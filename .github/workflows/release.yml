@@ -587,11 +587,14 @@ jobs:
           npm --version
           node -e 'const [maj, min, pat] = process.versions.npm.split(".").map(Number); if (maj < 11 || (maj === 11 && (min < 5 || (min === 5 && pat < 1)))) { console.error("npm >= 11.5.1 is required for trusted publishing"); process.exit(1); }'
           cd release-assets/npm
+          # The main tarball is superscalar-<version>.tgz; the platform ones are
+          # superscalar-<platform>-<version>.tgz.
+          main="$(ls superscalar-[0-9]*.tgz)"
           for tgz in superscalar-*.tgz; do
+            if [ "$tgz" = "$main" ]; then continue; fi
             echo "==> $tgz"
             npm publish "./$tgz" --access public --tag "$DIST_TAG"
           done
-          main="$(ls superscalar-[0-9]*.tgz)"
           echo "==> $main"
           npm publish "./$main" --access public --tag "$DIST_TAG"
 
