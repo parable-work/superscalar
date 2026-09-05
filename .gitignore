@@ -13,3 +13,6 @@ __pycache__/
 /bindings/typescript/native/
 /bindings/typescript/wasm-node/
 /bindings/typescript/wasm-bundler/
+# Release packaging output of the npm package (assemble job of release.yml).
+/bindings/typescript/npm/
+/bindings/typescript/*.tgz

@@ -66,11 +66,19 @@ strip_archive() {
 # from a build whose output went somewhere this script is not looking. The result goes to a
 # global because a bare `exit 1` inside a command substitution kills only the subshell,
 # which would let a failed resolve fall through into strip_archive.
+# CARGO_BUILD swaps the build driver. The release workflow sets it to
+# `cargo zigbuild` on the linux runner: the ffi crate also emits a cdylib, so a
+# cross target (aarch64 musl on an x86_64 runner) needs a linker for that
+# target, and zig provides one without a distro cross toolchain. cargo-zigbuild
+# takes the same flags and message format as cargo build.
+CARGO_BUILD="${CARGO_BUILD:-cargo build}"
+
 RESOLVED_STATICLIB=""
 resolve_staticlib() {
   local marker="$BUILD_SCRATCH/marker" log="$BUILD_SCRATCH/build.json" artifact freshness
   : >"$marker"
-  cargo build --message-format=json-render-diagnostics "$@" >"$log"
+  # shellcheck disable=SC2086
+  $CARGO_BUILD --message-format=json-render-diagnostics "$@" >"$log"
   artifact="$(python3 - "$log" <<'PY'
 import json, sys
 

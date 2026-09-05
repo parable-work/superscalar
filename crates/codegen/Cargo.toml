@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 minijinja = "2.21.0"
-superscalar = { path = "../core" }
+superscalar = { path = "../core", version = "0.1.0" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["preserve_order"] }
 serde_yaml_ng = "0.10"
