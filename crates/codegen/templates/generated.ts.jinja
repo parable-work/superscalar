@@ -1,0 +1,251 @@
+// {{ gen_note }}
+import { backend } from "{{ typescript.backend_module }}";
+import type { ScalarValidationResult, ValidationError } from "{{ typescript.validation_module }}";
+{% for imp in typescript.type_imports %}import type {
+{% for name in imp.names %}  {{ name }},
+{% endfor %}} from "{{ imp.module }}";
+
+export type {
+{% for name in imp.names %}  {{ name }},
+{% endfor %}} from "{{ imp.module }}";
+
+{% endfor %}export type JSDate = globalThis.Date;
+
+export interface ScalarMetadata {
+  canonicalName: string;
+  symbol: string;
+  primitive: string;
+  tsType: string;
+  format: string;
+  maxLength: number;
+  minLength: number;
+  pattern: string;
+  hasValidator: boolean;
+  examples: string[];
+  /**
+   * Comparability equivalence class, null when the scalar has none.
+   * Field equality is NOT the comparability relation: two nulls compare
+   * equal, so a direct comparison answers true for every pair of
+   * unclassed scalars. The relation is `comparableWith` below, mirroring the
+   * Rust core's `Registry::comparable_with`.
+   */
+  comparabilityClass: string | null;
+  isSortable: boolean;
+}
+
+/**
+ * Flat (single-identifier) form of a canonical scalar name, e.g.
+ * "Contact.Email" -> "Contact_Email". Used where dotted names are not valid
+ * identifiers (runtime schema payload keys, scalar registry keys). Canonical
+ * segments are PascalCase and never contain underscores, so the mapping is
+ * bijective.
+ */
+export function flatScalarName(canonicalName: string): string {
+  return canonicalName.replace(/\./g, "_");
+}
+
+export const scalarIdByCanonical: Record<string, number> = {
+{% for e in entries %}  {{ e.canonical_literal }}: {{ e.id }},
+{% endfor %}};
+
+interface LenientScalarError {
+  kind?: string;
+  message: string;
+}
+
+interface LenientCoerceResult {
+  value: unknown | null;
+  error: LenientScalarError | null;
+}
+
+function scalarErrorFromUnknown(error: unknown): LenientScalarError {
+  if (error instanceof Error) {
+    return { kind: "scalar", message: error.message };
+  }
+  return { kind: "scalar", message: String(error) };
+}
+
+function validationErrorFromLenient(error: LenientScalarError): ValidationError {
+  return { validator: error.kind || "scalar", message: error.message };
+}
+
+function coerceLenient(id: number, value: unknown): LenientCoerceResult {
+  try {
+    const encoded = JSON.stringify(value);
+    const jsonIn = encoded === undefined ? "null" : encoded;
+    const decoded = JSON.parse(backend.coerceLenient(id, jsonIn)) as Partial<LenientCoerceResult>;
+    return {
+      value: decoded.value === undefined ? null : decoded.value,
+      error: decoded.error === undefined ? null : decoded.error,
+    };
+  } catch (error) {
+    return { value: null, error: scalarErrorFromUnknown(error) };
+  }
+}
+
+function coerceValue(id: number, value: unknown): unknown | null {
+  const result = coerceLenient(id, value);
+  if (result.error) {
+    return null;
+  }
+  return result.value;
+}
+
+function parseJsonObject(value: string): unknown | null {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function validateWithBackend(id: number, value: unknown | null | undefined): ScalarValidationResult {
+  if (value === null || value === undefined || value === "") {
+    return [true, null];
+  }
+  const result = coerceLenient(id, value);
+  if (!result.error) {
+    return [true, null];
+  }
+  return [false, [validationErrorFromLenient(result.error)]];
+}
+
+{% for e in entries %}export type {{ e.camel }} = {{ e.ts_alias }};
+function convert{{ e.camel }}Value(value: unknown | null): {{ e.camel }} | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+{% if e.ts_type == "JSDate" %}  if (typeof value !== "string") {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date as unknown as {{ e.camel }};
+{% elif e.is_object %}  if (typeof value === "string") {
+    const parsed = parseJsonObject(value);
+    if (parsed === null) {
+      return null;
+    }
+    return parsed as {{ e.camel }};
+  }
+  return value as {{ e.camel }};
+{% else %}  return value as {{ e.camel }};
+{% endif %}}
+export function parse{{ e.camel }}(value: unknown): {{ e.camel }} | null {
+  return convert{{ e.camel }}Value(coerceValue({{ e.id }}, value));
+}
+export function normalize{{ e.camel }}(value: unknown): {{ e.camel }} | null {
+  return convert{{ e.camel }}Value(coerceValue({{ e.id }}, value));
+}
+export function parse{{ e.camel }}Strict(value: string): {{ e.camel }} {
+  const parsed = convert{{ e.camel }}Value(backend.parse({{ e.id }}, value));
+  if (parsed === null) {
+    throw new Error("invalid {{ e.canonical }}");
+  }
+  return parsed;
+}
+export function normalize{{ e.camel }}Strict(value: string): {{ e.camel }} {
+  const normalized = convert{{ e.camel }}Value(backend.normalize({{ e.id }}, value));
+  if (normalized === null) {
+    throw new Error("invalid {{ e.canonical }}");
+  }
+  return normalized;
+}
+export function validate{{ e.camel }}(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend({{ e.id }}, value);
+}
+
+{% endfor %}
+{% for alias in legacy_aliases %}{% if alias.name not in typescript.imported_type_names %}export type {{ alias.name }} = {{ alias.target }};
+{% endif %}export const parse{{ alias.name }} = parse{{ alias.target }};
+export const normalize{{ alias.name }} = normalize{{ alias.target }};
+export const validate{{ alias.name }} = validate{{ alias.target }};
+export const parse{{ alias.name }}Strict = parse{{ alias.target }}Strict;
+export const normalize{{ alias.name }}Strict = normalize{{ alias.target }}Strict;
+
+{% endfor %}
+{% for e in entries %}{% if e.reserved_words %}export const {{ e.camel }}ReservedWords = [{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}] as const;
+
+{% endif %}{% endfor %}export const SCALAR_METADATA: ScalarMetadata[] = [
+{% for e in metadata_entries %}  {
+    canonicalName: {{ e.canonical_literal }},
+    symbol: "{{ e.camel }}",
+    primitive: {{ e.primitive_literal }},
+    tsType: {{ e.ts_type_literal }},
+    format: "",
+    maxLength: {{ e.max_length }},
+    minLength: {{ e.min_length }},
+    pattern: {{ e.pattern_literal }},
+    hasValidator: {% if e.has_validator %}true{% else %}false{% endif %},
+    examples: [{% for example in e.examples %}{{ example.literal }}{% if not loop.last %}, {% endif %}{% endfor %}],
+    comparabilityClass: {{ e.comparability_class_ts }},
+    isSortable: {% if e.is_sortable %}true{% else %}false{% endif %},
+  },
+{% endfor %}];
+
+export const SCALAR_METADATA_BY_CANONICAL: Record<string, ScalarMetadata> =
+  SCALAR_METADATA.reduce<Record<string, ScalarMetadata>>((acc, meta) => {
+    acc[meta.canonicalName] = meta;
+    return acc;
+  }, {});
+
+// Maps an alias scalar's canonical name to its target's. `alias_of` means one
+// implementation under two ids, so the TARGET owns the comparability class and
+// the alias inherits it. comparableWith resolves through this before it reads a
+// class; reading the alias row's own class instead breaks transitivity one hop
+// out (the alias pair itself still answers true because identity fires first,
+// so the inconsistency hides where it was made). Module-local on purpose: the
+// predicate is the contract, the table is its implementation.
+const SCALAR_ALIAS_TARGETS: Record<string, string> = {
+{% for e in entries %}{% if e.is_alias %}  {{ e.canonical_literal }}: {{ e.alias_target_literal }},
+{% endif %}{% endfor %}};
+
+/**
+ * Reports whether comparing or joining values of the two named scalars is
+ * meaningful. Mirrors `ScalarDef::comparable_with` in the Rust core: aliases
+ * resolve first, a scalar is always comparable with itself, and two distinct
+ * scalars are comparable only when both declare the same named class.
+ *
+ * Do NOT reimplement this as `comparabilityClass` equality. Almost every
+ * scalar carries `null`, so field equality makes
+ * the entire catalog mutually comparable, `Contact.Email` against
+ * `Contact.PhoneNumber` included, which is the exact comparison the relation
+ * exists to reject.
+ *
+ * Fails closed on a name with no metadata row: an unknown scalar, and a
+ * scalar whose def sets `metadata_omit` and so has no comparability answer in
+ * this binding, both report false even against themselves. That matches the
+ * `isSortable` allowlist, which answers "no" to a shape nobody declared.
+ */
+export function comparableWith(a: string, b: string): boolean {
+  // Own-property lookups only. Both maps are plain objects, so a bare index
+  // on an inherited name ("constructor", "toString", "__proto__") returns an
+  // Object.prototype member instead of undefined, and the fail-closed
+  // contract breaks: "constructor" would compare equal to itself, and two
+  // distinct inherited names would compare equal through an undefined class.
+  let left = a;
+  if (Object.prototype.hasOwnProperty.call(SCALAR_ALIAS_TARGETS, a)) {
+    left = SCALAR_ALIAS_TARGETS[a];
+  }
+  let right = b;
+  if (Object.prototype.hasOwnProperty.call(SCALAR_ALIAS_TARGETS, b)) {
+    right = SCALAR_ALIAS_TARGETS[b];
+  }
+  if (
+    !Object.prototype.hasOwnProperty.call(SCALAR_METADATA_BY_CANONICAL, left) ||
+    !Object.prototype.hasOwnProperty.call(SCALAR_METADATA_BY_CANONICAL, right)
+  ) {
+    return false;
+  }
+  const metaLeft = SCALAR_METADATA_BY_CANONICAL[left];
+  const metaRight = SCALAR_METADATA_BY_CANONICAL[right];
+  if (left === right) {
+    return true;
+  }
+  return (
+    metaLeft.comparabilityClass !== null &&
+    metaLeft.comparabilityClass === metaRight.comparabilityClass
+  );
+}

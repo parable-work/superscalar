@@ -1,0 +1,15 @@
+# Rust build output (root workspace; examples/acme-scalars has its own).
+/target
+*.err
+
+# Binding build output. The Go archive dir is ignored in bindings/go, the
+# wasm-pack bundles in crates/wasm.
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+*.so
+/bindings/typescript/native/
+/bindings/typescript/wasm-node/
+/bindings/typescript/wasm-bundler/

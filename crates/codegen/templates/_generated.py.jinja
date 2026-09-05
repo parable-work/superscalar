@@ -1,0 +1,85 @@
+# {{ gen_note }}
+from {{ python.native_from }} import {{ python.native_name }}
+
+SCALAR_ID_BY_CANONICAL = {
+{% for e in entries %}    {{ e.canonical_literal }}: {{ e.id }},
+{% endfor %}}
+
+# Semantic facts, one row per scalar with a metadata row.
+# `comparability_class` names an equivalence class, or is None for a scalar
+# that has none, meaning self-comparable only. Field equality is NOT the
+# comparability relation: two Nones compare equal, so a direct comparison
+# answers true for every pair of unclassed scalars. The relation is
+# `comparable_with` below, mirroring the Rust core. `is_sortable` is False for the
+# structural, JSON and vector scalars. A scalar with no row here has NO
+# sortability answer in this binding: `SCALAR_METADATA[name]` raises KeyError,
+# which is the intended behaviour, not a gap.
+#
+# Deliberately ONE dict of plain dicts and not a NamedTuple and not one dict per
+# field. Not a NamedTuple: this module is imported by six services and
+# `pyproject.toml` declares requires-python = ">=3.9", and every dict form here
+# is annotation-free, so nothing is evaluated at class-creation time on the
+# floor (A33). Not one dict per field: the next metadata field would grow a
+# third module-level name in a package that star-imports this module (A26,
+# F11). The row shape matches the parity corpus row shape exactly.
+SCALAR_METADATA = {
+{% for e in metadata_entries %}    {{ e.canonical_literal }}: {"comparability_class": {{ e.comparability_class_py }}, "is_sortable": {% if e.is_sortable %}True{% else %}False{% endif %}},
+{% endfor %}}
+
+# Maps an alias scalar's canonical name to its target's. `alias_of` means one
+# implementation under two ids, so the TARGET owns the comparability class and
+# the alias inherits it. `comparable_with` resolves through this before it reads
+# a class; reading the alias row's own class instead breaks transitivity one hop
+# out (the alias pair itself still answers True because identity fires first, so
+# the inconsistency hides where it was made). Underscore-prefixed so
+# `from ._generated import *` does not grow a module-level name for it (A26,
+# F11) -- the predicate is the contract, this table is its implementation.
+_SCALAR_ALIAS_TARGETS = {
+{% for e in entries %}{% if e.is_alias %}    {{ e.canonical_literal }}: {{ e.alias_target_literal }},
+{% endif %}{% endfor %}}
+
+
+def comparable_with(a: str, b: str) -> bool:
+    """Report whether comparing or joining values of two named scalars is meaningful.
+
+    Mirrors ``ScalarDef::comparable_with`` in the Rust core: aliases resolve
+    first, a scalar is always comparable with itself, and two distinct scalars
+    are comparable only when both declare the same named class.
+
+    Do NOT reimplement this as ``comparability_class`` equality. Almost every
+    scalar carries ``None``, so field equality makes
+    the entire catalog mutually comparable, ``Contact.Email`` against
+    ``Contact.PhoneNumber`` included, which is the exact comparison the relation
+    exists to reject.
+
+    Fails closed on a name with no metadata row: an unknown scalar, and a
+    scalar whose def sets ``metadata_omit`` and so has no comparability answer
+    in this binding, both report False even against themselves. That matches
+    the ``is_sortable`` allowlist, which answers "no" to a shape nobody declared.
+    Note this differs from ``SCALAR_METADATA[name]``, which raises ``KeyError``
+    -- a predicate has a fail-closed answer, a row lookup does not.
+
+    The ``str``/``bool`` annotations are builtins, so they evaluate on the 3.9
+    floor this module is checked against (``python/scripts/py39_floor_check.py``).
+    """
+    a = _SCALAR_ALIAS_TARGETS.get(a, a)
+    b = _SCALAR_ALIAS_TARGETS.get(b, b)
+    meta_a = SCALAR_METADATA.get(a)
+    meta_b = SCALAR_METADATA.get(b)
+    if meta_a is None or meta_b is None:
+        return False
+    if a == b:
+        return True
+    class_a = meta_a["comparability_class"]
+    return class_a is not None and class_a == meta_b["comparability_class"]
+
+{% for e in entries %}def parse_{{ e.snake }}(value: str) -> str:
+    return _native.parse({{ e.id }}, value)
+
+def normalize_{{ e.snake }}(value: str) -> str:
+    return _native.normalize({{ e.id }}, value)
+
+def validate_{{ e.snake }}(value: str) -> None:
+    _native.validate({{ e.id }}, value)
+
+{% endfor %}
