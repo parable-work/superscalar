@@ -1,0 +1,14 @@
+# The GitHub release this module's prebuilt static archives come from.
+#
+# Written by the go-pin job of .github/workflows/release.yml after every
+# release: it records the tag, the core commit the archives were built from
+# and the SHA-256 of that release's manifest.json, then opens a pull request
+# with this file. Merging that pull request is what cuts the go/vX.Y.Z tag
+# (.github/workflows/go-module-tag.yml), so the Go module at that tag always
+# pins the archives built from the matching vX.Y.Z tag.
+#
+# scripts/fetch_release_archive.sh reads this file. Do not edit it by hand.
+# Empty until the first release.
+version=
+core_sha=
+manifest_sha256=
