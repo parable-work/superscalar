@@ -110,7 +110,13 @@ jobs:
       - name: codegen drift (python + ts)
         run: cargo run -p superscalar-codegen -- --check
 
-      - name: header drift check (cbindgen)
+      - name: docs check (every scalar has vectors and a description)
+        run: cargo run -p superscalar-codegen -- docs --check
+
+      - name: header drift check (declared names)
+        # Stable toolchain: the script compares the declared function set to the
+        # exported one. The byte-for-byte cbindgen check runs in the miri job,
+        # which has the nightly cbindgen needs for macro expansion.
         run: crates/ffi/scripts/check_header.sh
 
       - name: C consumer smoke (header valid C + ABI links)
@@ -138,6 +144,63 @@ jobs:
       - name: cargo miri test (ffi)
         # Force nightly; rust-toolchain.toml pins a stable channel (no miri).
         run: cargo +nightly miri test -p superscalar-ffi
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install cbindgen
+        run: cargo install cbindgen --version "$CBINDGEN_VERSION" --locked
+
+      # The exported C functions come out of the export_c_abi! macro, and
+      # cbindgen expands macros with `rustc -Zunpretty=expanded`, a nightly
+      # flag. This job has nightly, so it runs the byte-for-byte regeneration
+      # against the committed header; the gates job on stable checks names only.
+      - name: header drift check (cbindgen expansion on nightly)
+        run: crates/ffi/scripts/check_header.sh
+
+  acme-example:
+    name: acme-scalars example (extension through all four bindings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: examples/acme-scalars
+          cache-on-failure: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
+
+      - name: Build the four acme bindings and run built-in + acme vectors through each
+        run: examples/acme-scalars/scripts/smoke.sh
+
+      # The extension-model acceptance criterion: a third scalar added to the
+      # extension touches nothing outside examples/acme-scalars/ and still
+      # passes the smoke through every binding.
+      - name: Third scalar touches only the example
+        run: examples/acme-scalars/scripts/check_third_scalar.sh
 
   python-binding:
     name: python (PyO3) conformance
@@ -262,6 +325,7 @@ jobs:
       - dco
       - gates
       - miri
+      - acme-example
       - python-binding
       - go-binding
       - ts-binding

@@ -110,10 +110,13 @@ of them; run them locally before pushing.
 | `make wasm`           | wasm-pack build and a Node smoke test                              |
 | `make miri`           | `cargo +nightly miri test` on the ffi crate                        |
 | `make codegen-check`  | Generated Go, Python and TypeScript files match the registry       |
+| `make docs-check`     | Every scalar has conformance vectors and a description             |
 | `make go`             | Go binding builds and passes the conformance vectors               |
 | `make python`         | Python wheel builds and passes the conformance vectors             |
 | `make ts`             | TypeScript builds against napi and WASM, both pass the vectors     |
-| `make bindings`       | All of the above except `make miri`, which needs nightly           |
+| `make acme`           | The `examples/acme-scalars/` extension builds all four bindings and passes both corpora |
+| `make acme-third-scalar` | Adding a scalar to the example changes nothing outside `examples/acme-scalars/` |
+| `make bindings`       | All of the above except `make miri` (needs nightly) and `make acme-third-scalar` |
 
 ## Rules
 
