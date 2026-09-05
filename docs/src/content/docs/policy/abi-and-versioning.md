@@ -79,9 +79,11 @@ fails, and a vector change is visible in review.
 One version for everything. The repository tag `vX.Y.Z` is the version of the
 `superscalar` crate, its sibling crates (`superscalar-ffi`, `superscalar-wasm`,
 `superscalar-codegen`, `superscalar-napi`, `superscalar-python`), the npm
-package, the PyPI distribution and the Go module. The npm and PyPI versions
-are set from the tag in CI, not committed. The Go module is additionally
-tagged `go/vX.Y.Z` so `go get` resolves the subdirectory module.
+package, the PyPI distribution and the Go module. One script
+(`scripts/bump_version.py`) writes the version into every manifest, and the
+release workflow refuses a tag whose version the tree does not carry. The Go
+module is additionally tagged `go/vX.Y.Z`, on the commit that pins it to the
+`vX.Y.Z` release's archives, so `go get` resolves the subdirectory module.
 
 One release job cuts every artifact from that tag and pins them to one core
 commit through `manifest.json`. A set whose archives disagree on the commit is

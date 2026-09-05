@@ -20,8 +20,10 @@ npm install superscalar
 ```
 
 The main package depends on per-platform optional packages
-(`@superscalar/darwin-arm64` and the like) that carry the native addon; npm
-installs only the one for your platform. The main package also ships a WASM
+(`superscalar-darwin-arm64`, `superscalar-darwin-x64`,
+`superscalar-linux-x64-gnu`, `superscalar-linux-arm64-gnu`) that carry the
+native addon; npm installs only the one for your platform. Pre-releases are
+published under the `next` dist-tag (`npm install superscalar@next`). The main package also ships a WASM
 fallback, so a platform without a prebuilt addon still works in Node.
 
 ## Node or browser

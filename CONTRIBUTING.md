@@ -154,11 +154,74 @@ scalars specific to one project; see the `examples/acme-scalars/` walkthrough.
 Plain ASCII in source, docs and commit messages. Keep comments and docs short
 and concrete.
 
-## Releases and trusted publishing
+## Releases
 
-Releases are cut from a `vX.Y.Z` tag by `.github/workflows/release.yml`.
+One version for everything: the six crates, the npm package and its platform
+packages, the PyPI distribution, the Go module and the `examples/acme-scalars`
+workspace all carry the same SemVer version, and `scripts/bump_version.py`
+is the only thing that writes it. `bump_version.py check` fails when any site
+disagrees; the release workflow runs it before building anything.
+
+A release is four steps, each started by a person:
+
+1. Open the release pull request: run the `release-pr` workflow (Actions ->
+   release-pr -> Run workflow) with the version, without the leading `v`
+   (`0.1.0-alpha.1`, `0.1.0`). It runs `bump_version.py set`, which writes the
+   version everywhere and cuts the `Unreleased` section of `CHANGELOG.md`
+   into a dated `[X.Y.Z]` section, then opens `release/vX.Y.Z`. Review the
+   changelog. The pull request is opened with the workflow token, which does
+   not start CI: close and reopen it once so `ci-pass` runs, then merge it.
+   (Without the workflow: `python3 scripts/bump_version.py set X.Y.Z` on a
+   branch and open the pull request yourself.)
+2. Cut the tag: on a clean checkout of `main` at that merge, run
+   `scripts/tag_release.sh`. It re-checks every version site, creates the
+   annotated tag `vX.Y.Z` and pushes it. The push starts
+   `.github/workflows/release.yml`.
+3. `release.yml` runs the full CI, builds the static archives, napi addons,
+   wheels, header and wasm bundles on macOS and Linux runners, merges the
+   per-runner manifests and refuses a set whose artifacts were not all built
+   from the tag's commit, creates the GitHub release with build provenance
+   and an SBOM, publishes to crates.io, npm and PyPI, and opens a second pull
+   request that pins `bindings/go/release.pin` to the release's manifest
+   digest. Close and reopen that one too, then merge it.
+4. Merging the pin pull request cuts the Go module tag `go/vX.Y.Z`
+   (`.github/workflows/go-module-tag.yml`) on the pin commit. `go get
+   github.com/parable-work/superscalar/go@vX.Y.Z` resolves that tag, and the
+   module's fetch script then downloads and verifies the archives of the
+   `vX.Y.Z` release. The two tags are always cut together in this order; do
+   not create either by hand.
+
+Pre-releases: `vX.Y.Z-alpha.N`, `-beta.N` and `-rc.N` are the supported
+forms. The GitHub release is marked as a pre-release, npm publishes under the
+`next` dist-tag instead of `latest`, and PyPI receives the PEP 440 spelling
+(`0.1.0a1`), which `pip` skips unless asked for `--pre`. The first release is
+`v0.1.0-alpha.1`.
+
+A dry run of the build on any branch: Actions -> release -> Run workflow with
+`dry_run` checked (or `gh workflow run release.yml --ref <branch> -f
+dry_run=true`). It runs the verify, build and assemble jobs and uploads the
+assembled release set as the `release-assets` workflow artifact; nothing is
+released, published or deployed.
+
+### Trusted publishing
+
 crates.io, npm and PyPI are configured for trusted publishing (OIDC); no
 registry tokens are stored in this repository. Each registry's trusted
-publisher entry is registered against this repository and the workflow
-filename `release.yml`. If the workflow is ever renamed, every registry entry
-must be updated to match or publishing stops.
+publisher entry is registered against the repository `parable-work/superscalar`
+and the workflow filename `release.yml`, with the GitHub environment named in
+the job (`crates-io`, `npm`, `pypi`). If the workflow is renamed or an
+environment name changes, every registry entry must be updated to match or
+publishing stops. The three publish jobs are gated on the repository variable
+`RELEASE_PUBLISH_ENABLED`; it is set to `true` once the registrations exist.
+crates.io only accepts a trusted publisher for a crate that already exists, so
+the first version of each crate is published by hand with a personal token
+before the publisher is registered; the exact registrations are written at
+the top of each publish job in `release.yml`.
+
+### Behaviour changes and the changelog
+
+A change to a scalar's conformance vectors or accept set never ships without
+a `CHANGELOG.md` entry under `Unreleased` that names the bump it requires
+(see "Behaviour freeze" above). `release-pr` refuses to cut a release whose
+`Unreleased` section is empty, and `release.yml` refuses a tag whose version
+has no changelog section.
