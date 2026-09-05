@@ -1,0 +1,20 @@
+[package]
+name = "acme-scalars-ffi"
+description = "C ABI over the assembled Acme registry: export_c_abi! applied to acme_scalars::registry."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "acme_scalars_ffi"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+acme-scalars.workspace = true
+superscalar-ffi.workspace = true
+
+[lints]
+workspace = true

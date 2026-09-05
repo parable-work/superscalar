@@ -1,0 +1,99 @@
+A third scalar for the acme example, applied by scripts/check_third_scalar.sh
+and reverted afterwards. Acme.Sku takes the next id in the block (4098) and
+brings its own vectors. Regenerate with a fresh diff if ext/src/lib.rs or the
+conformance file changes shape. Empty context lines are empty, not a single
+space; git apply reads them as context.
+
+--- a/ext/src/lib.rs
++++ b/ext/src/lib.rs
+@@ -26,10 +26,12 @@
+ pub const ORDER_NUMBER: ScalarId = ScalarId(ID_BASE);
+ /// `Acme.ScalarRef`, frozen at 4097.
+ pub const SCALAR_REF: ScalarId = ScalarId(ID_BASE + 1);
++/// `Acme.Sku`, frozen at 4098.
++pub const SKU: ScalarId = ScalarId(ID_BASE + 2);
+
+ /// The Acme catalog. Ids are append-only: a new scalar takes the next free id
+ /// in the block and nothing is ever renumbered.
+-pub static DEFS: [ScalarDef; 2] = [
++pub static DEFS: [ScalarDef; 3] = [
+     ScalarDef {
+         id: ORDER_NUMBER,
+         namespace: "Acme",
+@@ -112,6 +114,45 @@
+         },
+         metadata_omit: false,
+     },
++    ScalarDef {
++        id: SKU,
++        namespace: "Acme",
++        canonical: "Acme.Sku",
++        primitive: PrimitiveKind::String,
++        sql_type: "TEXT",
++        metadata_primitive: "String",
++        json_schema_type: "string",
++        tag: ScalarTag::PatternOnly,
++        pattern: Some("^SKU-[A-Z0-9]{4,12}$"),
++        min_length: Some(8),
++        max_length: Some(16),
++        minimum: None,
++        maximum: None,
++        case_insensitive: false,
++        reserved_words: &[],
++        examples: &["SKU-A1B2C3"],
++        description: "SKU- followed by 4 to 12 uppercase letters or digits",
++        type_mappings: &[
++            ("typescript", "string"),
++            ("python", "str"),
++            ("go", "string"),
++            ("rust", "String"),
++            ("sql", "TEXT"),
++            ("json_schema", "string"),
++        ],
++        file_upload: None,
++        image_constraints: None,
++        docstring: "",
++        alias_of: None,
++        schema_primitive_override: None,
++        schema_omit: false,
++        format: None,
++        reserved_words_case_insensitive: false,
++        reserved_words_match_partial: false,
++        comparability_class: None,
++        hooks: ScalarHooks::NONE,
++        metadata_omit: false,
++    },
+ ];
+
+ /// The extension: name, block, defs, and the one hand-written impl.
+--- a/conformance/acme-scalars.v2.json
++++ b/conformance/acme-scalars.v2.json
+@@ -9,7 +9,8 @@
+   "metadata_excluded": [],
+   "metadata": {
+     "Acme.OrderNumber": { "comparability_class": null, "is_sortable": true },
+-    "Acme.ScalarRef": { "comparability_class": null, "is_sortable": true }
++    "Acme.ScalarRef": { "comparability_class": null, "is_sortable": true },
++    "Acme.Sku": { "comparability_class": null, "is_sortable": true }
+   },
+   "scalars": {
+     "Acme.OrderNumber": {
+@@ -41,6 +42,18 @@
+         { "input": "", "validator": "empty" },
+         { "input": "   ", "validator": "empty" }
+       ]
++    },
++    "Acme.Sku": {
++      "accepted": [
++        { "input": "SKU-A1B2", "normalized": "SKU-A1B2" },
++        { "input": "SKU-ABCDEF123456", "normalized": "SKU-ABCDEF123456" }
++      ],
++      "rejected": [
++        { "input": "SKU-A1", "validator": "length" },
++        { "input": "SKU-A1B2C3D4E5F6G", "validator": "length" },
++        { "input": "sku-a1b2", "validator": "pattern" },
++        { "input": "SKU_A1B2", "validator": "pattern" }
++      ]
+     }
+   }
+ }

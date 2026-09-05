@@ -1,0 +1,3 @@
+/target
+# wasm-pack output; scripts/smoke.sh builds into a temp dir, this covers a manual build
+/wasm/pkg

@@ -1,0 +1,25 @@
+[package]
+name = "acme-scalars-wasm"
+description = "wasm-bindgen build over the assembled Acme registry: export_wasm! applied to acme_scalars::registry."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "acme_scalars_wasm"
+crate-type = ["cdylib"]
+
+[dependencies]
+acme-scalars.workspace = true
+superscalar-wasm.workspace = true
+# The macro expansion names the framework as ::wasm_bindgen, so the wasm crate
+# depends on it directly.
+wasm-bindgen = "0.2"
+# The core's uuid v4 needs a randomness backend on wasm32.
+uuid = { version = "1", features = ["js"] }
+
+[lints]
+workspace = true

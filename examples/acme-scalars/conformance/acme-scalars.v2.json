@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "version": 2,
+    "source_language": "rust-core",
+    "source_package": "examples/acme-scalars/ext",
+    "non_sortable_count": 0,
+    "description": "Conformance vectors for the Acme extension, in the shape of the built-in corpus (parity/core-scalars.v2.json). Keys are canonical names; a binding resolves them to ids through the assembled registry. Acme.ScalarRef accepts a name only if the registry the binding dispatched into knows it, so its Acme.* vectors fail against a binding built over the built-in registry alone. `metadata` transcribes comparability_class and is_sortable from the defs; `non_sortable_count` is hand-maintained beside it."
+  },
+  "metadata_excluded": [],
+  "metadata": {
+    "Acme.OrderNumber": { "comparability_class": null, "is_sortable": true },
+    "Acme.ScalarRef": { "comparability_class": null, "is_sortable": true }
+  },
+  "scalars": {
+    "Acme.OrderNumber": {
+      "accepted": [
+        { "input": "ORD-000123", "normalized": "ORD-000123" },
+        { "input": "ORD-999999", "normalized": "ORD-999999" },
+        { "input": "ORD-000000", "normalized": "ORD-000000" }
+      ],
+      "rejected": [
+        { "input": "ORD-12", "validator": "length" },
+        { "input": "ORD-0001234", "validator": "length" },
+        { "input": " ORD-000123", "validator": "length" },
+        { "input": "ord-000123", "validator": "pattern" },
+        { "input": "ORD_000123", "validator": "pattern" },
+        { "input": "", "validator": "length" }
+      ]
+    },
+    "Acme.ScalarRef": {
+      "accepted": [
+        { "input": "Contact.Email", "normalized": "Contact.Email" },
+        { "input": "Identity.UUID", "normalized": "Identity.UUID" },
+        { "input": "Acme.OrderNumber", "normalized": "Acme.OrderNumber" },
+        { "input": "Acme.ScalarRef", "normalized": "Acme.ScalarRef" }
+      ],
+      "rejected": [
+        { "input": "Nope.Nope", "validator": "enum" },
+        { "input": "contact.email", "validator": "enum" },
+        { "input": "Acme.Missing", "validator": "enum" },
+        { "input": "", "validator": "empty" },
+        { "input": "   ", "validator": "empty" }
+      ]
+    }
+  }
+}
