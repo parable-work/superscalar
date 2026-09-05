@@ -19,11 +19,11 @@ binary has no runtime shared-library dependency.
 
 ## Install
 
-Nothing is published yet. From v0.1.0 the module is tagged `go/v0.1.0`
-alongside the repository tag `v0.1.0`, and the install is:
+Nothing is published yet. Every release `vX.Y.Z` also tags the module
+`go/vX.Y.Z` (the first release is `v0.1.0-alpha.1`), and the install is:
 
 ```
-go get github.com/parable-work/superscalar/go@v0.1.0
+go get github.com/parable-work/superscalar/go@vX.Y.Z
 ```
 
 Then fetch the static archive for your platform. The module commits the C

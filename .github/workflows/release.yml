@@ -219,6 +219,7 @@ jobs:
         env:
           NAPI_TARGETS: ${{ matrix.napi_targets }}
           NAPI_ZIG_FLAGS: ${{ matrix.napi_zig_flags }}
+          MATRIX_NAME: ${{ matrix.name }}
         run: |
           set -euo pipefail
           npm ci
@@ -232,7 +233,7 @@ jobs:
           # The loader (index.js) and its types are platform-independent and
           # list every configured triple; assemble copies them into the main
           # package from the linux build.
-          if [ "${{ matrix.name }}" = linux ]; then
+          if [ "$MATRIX_NAME" = linux ]; then
             mkdir -p "$DIST_DIR/napi-js"
             cp napi-out/x86_64-unknown-linux-gnu/index.js napi-out/x86_64-unknown-linux-gnu/index.d.ts "$DIST_DIR/napi-js/"
           fi
@@ -631,9 +632,11 @@ jobs:
     name: pin the Go module to this release (pull request)
     # Writes go/release.pin (tag, core commit, manifest digest) and
     # opens a pull request. Merging it cuts the go/vX.Y.Z tag
-    # (go-module-tag.yml). A pull request opened with the workflow token does
-    # not start ci.yml on its own: close and reopen it once (or push an empty
-    # commit) so ci-pass runs, then merge.
+    # (go-module-tag.yml). Needs the repository setting "Allow GitHub Actions
+    # to create and approve pull requests" (Settings -> Actions -> General);
+    # without it `gh pr create` is refused. A pull request opened with the
+    # workflow token does not start ci.yml on its own: close and reopen it
+    # once (or push an empty commit) so ci-pass runs, then merge.
     needs: [preflight, github-release]
     if: needs.preflight.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
@@ -757,4 +760,4 @@ jobs:
       - name: Deploy to GitHub Pages
         if: hashFiles('docs/dist/index.html') != ''
         id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

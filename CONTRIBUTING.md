@@ -162,6 +162,11 @@ workspace all carry the same SemVer version, and `scripts/bump_version.py`
 is the only thing that writes it. `bump_version.py check` fails when any site
 disagrees; the release workflow runs it before building anything.
 
+Two workflows (`release-pr` and the `go-pin` job of `release.yml`) open pull
+requests with the workflow token, which the repository setting "Allow GitHub
+Actions to create and approve pull requests" (Settings -> Actions -> General)
+must permit; it is off by default on a new repository.
+
 A release is four steps, each started by a person:
 
 1. Open the release pull request: run the `release-pr` workflow (Actions ->

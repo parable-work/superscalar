@@ -7,7 +7,9 @@ name: release-pr
 # opens the pull request. Review it, close and reopen it once so ci-pass runs
 # (a pull request opened with the workflow token does not start ci.yml), merge
 # it, then cut the tag with scripts/tag_release.sh. See CONTRIBUTING.md,
-# "Releases".
+# "Releases". Opening the pull request needs the repository setting "Allow
+# GitHub Actions to create and approve pull requests" (Settings -> Actions ->
+# General); the same setting gates the go-pin job of release.yml.
 
 on:
   workflow_dispatch:
