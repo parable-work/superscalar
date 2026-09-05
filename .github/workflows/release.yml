@@ -1,0 +1,290 @@
+name: release
+
+# SKELETON. Cut from one `vX.Y.Z` tag: verify (full CI) -> per-platform build
+# matrix -> assemble (merge the per-platform manifests, refuse a set whose
+# artifacts disagree on the core commit SHA) -> publish to crates.io, npm and
+# PyPI via trusted publishing (OIDC, no stored tokens) -> GitHub release with
+# build provenance attestations -> docs site to GitHub Pages.
+#
+# Steps marked `TODO(W4)` are placeholders for the release-engineering
+# workstream; they print what they will do and exit 0. Nothing in this file
+# publishes anything until those steps are filled in, and every registry's
+# trusted-publisher entry must be registered against this filename
+# (release.yml) before the first publish.
+
+on:
+  push:
+    tags: ["v*"]
+
+# Least-privilege default; every job that publishes escalates only the scopes
+# it needs (id-token for trusted publishing, contents for the GitHub release,
+# attestations for provenance, pages for the docs deploy).
+permissions:
+  contents: read
+
+# Serialize releases per ref so two tag pushes cannot publish overlapping
+# artifact sets; never cancel an in-flight release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: verify (full ci)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: build ${{ matrix.name }}
+    needs: verify
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: macos-latest
+            name: darwin
+            targets: "aarch64-apple-darwin x86_64-apple-darwin"
+          - os: ubuntu-latest
+            name: linux
+            targets: "x86_64-unknown-linux-musl aarch64-unknown-linux-musl"
+          - os: ubuntu-latest
+            name: wasm
+            targets: "wasm32-unknown-unknown"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        # rustup reads rust-toolchain.toml from the repository root.
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Install wasm-pack (wasm only)
+        if: matrix.name == 'wasm'
+        run: cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
+
+      - name: Build artifacts pinned to the checked-out core commit
+        env:
+          DIST_DIR: ${{ github.workspace }}/dist-${{ matrix.name }}
+          BUILD_TARGETS: ${{ matrix.targets }}
+        run: |
+          mkdir -p "$DIST_DIR"
+          echo "TODO(W4): build staticlibs, header and wasm bundle for: $BUILD_TARGETS into $DIST_DIR, then write $DIST_DIR/manifest.json stamped with $GITHUB_SHA"
+
+      - name: Upload platform dist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist-${{ matrix.name }}
+          path: dist-${{ matrix.name }}
+          if-no-files-found: error
+
+  assemble:
+    name: merge + verify pinned matrix
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download platform dists
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          path: _dists
+
+      - name: Merge per-platform manifests + verify the full matrix is pinned
+        env:
+          DIST: ${{ github.workspace }}/dist
+          DISTS: ${{ github.workspace }}/_dists
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIST"
+          cp -R "$DISTS"/dist-darwin/. "$DIST"/
+          cp -R "$DISTS"/dist-linux/. "$DIST"/
+          cp -R "$DISTS"/dist-wasm/. "$DIST"/
+          # MERGE the per-platform manifests so every artifact keeps the real
+          # core_sha its runner built from; do NOT rm + regenerate, which would
+          # stamp one SHA over the whole set and silently mask a mismatch.
+          python3 scripts/merge_manifests.py "$DIST/manifest.json" \
+            "$DISTS/dist-darwin/manifest.json" \
+            "$DISTS/dist-linux/manifest.json" \
+            "$DISTS/dist-wasm/manifest.json"
+          # verify_pinned aborts the release if any preserved core_sha disagrees.
+          python3 scripts/verify_pinned.py "$DIST/manifest.json" \
+            --require-platforms darwin_arm64,darwin_amd64,linux_amd64,linux_arm64
+
+      - name: Upload merged dist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+
+  publish-crates:
+    name: publish crates.io
+    needs: assemble
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Publish every crate at the tag version, in dependency order
+        run: |
+          echo "TODO(W4): exchange the OIDC token with rust-lang/crates-io-auth-action, then cargo publish superscalar, superscalar-ffi, superscalar-wasm, superscalar-codegen, superscalar-napi, superscalar-python in that order (first version of each crate is published manually before the repo can be linked)"
+
+  publish-npm:
+    name: publish npm
+    needs: assemble
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish napi prebuilds, wasm fallback and the main package with provenance
+        run: |
+          echo "TODO(W4): set the version from the tag, napi create-npm-dirs / napi artifacts / napi pre-publish for the per-platform optional packages, then npm publish --provenance for superscalar"
+
+  publish-pypi:
+    name: publish PyPI
+    needs: assemble
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build wheels and publish with trusted publishing
+        run: |
+          echo "TODO(W4): maturin-action wheel matrix (manylinux + musllinux x86_64/aarch64, macOS arm64 + x86_64, abi3-py39, sdist) with an explicit manylinux per target, then pypa/gh-action-pypi-publish"
+
+  github-release:
+    name: github release + attestations
+    needs: [assemble, publish-crates, publish-npm, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download merged dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Package release assets
+        working-directory: ${{ github.workspace }}/dist
+        run: |
+          set -euo pipefail
+          for plat in darwin_arm64 darwin_amd64 linux_amd64 linux_arm64; do
+            tar -czf "superscalar-$plat.tar.gz" "lib/$plat"
+          done
+          tar -czf "superscalar-shared.tar.gz" include wasm
+          echo "TODO(W4): generate an SBOM for the release set"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/superscalar-*.tar.gz
+            dist/manifest.json
+
+      - name: Create the GitHub release
+        working-directory: ${{ github.workspace }}/dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CORE_SHA="$(python3 -c 'import json; print(json.load(open("manifest.json"))["core_sha"])')"
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "SuperScalar ${GITHUB_REF_NAME}; artifacts pinned to core commit ${CORE_SHA}" \
+            superscalar-*.tar.gz manifest.json
+          echo "TODO(W4): also push the go/${GITHUB_REF_NAME} tag so go get resolves the bindings/go module"
+
+  docs-deploy:
+    name: docs (Starlight) to GitHub Pages
+    needs: github-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      # The per-scalar reference pages are generated, not committed
+      # (docs/.gitignore excludes src/content/docs/reference/ apart from index.md).
+      # The generator ships with the codegen CLI (W3); until then the site builds
+      # with the committed reference/index.md placeholder only.
+      - name: Generate scalar reference pages
+        run: |
+          echo "TODO(W4): cargo run -p superscalar-codegen -- docs --out docs/src/content/docs/reference/"
+
+      - name: Build the site
+        working-directory: docs
+        run: |
+          npm ci
+          npm run build
+
+      # Belt and braces: if the build produced no index.html, do not deploy.
+      - name: Upload Pages artifact
+        if: hashFiles('docs/dist/index.html') != ''
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/dist
+
+      - name: Deploy to GitHub Pages
+        if: hashFiles('docs/dist/index.html') != ''
+        id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

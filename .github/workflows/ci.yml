@@ -1,0 +1,285 @@
+name: ci
+
+# Gates for the SuperScalar workspace: Rust fmt/clippy/test, header drift,
+# C consumer smoke, WASM smoke, Miri on the ffi crate, codegen drift, and the
+# conformance corpus against every binding (TS on napi AND wasm). `ci-pass` is
+# the single aggregating job the branch ruleset requires; every other job must
+# be listed in its `needs`.
+#
+# Paths below follow the repository layout (crates/*, bindings/*). The smoke
+# scripts they call are owned by the crate or binding they exercise.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+# Least-privilege GITHUB_TOKEN: this workflow only reads the checkout. No job
+# writes to the repo, packages, or any other scope.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same PR branch (head_ref). Pushes to main and
+# workflow_call runs (release.yml) are keyed by SHA and never cancelled.
+concurrency:
+  group: ci-${{ github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dco:
+    name: dco sign-off
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Every commit in the pull request carries Signed-off-by
+        # A plain git check rather than a third-party action: the DCO
+        # convention is one trailer line per commit, and this keeps the
+        # sign-off gate free of an unpinned dependency.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for sha in $(git rev-list --no-merges "$BASE_SHA".."$HEAD_SHA"); do
+            # grep reads to EOF (no -q) so pipefail never sees a SIGPIPE from git log.
+            if ! git log -1 --format=%B "$sha" | grep -E '^Signed-off-by: .+ <[^>]+@[^>]+>$' >/dev/null; then
+              echo "missing Signed-off-by: $(git log -1 --format='%h %s' "$sha")"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Sign your commits: git commit -s (or git rebase --signoff). See CONTRIBUTING.md." >&2
+            exit 1
+          fi
+
+  gates:
+    name: fmt / clippy / test / header / c-consumer / wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        # rustup reads rust-toolchain.toml (channel, components, targets) from
+        # the repository root; nothing is interpolated into the shell here.
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-on-failure: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install cbindgen + wasm-pack
+        run: |
+          cargo install cbindgen --version "$CBINDGEN_VERSION" --locked
+          cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
+
+      - name: fmt
+        run: cargo fmt --all --check
+
+      - name: clippy (core + ffi + codegen, host)
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: clippy (wasm, wasm32)
+        run: cargo clippy -p superscalar-wasm --target wasm32-unknown-unknown -- -D warnings
+
+      - name: clippy (python + napi bindings, host)
+        run: cargo clippy -p superscalar-python -p superscalar-napi --all-targets -- -D warnings
+
+      - name: test (workspace)
+        run: cargo test
+
+      - name: codegen drift (python + ts)
+        run: cargo run -p superscalar-codegen -- --check
+
+      - name: header drift check (cbindgen)
+        run: crates/ffi/scripts/check_header.sh
+
+      - name: C consumer smoke (header valid C + ABI links)
+        run: crates/ffi/scripts/c_smoke.sh
+
+      - name: WASM Node smoke
+        run: crates/wasm/scripts/wasm_smoke.sh
+
+  miri:
+    name: miri (ffi free-discipline / UB proof)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install nightly + miri
+        run: |
+          rustup toolchain install nightly --profile minimal --component miri
+          rustup default nightly
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-on-failure: true
+
+      - name: cargo miri test (ffi)
+        # Force nightly; rust-toolchain.toml pins a stable channel (no miri).
+        run: cargo +nightly miri test -p superscalar-ffi
+
+  python-binding:
+    name: python (PyO3) conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build wheel + run conformance
+        working-directory: bindings/python
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --quiet --upgrade pip maturin pytest
+          maturin develop --release
+          pytest -q tests
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      # The step above stands up PYTHON_VERSION, so a construct that only fails
+      # on the declared floor (requires-python = ">=3.9") would go green everywhere.
+      # uv fetches a managed 3.9 rather than depending on the runner image's
+      # Python manifest, and unlike actions/setup-python it does not prepend
+      # an interpreter to PATH for any step appended after it.
+      - name: Generated module evaluates on the declared floor
+        working-directory: bindings/python
+        run: uv run --python 3.9 --no-project python scripts/py39_floor_check.py
+
+  go-binding:
+    name: go (cgo) conformance + codegen drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build ffi staticlib + run Go conformance
+        # GOTOOLCHAIN pins the exact compiler so go.mod can never auto-download
+        # a different patch.
+        env:
+          GOTOOLCHAIN: go${{ env.GO_VERSION }}
+          CGO_ENABLED: "1"
+        run: bindings/go/scripts/go_smoke.sh
+
+      - name: codegen drift (all languages, incl gofmt)
+        run: |
+          cargo run -p superscalar-codegen
+          git diff --exit-code -- . || {
+            echo "generated code is out of date; run: cargo run -p superscalar-codegen" >&2
+            exit 1
+          }
+
+  ts-binding:
+    name: ts (napi + wasm) conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned tool versions
+        # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
+
+      - name: Build napi + wasm, run conformance on both backends
+        run: bindings/typescript/scripts/ts_smoke.sh
+
+  ci-pass:
+    # The only required status check on main (repository ruleset "main").
+    # Runs even when a needed job fails so the check is always reported, and
+    # fails if any needed job failed or was cancelled. A skipped job (the dco
+    # job on pushes to main) does not fail it.
+    name: ci-pass
+    if: always()
+    needs:
+      - dco
+      - gates
+      - miri
+      - python-binding
+      - go-binding
+      - ts-binding
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any needed job failed or was cancelled
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          bad = {name: job["result"] for name, job in needs.items()
+                 if job["result"] in ("failure", "cancelled")}
+          for name, result in sorted(bad.items()):
+              print(f"{name}: {result}")
+          if bad:
+              sys.exit(1)
+          print("all gates passed")
+          PY
