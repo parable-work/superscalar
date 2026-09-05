@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "moduleSuffixes": [".node", ""],
+    "outDir": "dist/esm",
+    "rootDir": "src",
+    "declaration": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "comment": "moduleSuffixes makes `./backend` resolve to backend.node.ts in this pass. Without it, index.ts/generated.ts/runtime pull in backend.ts, which emits dist/esm/backend.js with a bare `require` (undefined under ESM) and a ../native path that is one directory too shallow from dist/esm/.",
+  "include": ["src/backend.node.ts", "src/generated.ts", "src/index.ts"]
+}

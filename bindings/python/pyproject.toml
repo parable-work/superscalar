@@ -1,0 +1,38 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "superscalar"
+version = "0.1.0"
+description = "Scalar types library: parse/normalize/validate, generated from the Rust core."
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [{ name = "Parable Work, Inc." }]
+dependencies = []
+classifiers = ["Programming Language :: Rust"]
+
+[project.urls]
+Repository = "https://github.com/parable-work/superscalar"
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.2",
+]
+
+[tool.maturin]
+# Mixed layout: the python package superscalar/ lives here, the PyO3 crate
+# that builds the compiled binding is crates/python at the workspace root;
+# the compiled module is placed at superscalar._native.
+manifest-path = "../../crates/python/Cargo.toml"
+module-name = "superscalar._native"
+python-source = "."
+features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
