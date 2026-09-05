@@ -34,15 +34,15 @@ REDUCED_NOTE="reduced check: names only; no nightly toolchain for cbindgen expan
 
 cd "$WORKSPACE" || exit 1
 
-# The Go module ships its own copy of the header (bindings/go/include) because
+# The Go module ships its own copy of the header (go/include) because
 # `go get` only downloads the module directory. --write refreshes the copy;
 # both check modes require it to be byte-identical to the ffi header.
-GO_HEADER="$WORKSPACE/bindings/go/include/superscalar.h"
+GO_HEADER="$WORKSPACE/go/include/superscalar.h"
 
 check_go_copy() {
   if ! cmp -s "$HEADER" "$GO_HEADER"; then
     echo "ERROR: $GO_HEADER differs from $HEADER." >&2
-    echo "Run: cp crates/ffi/superscalar.h bindings/go/include/superscalar.h" >&2
+    echo "Run: cp crates/ffi/superscalar.h go/include/superscalar.h" >&2
     exit 1
   fi
 }

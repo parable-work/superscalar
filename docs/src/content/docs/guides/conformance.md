@@ -69,7 +69,7 @@ make ts                    # builds napi and WASM and runs the Node runner on bo
 make bindings              # all of the above plus lint, header and codegen drift
 ```
 
-The Go, Python and TypeScript runners live in `bindings/go/conformance_test.go`,
+The Go, Python and TypeScript runners live in `go/conformance_test.go`,
 `bindings/python/tests/test_conformance.py` and
 `bindings/typescript/test/conformance.cjs`. Each prints a pass and fail
 count per bucket.

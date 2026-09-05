@@ -62,7 +62,7 @@ fn relative_paths_resolve_against_the_config_directory() {
         PathBuf::from("/abs/out.go")
     );
     let go = common::emitter("go").output(&config).expect("go enabled");
-    assert_eq!(go, root.join("bindings/go/generated.go"));
+    assert_eq!(go, root.join("go/generated.go"));
 
     // Config::load takes the root from the file's own directory, wherever
     // the process runs.

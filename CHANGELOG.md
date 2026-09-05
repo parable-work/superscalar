@@ -22,8 +22,10 @@ bump they require (minor when loosening, major when tightening).
   `release-pr.yml` and `scripts/bump_version.py` set the one shared version;
   `go-module-tag.yml` cuts `go/vX.Y.Z` once the Go module is pinned to a
   release.
-- Go module: `include/superscalar.h` is committed inside the module,
-  `release.pin` records the release the archives come from, and
+- Go module: the module lives at `go/` so that its path
+  `github.com/parable-work/superscalar/go` and its `go/vX.Y.Z` tags resolve;
+  `include/superscalar.h` is committed inside the module, `release.pin`
+  records the release the archives come from, and
   `scripts/fetch_release_archive.sh` downloads and verifies them against the
   pinned manifest digest.
 

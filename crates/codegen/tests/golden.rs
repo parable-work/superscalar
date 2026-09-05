@@ -53,10 +53,10 @@ fn config_names_every_output_the_cli_wrote_before_it_was_configurable() {
     assert_eq!(
         outputs,
         [
-            "bindings/go/generated.go",
             "bindings/python/superscalar/_generated.py",
             "bindings/typescript/src/generated.ts",
             "crates/core/src/scalar_metadata.rs",
+            "go/generated.go",
         ]
     );
 }

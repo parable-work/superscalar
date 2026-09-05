@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the ffi static archive into bindings/go/lib/<goos>_<goarch>, then run the Go
+# Build the ffi static archive into go/lib/<goos>_<goarch>, then run the Go
 # binding's v2 conformance via cgo against it. The binding links the hermetic
 # lib/<goos>_<goarch> (cgo_ldflags_<goos>_<goarch>.go), so this stages the archive
 # there exactly as a release fetch would.

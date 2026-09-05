@@ -2,7 +2,7 @@
 /target
 *.err
 
-# Binding build output. The Go archive dir is ignored in bindings/go, the
+# Binding build output. The Go archive dir is ignored in go/, the
 # wasm-pack bundles in crates/wasm.
 node_modules/
 dist/

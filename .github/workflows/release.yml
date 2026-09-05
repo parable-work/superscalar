@@ -629,7 +629,7 @@ jobs:
 
   go-pin:
     name: pin the Go module to this release (pull request)
-    # Writes bindings/go/release.pin (tag, core commit, manifest digest) and
+    # Writes go/release.pin (tag, core commit, manifest digest) and
     # opens a pull request. Merging it cuts the go/vX.Y.Z tag
     # (go-module-tag.yml). A pull request opened with the workflow token does
     # not start ci.yml on its own: close and reopen it once (or push an empty
@@ -663,19 +663,19 @@ jobs:
           python3 - "$TAG" "$CORE_SHA" "$MANIFEST_SHA" <<'PY'
           import pathlib, re, sys
           tag, core, digest = sys.argv[1:]
-          p = pathlib.Path("bindings/go/release.pin")
+          p = pathlib.Path("go/release.pin")
           text = p.read_text()
           for key, value in (("version", tag), ("core_sha", core), ("manifest_sha256", digest)):
               text, n = re.subn(rf"^{key}=.*$", f"{key}={value}", text, count=1, flags=re.M)
               assert n == 1, key
           p.write_text(text)
           PY
-          cat bindings/go/release.pin
+          cat go/release.pin
           branch="chore/go-pin-$TAG"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add bindings/go/release.pin
+          git add go/release.pin
           git commit -s -m "chore(go): pin the Go module to the $TAG archives" \
             -m "release.pin now points at the $TAG GitHub release (core $CORE_SHA, manifest sha256 $MANIFEST_SHA). Merging this cuts the go/$TAG tag."
           git push origin "$branch"
@@ -684,7 +684,7 @@ jobs:
             --body "$(printf '%s\n' \
               "## What and why" \
               "" \
-              "Pins bindings/go/release.pin to the $TAG release: core commit $CORE_SHA, manifest.json sha256 $MANIFEST_SHA. Merging cuts the go/$TAG tag (go-module-tag.yml), so the Go module at that tag fetches the archives built from $TAG." \
+              "Pins go/release.pin to the $TAG release: core commit $CORE_SHA, manifest.json sha256 $MANIFEST_SHA. Merging cuts the go/$TAG tag (go-module-tag.yml), so the Go module at that tag fetches the archives built from $TAG." \
               "" \
               "Opened by release.yml with the workflow token, which does not start ci.yml: close and reopen this pull request once so ci-pass runs, then merge." \
               "" \

@@ -1,0 +1,4 @@
+/lib/
+# Written by scripts/build_ffi.sh and scripts/fetch_release_archive.sh for the
+# host platform; the digest differs per machine and per archive.
+/archive_stamp_*.go

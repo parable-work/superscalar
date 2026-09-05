@@ -26,7 +26,7 @@ gen_note = "@generated; do not edit"
 source = "builtin"
 
 [go]
-out = "bindings/go/generated.go"
+out = "go/generated.go"
 package = "superscalar"
 module = "github.com/parable-work/superscalar/go"
 header = "crates/ffi/superscalar.h"

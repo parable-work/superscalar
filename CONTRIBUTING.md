@@ -182,7 +182,7 @@ A release is four steps, each started by a person:
    per-runner manifests and refuses a set whose artifacts were not all built
    from the tag's commit, creates the GitHub release with build provenance
    and an SBOM, publishes to crates.io, npm and PyPI, and opens a second pull
-   request that pins `bindings/go/release.pin` to the release's manifest
+   request that pins `go/release.pin` to the release's manifest
    digest. Close and reopen that one too, then merge it.
 4. Merging the pin pull request cuts the Go module tag `go/vX.Y.Z`
    (`.github/workflows/go-module-tag.yml`) on the pin commit. `go get

@@ -3,7 +3,7 @@ name: go-module-tag
 # Cuts the go/vX.Y.Z tag for the Go module. A Go module in a subdirectory is
 # versioned by tags prefixed with that directory, so `go get` of
 # github.com/parable-work/superscalar/go@vX.Y.Z looks for go/vX.Y.Z. The tag
-# points at the commit that pins bindings/go/release.pin to the vX.Y.Z release
+# points at the commit that pins go/release.pin to the vX.Y.Z release
 # (the pull request opened by the go-pin job of release.yml), which is the
 # first commit at which the module can fetch and verify its archives, so it is
 # cut on that commit rather than on vX.Y.Z itself. Nothing needs to run on the
@@ -14,7 +14,7 @@ name: go-module-tag
 on:
   push:
     branches: [main]
-    paths: ["bindings/go/release.pin"]
+    paths: ["go/release.pin"]
 
 permissions:
   contents: read
@@ -41,11 +41,11 @@ jobs:
         # directory. Fail loudly instead of cutting a tag `go get` cannot use.
         run: |
           set -euo pipefail
-          module="$(sed -n 's/^module //p' bindings/go/go.mod)"
-          expected="github.com/${GITHUB_REPOSITORY}/bindings/go"
+          module="$(sed -n 's/^module //p' go/go.mod)"
+          expected="github.com/${GITHUB_REPOSITORY}/go"
           if [ "$module" != "$expected" ]; then
-            echo "bindings/go/go.mod declares module $module, but a module in bindings/go must be $expected" >&2
-            echo "(and its tags bindings/go/vX.Y.Z), or the directory must move to match the module path." >&2
+            echo "go/go.mod declares module $module, but a module in go/ must be $expected" >&2
+            echo "(and its tags go/vX.Y.Z), or the directory must move to match the module path." >&2
             exit 1
           fi
 
@@ -54,7 +54,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version="$(sed -n 's/^version=//p' bindings/go/release.pin | head -n 1)"
+          version="$(sed -n 's/^version=//p' go/release.pin | head -n 1)"
           if [ -z "$version" ]; then
             echo "release.pin has no version; nothing to tag"
             exit 0

@@ -8,7 +8,7 @@
 # starts .github/workflows/release.yml; it has to come from a person or a
 # personal token, because a tag pushed with the workflow token would not start
 # a workflow. The matching go/vX.Y.Z tag is not cut here: it follows the
-# release once its archive digest is pinned (bindings/go/release.pin), see
+# release once its archive digest is pinned (go/release.pin), see
 # CONTRIBUTING.md, "Releases".
 set -euo pipefail
 
