@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.astro/
+
+# The per-scalar reference is written by `superscalar docs` in CI on every
+# deploy. Only the hand-written index page is committed.
+src/content/docs/reference/*
+!src/content/docs/reference/index.md

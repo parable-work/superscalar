@@ -1,0 +1,6 @@
+# Single source of truth for the Rust pin. rustup and cargo read this file in
+# the repository root; CI does not inline a Rust version anywhere.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

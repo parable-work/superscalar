@@ -1,0 +1,37 @@
+# acme-scalars: a downstream extension of the scalar core, assembled into the
+# four bindings with the export macros. Its own workspace so it builds exactly
+# the way an external project would: through the crates' public surface, never
+# through the parent workspace.
+[workspace]
+resolver = "2"
+members = ["ext", "ffi", "napi", "python", "wasm"]
+# napi, python and wasm are cdylibs that only link inside their host runtime
+# (Node, CPython, wasm32); scripts/smoke.sh builds each one on its own.
+default-members = ["ext", "ffi"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Parable Work, Inc."]
+license = "Apache-2.0"
+repository = "https://github.com/parable-work/superscalar"
+publish = false
+
+[workspace.dependencies]
+acme-scalars = { path = "ext" }
+# A published downstream pins a crates.io version here; the example points at
+# the crates under crates/ two directories up. default-features = false leaves out each
+# binding crate's own built-in assembly (its `builtin` feature): the cdylibs
+# in this workspace carry exactly one expansion of each export macro.
+superscalar = { path = "../../crates/core" }
+superscalar-ffi = { path = "../../crates/ffi", default-features = false }
+superscalar-napi = { path = "../../crates/napi", default-features = false }
+# The Python crate's lib target is named superscalar_native (the module it
+# produces); the dependency rename lets Rust code use the package's own name.
+superscalar_python = { package = "superscalar-python", path = "../../crates/python", default-features = false }
+superscalar-wasm = { path = "../../crates/wasm", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }

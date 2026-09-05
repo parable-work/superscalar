@@ -1,0 +1,56 @@
+// {{ gen_note }}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScalarMetadata {
+    pub canonical_name: &'static str,
+    pub primitive: &'static str,
+    pub sql_type: &'static str,
+    pub json_schema_type: Option<&'static str>,
+    pub format: Option<&'static str>,
+    pub max_length: Option<usize>,
+    pub min_length: Option<usize>,
+    pub pattern: Option<&'static str>,
+    /// Comparability equivalence class, `None` when the scalar has none.
+    /// Field equality is NOT the comparability relation: two `None`s compare
+    /// equal, so a direct comparison answers `true` for every pair of unclassed
+    /// scalars. The relation is `ScalarDef::comparable_with`.
+    pub comparability_class: Option<&'static str>,
+    pub is_sortable: bool,
+}
+
+pub const SCALAR_METADATA: &[ScalarMetadata] = &[
+{% for e in entries %}    ScalarMetadata {
+        canonical_name: {{ e.canonical_literal }},
+        primitive: {{ e.primitive_literal }},
+        sql_type: {{ e.sql_type_literal }},
+        json_schema_type: {{ e.json_schema_type_literal }},
+        format: None,
+        max_length: {{ e.max_length_literal }},
+        min_length: {{ e.min_length_literal }},
+        pattern: {{ e.pattern_literal }},
+        comparability_class: {{ e.comparability_class_literal }},
+        is_sortable: {% if e.is_sortable %}true{% else %}false{% endif %},
+    },
+{% endfor %}];
+
+impl ScalarMetadata {
+    /// Flat (single-identifier) form of the canonical name, e.g.
+    /// "Contact.Email" -> "Contact_Email". Used where dotted names are not
+    /// valid identifiers (runtime schema payload keys, Arrow metadata).
+    pub fn flat_name(&self) -> String {
+        flat_scalar_name(self.canonical_name)
+    }
+}
+
+/// Derive the flat scalar name from a canonical name ("A.B" -> "A_B").
+/// Canonical segments are PascalCase and never contain underscores, so the
+/// mapping is bijective.
+pub fn flat_scalar_name(canonical_name: &str) -> String {
+    canonical_name.replace('.', "_")
+}
+
+pub fn scalar_metadata_by_canonical_name(name: &str) -> Option<&'static ScalarMetadata> {
+    SCALAR_METADATA
+        .iter()
+        .find(|scalar| scalar.canonical_name == name)
+}

@@ -1,0 +1,35 @@
+[package]
+name = "superscalar"
+description = "Scalar types library: one Rust core for every scalar's parse/normalize/validate, with an open registry that downstream extensions add to."
+# Package fields are inlined (not `*.workspace = true`) so the crate resolves as
+# a standalone path dependency from crates that are NOT part of this workspace
+# and from Dockerfiles that COPY only this crate's directory. Values match the
+# workspace [workspace.package] block.
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95.0"
+authors = ["Parable Work, Inc."]
+license = "Apache-2.0"
+repository = "https://github.com/parable-work/superscalar"
+
+[lib]
+name = "superscalar"
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
+once_cell = "1"
+phonenumber = "0.3"
+regex = "1.12"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.149", features = ["preserve_order"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+
+[dev-dependencies]
+# The parity gate compiles each scalar's DECLARED pattern to check it agrees with what
+# that scalar's implementation actually produces.
+regex = "1.12"
+serde_json = { version = "1.0.149", features = ["preserve_order"] }
+
+[lints]
+workspace = true

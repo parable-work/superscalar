@@ -1,0 +1,329 @@
+// {{ gen_note }}
+
+package {{ go.package }}
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// ScalarMetadata describes a single scalar type's identity and validation surface.
+type ScalarMetadata struct {
+	CanonicalName  string
+	Symbol         string
+	Primitive      string
+	Description    string
+	GoType         string
+	SQLType        string
+	JSONSchemaType string
+	Format         string
+	MaxLength      int
+	MinLength      int
+	Maximum        *int64
+	Minimum        *int64
+	Pattern        string
+	HasCustomNormalize bool
+	HasCustomParse     bool
+	HasCustomValidate  bool
+	HasValidator   bool
+	Examples       []string
+	// Comparability equivalence class, empty when the scalar has none.
+	// Field equality is NOT the comparability relation: absent is encoded
+	// here as the empty string, which is also the zero value a failed map
+	// lookup returns, so comparing two fields answers true for every pair
+	// of unclassed scalars and for every pair of names that do not exist.
+	// The relation is ComparableWith below, mirroring the Rust core's
+	// Registry::comparable_with.
+	ComparabilityClass string
+	IsSortable         bool
+}
+
+func scalarInt64Ptr(value int64) *int64 {
+	return &value
+}
+
+type ScalarPattern string
+
+func (p ScalarPattern) String() string {
+	return string(p)
+}
+
+func (p ScalarPattern) MatchString(value string) bool {
+	matched, err := regexp.MatchString(string(p), value)
+	return err == nil && matched
+}
+
+// Frozen scalar ids: the stable u32 C ABI contract, one constant per registry entry.
+const (
+{% for e in entries %}	scalarID{{ e.camel }} uint32 = {{ e.id }}
+{% endfor %})
+
+// ScalarIDByCanonical maps a canonical scalar string to its frozen u32 id.
+var ScalarIDByCanonical = map[string]uint32{
+{% for e in entries %}	{{ e.canonical_literal }}: {{ e.id }},
+{% endfor %}}
+
+{{ go.after_ids }}// VALID_SCALARS lists every canonical scalar name known to scalar-lib.
+var VALID_SCALARS = []{{ go.scalar_list_type }}{
+{% for e in entries %}	{{ go.scalar_list_type }}({{ e.canonical_literal }}),
+{% endfor %}}
+
+var validScalarsMap = func() map[{{ go.scalar_list_type }}]struct{} {
+	m := make(map[{{ go.scalar_list_type }}]struct{}, len(VALID_SCALARS))
+	for _, scalar := range VALID_SCALARS {
+		m[scalar] = struct{}{}
+	}
+	return m
+}()
+
+{% for e in entries %}// {{ e.canonical }} - {{ e.description_literal }}
+{% if e.is_metadata_alias or e.is_alias_member %}type {{ e.camel }} = {{ e.go_type }}
+{% else %}type {{ e.camel }} {{ e.go_type }}
+{% endif %}
+{% endfor %}
+{% for e in entries %}{% if e.reserved_words %}var {{ e.camel }}ReservedWords = map[string]bool{
+{% for word in e.reserved_words %}	{{ word.literal }}: true,
+{% endfor %}}
+
+{% endif %}{% endfor %}var SCALAR_METADATA = []ScalarMetadata{
+{% for e in metadata_entries %}	{
+		CanonicalName:  {{ e.canonical_literal }},
+		Symbol:         "{{ e.camel }}",
+		Primitive:      {{ e.primitive_literal }},
+		Description:    {{ e.description_literal }},
+		GoType:         {{ e.go_type_literal }},
+		SQLType:        {{ e.sql_type_literal }},
+		JSONSchemaType: {{ e.json_schema_type_literal }},
+		Format:         "",
+		MaxLength:      {{ e.max_length }},
+		MinLength:      {{ e.min_length }},
+		Maximum:        {{ e.maximum_literal }},
+		Minimum:        {{ e.minimum_literal }},
+		Pattern:        {{ e.pattern_literal }},
+		HasCustomNormalize: {% if e.has_custom_normalize %}true{% else %}false{% endif %},
+		HasCustomParse:     {% if e.has_custom_parse %}true{% else %}false{% endif %},
+		HasCustomValidate:  {% if e.has_custom_validate %}true{% else %}false{% endif %},
+		HasValidator:   {% if e.has_validator %}true{% else %}false{% endif %},
+		Examples:       []string{{ "{" }}{% for example in e.examples %}{{ example.literal }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
+		ComparabilityClass: {{ e.comparability_class_go }},
+		IsSortable: {% if e.is_sortable %}true{% else %}false{% endif %},
+	},
+{% endfor %}}
+
+var ScalarMetadataByCanonical = func() map[string]*ScalarMetadata {
+	m := make(map[string]*ScalarMetadata, len(SCALAR_METADATA))
+	for i := range SCALAR_METADATA {
+		m[SCALAR_METADATA[i].CanonicalName] = &SCALAR_METADATA[i]
+	}
+	return m
+}()
+
+// scalarAliasTargets maps an alias scalar's canonical name to its target's.
+// `alias_of` means one implementation under two ids, so the TARGET owns the
+// comparability class and the alias inherits it. ComparableWith resolves through
+// this map before it reads a class; reading the alias row's own class instead
+// breaks transitivity one hop out (the alias pair itself still answers true
+// because identity fires first, so the inconsistency hides where it was made).
+var scalarAliasTargets = map[string]string{
+{% for e in entries %}{% if e.is_alias %}	{{ e.canonical_literal }}: {{ e.alias_target_literal }},
+{% endif %}{% endfor %}}
+
+// ComparableWith reports whether comparing or joining values of the two named
+// scalars is meaningful. It mirrors ScalarDef::comparable_with in the Rust core:
+// aliases resolve first, a scalar is always comparable with itself, and two
+// distinct scalars are comparable only when both declare the same named class.
+//
+// Do NOT reimplement this as ComparabilityClass equality. Almost every scalar
+// carries the empty class, so field equality makes
+// the entire catalog mutually comparable, Contact.Email against
+// Contact.PhoneNumber included, which is the exact comparison the relation
+// exists to reject. The empty string is also what a ScalarMetadataByCanonical
+// miss yields, so field equality cannot tell "no class" from "no such scalar".
+//
+// Fails closed on a name with no metadata row: an unknown scalar, and a
+// scalar whose def sets metadata_omit and so has no comparability answer in
+// this binding, both report false even against themselves. That matches the
+// is_sortable allowlist, which answers "no" to a shape nobody declared.
+func ComparableWith(a, b string) bool {
+	if target, ok := scalarAliasTargets[a]; ok {
+		a = target
+	}
+	if target, ok := scalarAliasTargets[b]; ok {
+		b = target
+	}
+	metaA, metaB := ScalarMetadataByCanonical[a], ScalarMetadataByCanonical[b]
+	if metaA == nil || metaB == nil {
+		return false
+	}
+	if a == b {
+		return true
+	}
+	return metaA.ComparabilityClass != "" && metaA.ComparabilityClass == metaB.ComparabilityClass
+}
+
+func patternForCanonical(canonicalId string) string {
+	meta := ScalarMetadataByCanonical[canonicalId]
+	if meta == nil {
+		return ""
+	}
+	return meta.Pattern
+}
+
+{% for e in metadata_entries %}{% if e.has_pattern %}var {{ e.camel }}Pattern = ScalarPattern(patternForCanonical({{ e.canonical_literal }}))
+{% endif %}{% endfor %}
+{{ go.after_patterns }}func validationErrorsFromError(err error) []ValidationError {
+	if err == nil {
+		return nil
+	}
+	message := err.Error()
+	validator := "scalar"
+	if strings.Contains(message, "reserved") {
+		validator = "reservedWord"
+	} else if strings.HasPrefix(message, "pattern:") {
+		validator = "pattern"
+	} else if strings.HasPrefix(message, "length:") {
+		validator = "length"
+	} else if strings.HasPrefix(message, "range:") {
+		validator = "range"
+	} else if strings.HasPrefix(message, "enum:") {
+		validator = "enum"
+	} else if strings.HasPrefix(message, "empty:") {
+		validator = "required"
+	} else if strings.HasPrefix(message, "custom:") {
+		validator = "custom"
+	} else if strings.HasPrefix(message, "parse:") {
+		validator = "parse"
+	}
+	return []ValidationError{{ "{" }}{{ "{" }}Validator: validator, Message: message{{ "}" }}{{ "}" }}
+}
+
+func validateScalarValue(id uint32, value string) (bool, []ValidationError) {
+	if err := callScalarValidate(id, value); err != nil {
+		return false, validationErrorsFromError(err)
+	}
+	return true, nil
+}
+
+// scalarRequiredValueMissing reports whether a required scalar carries no value.
+// Numeric and boolean kinds are exempt: 0 and false are legitimate values that
+// Go cannot distinguish from an absent JSON key, so treating them as missing
+// rejects valid payloads. The Python (`is None`) and TypeScript (`=== null`)
+// bindings already accept them; this keeps Go in parity.
+func scalarRequiredValueMissing(value any) bool {
+	rv := reflect.ValueOf(value)
+	if !rv.IsValid() {
+		return true
+	}
+	switch rv.Kind() {
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return false
+	}
+	return rv.IsZero()
+}
+
+func scalarStringValue(value any) string {
+	switch v := value.(type) {
+	case EmbeddingVector:
+		encoded, err := json.Marshal([]float32(v))
+		if err == nil {
+			return string(encoded)
+		}
+	case GenericJSON:
+		return string(v)
+	case GenericStringMap:
+		encoded, err := json.Marshal(map[string]string(v))
+		if err == nil {
+			return string(encoded)
+		}
+	case TemporalDateTime:
+		return time.Time(v).Format(time.RFC3339Nano)
+	case TemporalDuration:
+		return time.Duration(v).String()
+	}
+	// Format via the underlying kind: fmt.Sprint on a scalar type whose
+	// String() delegates back here would recurse infinitely.
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.String:
+		return rv.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(rv.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(rv.Uint(), 10)
+	case reflect.Float32:
+		return strconv.FormatFloat(rv.Float(), 'g', -1, 32)
+	case reflect.Float64:
+		return strconv.FormatFloat(rv.Float(), 'g', -1, 64)
+	case reflect.Bool:
+		return strconv.FormatBool(rv.Bool())
+	}
+	return fmt.Sprint(value)
+}
+
+func ValidatorFor(canonicalId string) func(string) error {
+	switch canonicalId {
+{% for e in metadata_entries %}{% if e.has_validator %}	case {{ e.canonical_literal }}:
+		return func(value string) error { return callScalarValidate({{ e.id }}, value) }
+{% endif %}{% endfor %}	default:
+		return nil
+	}
+}
+
+{% for e in entries %}{% if not e.is_object %}// Parse{{ e.camel }} validates and returns the canonical form of a {{ e.canonical }} value.
+func Parse{{ e.camel }}(value string) (string, error) { return callScalarParse({{ e.id }}, value) }
+
+// Normalize{{ e.camel }} returns the canonical form of a {{ e.canonical }} value without enforcing shape.
+func Normalize{{ e.camel }}(value string) (string, error) { return callScalarNormalize({{ e.id }}, value) }
+
+// Validate{{ e.camel }} enforces the shape of a {{ e.canonical }} value.
+func Validate{{ e.camel }}(value string) error { return callScalarValidate({{ e.id }}, value) }
+
+{% if not e.is_alias_member %}
+func (v {{ e.camel }}) String() string {
+	return {% if e.go_type == "string" %}string(v){% else %}scalarStringValue(v){% endif %}
+}
+
+{% if e.go_type == "string" %}func (v {{ e.camel }}) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v {{ e.camel }}) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v {{ e.camel }}) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+{% endif %}
+{% if e.has_validator %}// Validate validates {{ e.camel }} and returns whether validation passed along with any errors.
+func (v {{ e.camel }}) Validate() (bool, []ValidationError) {
+	return validateScalarValue({{ e.id }}, {% if e.go_type == "string" %}string(v){% else %}scalarStringValue(v){% endif %})
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v {{ e.camel }}) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{ "{" }}{{ "{" }}Validator: "required", Message: "required field"{{ "}" }}{{ "}" }}
+	}
+	return v.Validate()
+}
+
+{% endif %}
+{% endif %}
+{% endif %}{% endfor %}
+{% for alias in legacy_aliases %}// {{ alias.name }} is a legacy scalar alias preserved for compatibility.
+type {{ alias.name }} = {{ alias.target }}
+{% if alias.parse_target %}
+var Parse{{ alias.name }} = {{ alias.parse_target }}
+{% endif %}
+
+{% endfor %}

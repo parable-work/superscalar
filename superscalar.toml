@@ -1,0 +1,65 @@
+# Codegen configuration for the built-in (generic) registry. Every package
+# name, import path, output path and native entry name the generated files
+# carry comes from here; the templates hold none of them. Paths are relative
+# to this file's directory.
+#
+#   cargo run -p superscalar-codegen                  regenerate
+#   cargo run -p superscalar-codegen -- --check       drift gate
+#   cargo run -p superscalar-codegen -- registry dump
+#   cargo run -p superscalar-codegen -- docs --out DIR [--check]
+#
+# Emitters are enabled by the presence of their section; `enabled = false`
+# turns one off without deleting its settings. Maps (`type_overrides`,
+# `type_renames`) are looked up by key and never iterated, so their order here
+# cannot change the output. A downstream extension keeps its own copy of this
+# file next to its xtask; `[extension.*]` tables are for that xtask and are
+# not read by the library.
+
+[package]
+name = "superscalar"
+gen_note = "@generated; do not edit"
+
+[registry]
+# The CLI only sees compiled-in scalars, so "builtin" is the one accepted
+# value. An extension runs the codegen library from its own xtask over its
+# assembled registry and ignores this section.
+source = "builtin"
+
+[go]
+out = "bindings/go/generated.go"
+package = "superscalar"
+module = "github.com/parable-work/superscalar/go"
+header = "crates/ffi/superscalar.h"
+cgo_library = "superscalar_ffi"
+gofmt = true
+
+# Canonical name -> Go type, replacing the def's type_mappings["go"]. The UUID
+# pair shares the hand-written `UUID` type in the Go package instead of the
+# catalog's `uuid.UUID` mapping.
+[go.type_overrides]
+"Identity.UUID" = "UUID"
+"Identity.UserID" = "UUID"
+
+[typescript]
+out = "bindings/typescript/src/generated.ts"
+package = "superscalar"
+backend_module = "./backend"
+validation_module = "./validation"
+
+# type_mappings["typescript"] value -> emitted TS type. The public TS surface
+# names Date through JSDate.
+[typescript.type_renames]
+Date = "JSDate"
+
+[python]
+out = "bindings/python/superscalar/_generated.py"
+package = "superscalar"
+native_module = "._native"
+
+[rust_metadata]
+out = "crates/core/src/scalar_metadata.rs"
+
+[docs]
+vectors = ["conformance/core-scalars.v2.json"]
+# Absolute link prefix for the generated reference pages, site base included.
+link_prefix = "/superscalar/reference"

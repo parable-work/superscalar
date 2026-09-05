@@ -1,0 +1,38 @@
+# superscalar workspace.
+#
+# This tree owns its own build and code generation: the pure-Rust core crate
+# (crates/core), the fixed C ABI crate (crates/ffi), the wasm-bindgen crate
+# (crates/wasm), the codegen library and CLI (crates/codegen), the PyO3 crate
+# (crates/python) and the napi crate (crates/napi).
+[workspace]
+resolver = "2"
+members = [
+  "crates/core",
+  "crates/ffi",
+  "crates/wasm",
+  "crates/codegen",
+  "crates/python",
+  "crates/napi",
+]
+# wasm is a cdylib that only links on wasm32; build it with wasm-pack
+# (crates/wasm/scripts/wasm_smoke.sh), not the host default `cargo test`/`cargo build`.
+# python is a PyO3 cdylib built by maturin (bindings/python/scripts/py_smoke.sh).
+# napi is a napi cdylib built by `napi build` (bindings/typescript/scripts/ts_smoke.sh);
+# its undefined node symbols only resolve at addon load, so it stays out of the
+# host default build.
+default-members = ["crates/core", "crates/ffi", "crates/codegen"]
+# examples/acme-scalars is its own workspace: a downstream extension built the
+# way an external project would build it (examples/acme-scalars/scripts/smoke.sh).
+exclude = ["examples/acme-scalars"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95.0"
+authors = ["Parable Work, Inc."]
+license = "Apache-2.0"
+repository = "https://github.com/parable-work/superscalar"
+
+# Shared lints; member crates opt in with `[lints] workspace = true`.
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }

@@ -1,0 +1,1561 @@
+{
+  "meta": {
+    "version": 2,
+    "source_language": "rust-core",
+    "source_package": "core",
+    "non_sortable_count": 4,
+    "comparability_classes": {
+      "temporal_instant": ["Temporal.Date", "Temporal.DateTime"]
+    },
+    "description": "Canonical scalar parity vectors for the SuperScalar Rust core. Keys are canonical ScalarId strings. Built by a differential harness over the four legacy implementations: where they agree the consensus is canonical; where they disagree the choice is recorded in a `canonical_choice` note on the affected vector. The Rust core must reproduce every vector. This file IS the divergence catalog. `metadata` is a separate section: a transcript of the generated `core/src/scalar_metadata.rs` table (regenerate with `python3 parity/gen_core_scalars_metadata.py`), covering the scalars that have a metadata row. The scalars listed in `metadata_excluded` appear in `scalars` and not in `metadata`; `set(scalars) - set(metadata) == set(metadata_excluded)` is asserted by all four readers. `meta.non_sortable_count` is hand-maintained beside the generated `metadata` section: an expectation derived from the transcript it checks would assert nothing, so the generator must never write it. `meta.comparability_classes` is hand-maintained on the same terms and for the same reason: it maps each comparability class to its sorted member list, and all four readers derive the same map from the `metadata` rows and compare. A member list rather than a count, because a count cannot catch a class attached to the wrong scalar."
+  },
+  "metadata_excluded": [],
+  "metadata": {
+    "Auth.JWT": { "comparability_class": null, "is_sortable": true },
+    "Auth.Password": { "comparability_class": null, "is_sortable": true },
+    "Contact.Email": { "comparability_class": null, "is_sortable": true },
+    "Contact.PhoneNumber": { "comparability_class": null, "is_sortable": true },
+    "Crypto.RSAPrivateKey": { "comparability_class": null, "is_sortable": true },
+    "Crypto.RSAPublicKey": { "comparability_class": null, "is_sortable": true },
+    "Design.Color": { "comparability_class": null, "is_sortable": true },
+    "Embedding.Vector": { "comparability_class": null, "is_sortable": false },
+    "File.SizeBytes": { "comparability_class": null, "is_sortable": true },
+    "Finance.Money": { "comparability_class": null, "is_sortable": true },
+    "Generic.Int64": { "comparability_class": null, "is_sortable": true },
+    "Generic.JSON": { "comparability_class": null, "is_sortable": false },
+    "Generic.Probability": { "comparability_class": null, "is_sortable": true },
+    "Generic.StringMap": { "comparability_class": null, "is_sortable": false },
+    "Geo.Location": { "comparability_class": null, "is_sortable": false },
+    "Identity.Name": { "comparability_class": null, "is_sortable": true },
+    "Identity.Slug": { "comparability_class": null, "is_sortable": true },
+    "Identity.UUID": { "comparability_class": null, "is_sortable": true },
+    "Identity.UserID": { "comparability_class": null, "is_sortable": true },
+    "Localization.Locale": { "comparability_class": null, "is_sortable": true },
+    "Network.DomainName": { "comparability_class": null, "is_sortable": true },
+    "Network.IpAddress": { "comparability_class": null, "is_sortable": true },
+    "Network.Uri": { "comparability_class": null, "is_sortable": true },
+    "Network.Url": { "comparability_class": null, "is_sortable": true },
+    "Temporal.CronExpression": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Date": { "comparability_class": "temporal_instant", "is_sortable": true },
+    "Temporal.DateTime": { "comparability_class": "temporal_instant", "is_sortable": true },
+    "Temporal.Duration": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Milliseconds": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Month": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Quarter": { "comparability_class": null, "is_sortable": true },
+    "Temporal.QuarterYear": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Time": { "comparability_class": null, "is_sortable": true },
+    "Temporal.TimeZone": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Year": { "comparability_class": null, "is_sortable": true },
+    "Text.Markdown": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Seconds": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Minutes": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Hours": { "comparability_class": null, "is_sortable": true },
+    "Temporal.Days": { "comparability_class": null, "is_sortable": true },
+    "Text.Sql": { "comparability_class": null, "is_sortable": true },
+    "Crypto.SHA256": { "comparability_class": null, "is_sortable": true },
+    "Network.DnsLabel": { "comparability_class": null, "is_sortable": true },
+    "Temporal.RecurrenceRule": { "comparability_class": null, "is_sortable": true }
+  },
+  "scalars": {
+    "Contact.Email": {
+      "accepted": [
+        {
+          "input": "TEST@EXAMPLE.COM",
+          "normalized": "test@example.com"
+        },
+        {
+          "input": "  user@example.com  ",
+          "normalized": "user@example.com"
+        },
+        {
+          "input": " User@Example.COM ",
+          "normalized": "user@example.com"
+        },
+        {
+          "input": "user+tag@example.com",
+          "normalized": "user+tag@example.com"
+        },
+        {
+          "input": "first.last@mail.example.com",
+          "normalized": "first.last@mail.example.com"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "not-an-email",
+          "validator": "pattern"
+        },
+        {
+          "input": "user@",
+          "validator": "pattern"
+        },
+        {
+          "input": "user@example",
+          "validator": "pattern"
+        },
+        {
+          "input": "user@example.c",
+          "validator": "pattern"
+        },
+        {
+          "input": "",
+          "validator": "empty"
+        },
+        {
+          "input": "   ",
+          "validator": "empty"
+        }
+      ]
+    },
+    "Identity.UUID": {
+      "accepted": [
+        {
+          "input": "123e4567-e89b-12d3-a456-426614174000",
+          "normalized": "YQJpYwUwvbaLOwTUr4thA"
+        },
+        {
+          "input": "1q3ftxYKI0brlcFFxCGBu",
+          "normalized": "1q3ftxYKI0brlcFFxCGBu"
+        },
+        {
+          "input": "00000000-0000-0000-0000-000000000000",
+          "normalized": "0"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "invalid-uuid",
+          "validator": "parse"
+        },
+        {
+          "input": "8AMTIJy4UWqRr3zMiOATlN",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Design.Color": {
+      "accepted": [
+        {
+          "input": "#F00",
+          "normalized": "#FF0000FF"
+        },
+        {
+          "input": "#FF5733",
+          "normalized": "#FF5733FF"
+        },
+        {
+          "input": "#FF573380",
+          "normalized": "#FF573380"
+        },
+        {
+          "input": "red",
+          "normalized": "#FF0000FF"
+        },
+        {
+          "input": "aqua",
+          "normalized": "#00FFFFFF"
+        },
+        {
+          "input": "navy",
+          "normalized": "#000080FF"
+        },
+        {
+          "input": "orange",
+          "normalized": "#FFA500FF"
+        },
+        {
+          "input": "coral",
+          "normalized": "#FF7F50FF"
+        },
+        {
+          "input": "gray",
+          "normalized": "#808080FF"
+        },
+        {
+          "input": "grey",
+          "normalized": "#808080FF"
+        },
+        {
+          "input": "cornflowerblue",
+          "normalized": "#6495EDFF"
+        },
+        {
+          "input": "darkolivegreen",
+          "normalized": "#556B2FFF"
+        },
+        {
+          "input": "REBECCAPURPLE",
+          "normalized": "#663399FF"
+        },
+        {
+          "input": "transparent",
+          "normalized": "#00000000"
+        },
+        {
+          "input": "rgba(255, 0, 0, 0.5)",
+          "normalized": "#FF000080"
+        },
+        {
+          "input": "hsl(120, 100%, 50%)",
+          "normalized": "#00FF00FF"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "notacolor",
+          "validator": "parse"
+        },
+        {
+          "input": "#GGG",
+          "validator": "parse"
+        },
+        {
+          "input": "rgb(256, 0, 0)",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Contact.PhoneNumber": {
+      "accepted": [
+        {
+          "input": "+1 (415) 555-2671",
+          "normalized": "+14155552671"
+        },
+        {
+          "input": "+44 20 7183 8750",
+          "normalized": "+442071838750"
+        },
+        {
+          "input": "+33 1 23 45 67 89",
+          "normalized": "+33123456789"
+        },
+        {
+          "input": "+49 30 12345678",
+          "normalized": "+493012345678"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "4155552671",
+          "validator": "custom"
+        },
+        {
+          "input": "123",
+          "validator": "custom"
+        },
+        {
+          "input": "",
+          "validator": "custom"
+        }
+      ]
+    },
+    "Temporal.DateTime": {
+      "accepted": [
+        {
+          "input": "2026-01-15T12:00:00Z",
+          "normalized": "2026-01-15T12:00:00Z"
+        },
+        {
+          "input": "2026-06-15T14:30:45Z",
+          "normalized": "2026-06-15T14:30:45Z"
+        },
+        {
+          "input": "2026-01-15T12:00:00.5Z",
+          "normalized": "2026-01-15T12:00:00.5Z",
+          "canonical_choice": "Sub-seconds PRESERVED in Go time.RFC3339Nano minimal form (keep the fraction, trim trailing zeros): canonical output is ...00.5Z, NOT JS toISOString's padded .500Z. NOTE: the legacy Go scalar's MarshalJSON uses time.RFC3339 (no fraction) and actually DROPS sub-seconds to ...00Z; preserving them is the deliberate improvement over the legacy impl, recorded here as canonical. Flagged for human review (see core/src/scalars/datetime.rs)."
+        },
+        {
+          "input": "2026-01-15T12:00:00+05:00",
+          "normalized": "2026-01-15T12:00:00+05:00",
+          "canonical_choice": "RFC3339 preserves the original UTC offset, NOT JS toISOString() which converts to UTC Z (2026-01-15T07:00:00.000Z). The core MUST keep the +05:00 offset; this records RFC3339 as canonical over toISOString() for non-Z offsets."
+        },
+        {
+          "input": "2026-06-15 14:30:45",
+          "normalized": "2026-06-15T14:30:45Z",
+          "canonical_choice": "SQL space-separated form (Go dateparse), interpreted as UTC."
+        },
+        {
+          "input": "2026-05-29 14:52:58.615435+00",
+          "normalized": "2026-05-29T14:52:58.615435Z",
+          "canonical_choice": "PostgreSQL TIMESTAMPTZ text form with an hour-only UTC offset."
+        },
+        {
+          "input": "Mon, 15 Jun 2026 14:30:45 GMT",
+          "normalized": "2026-06-15T14:30:45Z",
+          "canonical_choice": "HTTP-date / RFC2822 GMT form -> UTC Z."
+        },
+        {
+          "input": "Mon, 15 Jun 2026 14:30:45 -0700",
+          "normalized": "2026-06-15T14:30:45-07:00",
+          "canonical_choice": "RFC2822 numeric offset preserved (not normalized to UTC)."
+        },
+        {
+          "input": "2026-06-15",
+          "normalized": "2026-06-15T00:00:00Z",
+          "canonical_choice": "Date-only -> midnight UTC (Go dateparse)."
+        }
+      ],
+      "rejected": [
+        {
+          "input": "not-a-date",
+          "validator": "parse"
+        },
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "01/02/24",
+          "validator": "parse",
+          "note": "2-digit year must reject, not corrupt into year 0001 (symmetric with Temporal.Date; feeds coverage min/max via parse_temporal_date_time)."
+        },
+        {
+          "input": "24-06-15T09:00:00",
+          "validator": "parse",
+          "note": "1-2 digit leading year must reject, not corrupt into year 0024."
+        },
+        {
+          "input": "0001-01-01T00:00:00Z",
+          "validator": "parse",
+          "note": "Go zero-time / .NET DateTime.MinValue sentinel must not bucket as a real calendar date."
+        },
+        {
+          "input": "1786550463000",
+          "validator": "parse",
+          "note": "Bare epoch counts are never guessed from digit count. The 12..=13-digit unix-ms acceptance (Gmail internalDate) is deleted; declared x-temporal-format decoding owns epoch wire values."
+        },
+        {
+          "input": "100000000000",
+          "validator": "parse",
+          "note": "12-digit bound of the deleted unix-ms heuristic; rejected like every other bare count."
+        }
+      ]
+    },
+    "Temporal.Date": {
+      "accepted": [
+        {
+          "input": "2025-01-01",
+          "normalized": "2025-01-01"
+        },
+        {
+          "input": "2025/01/15",
+          "normalized": "2025-01-15"
+        },
+        {
+          "input": "01/15/2025",
+          "normalized": "2025-01-15"
+        },
+        {
+          "input": "January 15, 2025",
+          "normalized": "2025-01-15"
+        },
+        {
+          "input": "Jan 15, 2025",
+          "normalized": "2025-01-15"
+        },
+        {
+          "input": "2025-01-15T12:00:00Z",
+          "normalized": "2025-01-15"
+        },
+        {
+          "input": "  2025-01-01  ",
+          "normalized": "2025-01-01"
+        },
+        {
+          "input": "2024-06-15T09:00:00",
+          "normalized": "2024-06-15"
+        },
+        {
+          "input": "2024-01-02 03:04:05",
+          "normalized": "2024-01-02"
+        },
+        {
+          "input": "2026-05-29 14:52:58.615435+00",
+          "normalized": "2026-05-29",
+          "canonical_choice": "Temporal.Date accepts every Temporal.DateTime input and drops the time."
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "not-a-date",
+          "validator": "parse"
+        },
+        {
+          "input": "2025-13-01",
+          "validator": "parse"
+        },
+        {
+          "input": "01/02/24",
+          "validator": "parse"
+        },
+        {
+          "input": "12/31/24",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Duration": {
+      "accepted": [
+        {
+          "input": "30s",
+          "normalized": "30s"
+        },
+        {
+          "input": "1h30m",
+          "normalized": "1h30m0s"
+        },
+        {
+          "input": "500ms",
+          "normalized": "500ms"
+        },
+        {
+          "input": "1.5h",
+          "normalized": "1h30m0s"
+        },
+        {
+          "input": "500us",
+          "normalized": "500us"
+        },
+        {
+          "input": "500\u00b5s",
+          "normalized": "500us"
+        },
+        {
+          "input": "500\u03bcs",
+          "normalized": "500us"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "foo",
+          "validator": "parse"
+        },
+        {
+          "input": "",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Generic.JSON": {
+      "accepted": [
+        {
+          "input": "{\"k\":1}",
+          "normalized": "{\"k\":1}"
+        },
+        {
+          "input": "[1,2,3]",
+          "normalized": "[1,2,3]"
+        },
+        {
+          "input": "\"text\"",
+          "normalized": "\"text\""
+        },
+        {
+          "input": "42",
+          "normalized": "42"
+        },
+        {
+          "input": "true",
+          "normalized": "true"
+        },
+        {
+          "input": "null",
+          "normalized": "null"
+        },
+        {
+          "input": "{ \"z\": 1, \"a\": 2 }",
+          "normalized": "{\"z\":1,\"a\":2}",
+          "note": "canonical = parse + re-serialize: whitespace compacted; key order preserved (z before a), not sorted -- serde_json preserve_order"
+        },
+        {
+          "input": "{\n  \"b\": 1,\n  \"a\": 2\n}",
+          "normalized": "{\"b\":1,\"a\":2}",
+          "note": "pretty-printed input collapses to compact form; key order preserved"
+        },
+        {
+          "input": "{\"outer\": {\"y\": 1, \"x\": 2}, \"list\": [ 1 , 2 ]}",
+          "normalized": "{\"outer\":{\"y\":1,\"x\":2},\"list\":[1,2]}",
+          "note": "nested object key order preserved, inner array whitespace compacted"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "{",
+          "validator": "parse"
+        },
+        {
+          "input": "not-json",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Month": {
+      "accepted": [
+        {
+          "input": "1",
+          "normalized": "01"
+        },
+        {
+          "input": "01",
+          "normalized": "01"
+        },
+        {
+          "input": "12",
+          "normalized": "12"
+        },
+        {
+          "input": "Feb",
+          "normalized": "02"
+        },
+        {
+          "input": "February",
+          "normalized": "02"
+        },
+        {
+          "input": "FEBRUARY",
+          "normalized": "02"
+        },
+        {
+          "input": "Sep",
+          "normalized": "09"
+        },
+        {
+          "input": "  Feb  ",
+          "normalized": "02"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "0",
+          "validator": "parse"
+        },
+        {
+          "input": "13",
+          "validator": "parse"
+        },
+        {
+          "input": "Smarch",
+          "validator": "parse"
+        },
+        {
+          "input": "001",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.QuarterYear": {
+      "accepted": [
+        {
+          "input": "2025-Q1",
+          "normalized": "2025-Q1"
+        },
+        {
+          "input": "2025-q1",
+          "normalized": "2025-Q1"
+        },
+        {
+          "input": "Q1/2025",
+          "normalized": "2025-Q1"
+        },
+        {
+          "input": "Q1-2025",
+          "normalized": "2025-Q1"
+        },
+        {
+          "input": "Q1-25",
+          "normalized": "2025-Q1"
+        },
+        {
+          "input": "Q4-00",
+          "normalized": "2000-Q4"
+        },
+        {
+          "input": "  2025-Q1  ",
+          "normalized": "2025-Q1"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "2025-Q0",
+          "validator": "parse"
+        },
+        {
+          "input": "2025-Q5",
+          "validator": "parse"
+        },
+        {
+          "input": "Q1 2025",
+          "validator": "parse"
+        },
+        {
+          "input": "Q1-202",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Finance.Money": {
+      "accepted": [
+        {
+          "input": "1000",
+          "normalized": "1000"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": " 100 ",
+          "normalized": "100"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-500",
+          "validator": "range",
+          "canonical_choice": "Declared @scalarMinimum(0) wins over the single Rust impl, which omitted the range check and accepted negatives (write vectors from the declared spec, not from one implementation's bug). Realized by the generic Int directive engine."
+        },
+        {
+          "input": "",
+          "validator": "parse"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        }
+      ]
+    },
+    "Auth.JWT": {
+      "accepted": [
+        {
+          "input": "aaa.bbb.ccc",
+          "normalized": "aaa.bbb.ccc"
+        },
+        {
+          "input": "eyJhbGc.cGF5bG9hZA.SflKxwRJ",
+          "normalized": "eyJhbGc.cGF5bG9hZA.SflKxwRJ",
+          "note": "Synthetic JWT-shaped test vector (3 base64url segments), NOT a real credential -- exercises the Auth.JWT three-part pattern with a realistic header segment. The payload segment is deliberately de-fanged (does not begin with the `ey` prefix) so Datadog's `Generic JSON Web Token` secret detector does not raise a false positive on corpus test data, while the value still validates against the scalar's `^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$` pattern."
+        }
+      ],
+      "rejected": [
+        {
+          "input": "notajwt",
+          "validator": "pattern"
+        },
+        {
+          "input": "a.b",
+          "validator": "pattern"
+        },
+        {
+          "input": "",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Generic.Int64": {
+      "accepted": [
+        {
+          "input": "1000",
+          "normalized": "1000"
+        },
+        {
+          "input": "-5",
+          "normalized": "-5"
+        },
+        {
+          "input": "007",
+          "normalized": "7"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "abc",
+          "validator": "parse"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        }
+      ]
+    },
+    "Network.IpAddress": {
+      "accepted": [
+        {
+          "input": "192.168.1.1",
+          "normalized": "192.168.1.1"
+        },
+        {
+          "input": "10.0.0.255",
+          "normalized": "10.0.0.255"
+        },
+        {
+          "input": "::1",
+          "normalized": "::1"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "999.1.1.1",
+          "validator": "pattern"
+        },
+        {
+          "input": "not-an-ip",
+          "validator": "pattern"
+        },
+        {
+          "input": "",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Geo.Location": {
+      "accepted": [
+        {
+          "input": "{\"lat\":37.7749,\"lon\":-122.4194}",
+          "normalized": "{\"lat\":37.7749,\"lon\":-122.4194}"
+        },
+        {
+          "input": "37.7749,-122.4194",
+          "normalized": "{\"lat\":37.7749,\"lon\":-122.4194}",
+          "canonical_choice": "Canonical form is the Object {lat,lon} (TS impl + POINT SQL); the legacy 'lat,lon' string is accepted on input and normalized to the object."
+        }
+      ],
+      "rejected": [
+        {
+          "input": "not-a-location",
+          "validator": "parse"
+        },
+        {
+          "input": "",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Auth.Password": {
+      "accepted": [
+        {
+          "input": "hunter2!",
+          "normalized": "hunter2!"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "short",
+          "validator": "length"
+        }
+      ]
+    },
+    "Crypto.RSAPrivateKey": {
+      "accepted": [],
+      "rejected": [
+        {
+          "input": "not-a-pem",
+          "validator": "pattern"
+        },
+        {
+          "input": "",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Crypto.RSAPublicKey": {
+      "accepted": [],
+      "rejected": [
+        {
+          "input": "not-a-pem",
+          "validator": "pattern"
+        },
+        {
+          "input": "",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Crypto.SHA256": {
+      "accepted": [
+        {
+          "input": "0000000000000000000000000000000000000000000000000000000000000000",
+          "normalized": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "input": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "normalized": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "length"
+        },
+        {
+          "input": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde",
+          "validator": "length"
+        },
+        {
+          "input": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
+          "validator": "length"
+        },
+        {
+          "input": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+          "validator": "pattern"
+        },
+        {
+          "input": "g123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Embedding.Vector": {
+      "accepted": [
+        {
+          "input": "[0.1,0.2,0.3]",
+          "normalized": "[0.1,0.2,0.3]"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "notavector",
+          "validator": "parse"
+        },
+        {
+          "input": "[1,2,",
+          "validator": "parse"
+        }
+      ]
+    },
+    "File.SizeBytes": {
+      "accepted": [
+        {
+          "input": "204800",
+          "normalized": "204800"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-1",
+          "validator": "range"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Generic.Probability": {
+      "accepted": [
+        {
+          "input": "0.75",
+          "normalized": "0.75"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": "1",
+          "normalized": "1"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "2",
+          "validator": "range"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Generic.StringMap": {
+      "accepted": [
+        {
+          "input": "{\"a\":\"b\"}",
+          "normalized": "{\"a\":\"b\"}"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "not json",
+          "validator": "parse"
+        },
+        {
+          "input": "[1,2,3]",
+          "validator": "custom"
+        }
+      ]
+    },
+    "Identity.Name": {
+      "accepted": [
+        {
+          "input": "A Name",
+          "normalized": "A Name"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "A",
+          "validator": "length"
+        }
+      ]
+    },
+    "Identity.Slug": {
+      "accepted": [
+        {
+          "input": "acme-corp",
+          "normalized": "acme-corp"
+        },
+        {
+          "input": "q1_sales",
+          "normalized": "q1_sales"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "Acme",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Identity.UserID": {
+      "accepted": [
+        {
+          "input": "YQJpYwUwvbaLOwTUr4thA",
+          "normalized": "YQJpYwUwvbaLOwTUr4thA"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "invalid-uuid",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Localization.Locale": {
+      "accepted": [
+        {
+          "input": "en-US",
+          "normalized": "en-US"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "english",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Network.DomainName": {
+      "accepted": [
+        {
+          "input": "example.com",
+          "normalized": "example.com"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "not a domain",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Network.Uri": {
+      "accepted": [
+        {
+          "input": "postgres://user:pass@localhost:5432/dbname",
+          "normalized": "postgres://user:pass@localhost:5432/dbname"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "notauri",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Network.Url": {
+      "accepted": [
+        {
+          "input": "https://www.example.com/example/path",
+          "normalized": "https://www.example.com/example/path"
+        },
+        {
+          "input": "example.com",
+          "normalized": "https://example.com",
+          "canonical_choice": "Scheme-less host gets https:// prepended in normalize: a website field accepts 'acme.com'. Replaces the legacy hand-written TS normalizeNetworkUrl mirror; prepend now lives once in the Rust core (core/src/scalars/network_url.rs)."
+        },
+        {
+          "input": "www.acme.com/path",
+          "normalized": "https://www.acme.com/path"
+        },
+        {
+          "input": "  http://x.io  ",
+          "normalized": "http://x.io",
+          "canonical_choice": "Trimmed; existing http(s) scheme is preserved (not upgraded to https), scheme detection is case-insensitive."
+        }
+      ],
+      "rejected": [
+        {
+          "input": "noturl",
+          "validator": "pattern",
+          "note": "'noturl' -> 'https://noturl' after prepend, but the pattern needs a dotted host, so it stays rejected."
+        }
+      ]
+    },
+    "Temporal.CronExpression": {
+      "accepted": [
+        {
+          "input": "0 9 * * MON-FRI",
+          "normalized": "0 9 * * MON-FRI"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "not a cron",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Temporal.Milliseconds": {
+      "accepted": [
+        {
+          "input": "1000",
+          "normalized": "1000"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": " -1000 ",
+          "normalized": "-1000"
+        },
+        {
+          "input": "-9007199254740991",
+          "normalized": "-9007199254740991"
+        },
+        {
+          "input": "9007199254740991",
+          "normalized": "9007199254740991"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Seconds": {
+      "accepted": [
+        {
+          "input": "60",
+          "normalized": "60"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": " -60 ",
+          "normalized": "-60"
+        },
+        {
+          "input": "-9007199254740991",
+          "normalized": "-9007199254740991"
+        },
+        {
+          "input": "9007199254740991",
+          "normalized": "9007199254740991"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Minutes": {
+      "accepted": [
+        {
+          "input": "5",
+          "normalized": "5"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": " -5 ",
+          "normalized": "-5"
+        },
+        {
+          "input": "-9007199254740991",
+          "normalized": "-9007199254740991"
+        },
+        {
+          "input": "9007199254740991",
+          "normalized": "9007199254740991"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Hours": {
+      "accepted": [
+        {
+          "input": "2",
+          "normalized": "2"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": " -2 ",
+          "normalized": "-2"
+        },
+        {
+          "input": "-9007199254740991",
+          "normalized": "-9007199254740991"
+        },
+        {
+          "input": "9007199254740991",
+          "normalized": "9007199254740991"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Days": {
+      "accepted": [
+        {
+          "input": "7",
+          "normalized": "7"
+        },
+        {
+          "input": "0",
+          "normalized": "0"
+        },
+        {
+          "input": " -7 ",
+          "normalized": "-7"
+        },
+        {
+          "input": "-9007199254740991",
+          "normalized": "-9007199254740991"
+        },
+        {
+          "input": "9007199254740991",
+          "normalized": "9007199254740991"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "9007199254740992",
+          "validator": "range"
+        },
+        {
+          "input": "1.5",
+          "validator": "parse"
+        },
+        {
+          "input": "abc",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Temporal.Quarter": {
+      "accepted": [
+        {
+          "input": "Q1",
+          "normalized": "Q1"
+        },
+        {
+          "input": "q4",
+          "normalized": "q4"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "Q5",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Temporal.Time": {
+      "accepted": [
+        {
+          "input": "12:25",
+          "normalized": "12:25"
+        },
+        {
+          "input": "09:30:00",
+          "normalized": "09:30:00"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "25:00",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Temporal.TimeZone": {
+      "accepted": [
+        {
+          "input": "America/New_York",
+          "normalized": "America/New_York"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "notazone",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Temporal.Year": {
+      "accepted": [
+        {
+          "input": "2025",
+          "normalized": "2025"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "0999",
+          "validator": "pattern"
+        }
+      ]
+    },
+    "Text.Markdown": {
+      "accepted": [
+        {
+          "input": "## Hello, World!",
+          "normalized": "## Hello, World!"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "length"
+        }
+      ]
+    },
+    "Text.Sql": {
+      "accepted": [
+        {
+          "input": "SELECT 1",
+          "normalized": "SELECT 1"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "length"
+        }
+      ]
+    },
+    "Network.DnsLabel": {
+      "accepted": [
+        {
+          "input": "mycompany",
+          "normalized": "mycompany"
+        },
+        {
+          "input": "acme-corp",
+          "normalized": "acme-corp"
+        },
+        {
+          "input": "A1",
+          "normalized": "A1"
+        },
+        {
+          "input": "a",
+          "normalized": "a"
+        },
+        {
+          "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "input": "  acme.okta.com  ",
+          "normalized": "acme"
+        },
+        {
+          "input": "https://Sunrun.my.salesforce.com/path",
+          "normalized": "Sunrun",
+          "canonical_choice": "Case preserved; first label extracted from a pasted host or URL. The extraction lives once in the Rust hook (core/src/scalars/network_dns_label.rs); it replaces the FE-only normalizeForPattern rescue."
+        },
+        {
+          "input": "HTTPS://acme.okta.com",
+          "normalized": "acme",
+          "canonical_choice": "Scheme detection is case-insensitive; the extracted label keeps its own casing."
+        }
+      ],
+      "rejected": [
+        {
+          "input": "-acme",
+          "validator": "pattern"
+        },
+        {
+          "input": "acme-",
+          "validator": "pattern"
+        },
+        {
+          "input": "not_a_domain!",
+          "validator": "pattern"
+        },
+        {
+          "input": "",
+          "validator": "pattern"
+        },
+        {
+          "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "validator": "length",
+          "note": "The directive engine checks max_length before the pattern."
+        },
+        {
+          "input": "a'; DROP TABLE users--",
+          "validator": "pattern",
+          "note": "Injection-style input from the scalar test-input catalog. A NUL-byte vector is unusable here: the cgo binding's CString truncates at NUL (pre-existing, all scalars)."
+        }
+      ]
+    },
+    "Temporal.RecurrenceRule": {
+      "accepted": [
+        {
+          "input": "FREQ=DAILY;BYHOUR=9;BYMINUTE=0",
+          "normalized": "FREQ=DAILY;BYMINUTE=0;BYHOUR=9"
+        },
+        {
+          "input": "FREQ=WEEKLY;BYDAY=MO,WE,FR;BYHOUR=9;BYMINUTE=0",
+          "normalized": "FREQ=WEEKLY;BYMINUTE=0;BYHOUR=9;BYDAY=MO,WE,FR"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYMONTHDAY=1;BYHOUR=9;BYMINUTE=0",
+          "normalized": "FREQ=MONTHLY;BYMINUTE=0;BYHOUR=9;BYMONTHDAY=1"
+        },
+        {
+          "input": "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU",
+          "normalized": "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYMONTHDAY=-1",
+          "normalized": "FREQ=MONTHLY;BYMONTHDAY=-1"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYDAY=2TU",
+          "normalized": "FREQ=MONTHLY;BYDAY=2TU"
+        },
+        {
+          "input": "FREQ=WEEKLY;BYDAY=WE,FR,MO",
+          "normalized": "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+        },
+        {
+          "input": "freq=weekly;byday=fr,mo",
+          "normalized": "FREQ=WEEKLY;BYDAY=MO,FR"
+        },
+        {
+          "input": "  FREQ=DAILY  ",
+          "normalized": "FREQ=DAILY"
+        },
+        {
+          "input": "RRULE:FREQ=DAILY",
+          "normalized": "FREQ=DAILY"
+        },
+        {
+          "input": "FREQ=DAILY;UNTIL=20261231T235959",
+          "normalized": "FREQ=DAILY;UNTIL=20261231T235959Z"
+        },
+        {
+          "input": "FREQ=DAILY;UNTIL=20261231",
+          "normalized": "FREQ=DAILY;UNTIL=20261231"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYSETPOS=2;BYDAY=TU",
+          "normalized": "FREQ=MONTHLY;BYDAY=TU;BYSETPOS=2"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "",
+          "validator": "empty"
+        },
+        {
+          "input": "   ",
+          "validator": "empty"
+        },
+        {
+          "input": "BYDAY=MO",
+          "validator": "custom"
+        },
+        {
+          "input": "FREQ",
+          "validator": "parse"
+        },
+        {
+          "input": "FREQ=",
+          "validator": "parse"
+        },
+        {
+          "input": "FREQ=FORTNIGHTLY",
+          "validator": "enum"
+        },
+        {
+          "input": "FREQ=DAILY;NOPE=1",
+          "validator": "enum"
+        },
+        {
+          "input": "FREQ=DAILY;FREQ=WEEKLY",
+          "validator": "custom"
+        },
+        {
+          "input": "FREQ=DAILY;UNTIL=20260101;COUNT=5",
+          "validator": "custom"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYSETPOS=2",
+          "validator": "custom"
+        },
+        {
+          "input": "DTSTART=20260101T090000Z;FREQ=DAILY",
+          "validator": "custom"
+        },
+        {
+          "input": "FREQ=DAILY;BYHOUR=24",
+          "validator": "range"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYMONTHDAY=0",
+          "validator": "range"
+        },
+        {
+          "input": "FREQ=MONTHLY;BYMONTHDAY=32",
+          "validator": "range"
+        },
+        {
+          "input": "FREQ=YEARLY;BYMONTH=13",
+          "validator": "range"
+        },
+        {
+          "input": "FREQ=DAILY;INTERVAL=0",
+          "validator": "range"
+        },
+        {
+          "input": "FREQ=WEEKLY;BYDAY=XX",
+          "validator": "enum"
+        },
+        {
+          "input": "FREQ=WEEKLY;BYDAY=0MO",
+          "validator": "range"
+        },
+        {
+          "input": "FREQ=DAILY;UNTIL=2026-12-31",
+          "validator": "parse"
+        }
+      ]
+    }
+  }
+}

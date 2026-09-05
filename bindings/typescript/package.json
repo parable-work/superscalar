@@ -1,0 +1,54 @@
+{
+  "name": "superscalar",
+  "version": "0.1.0",
+  "description": "Scalar types library: napi (Node) + WASM (browser) bindings over the Rust core.",
+  "license": "Apache-2.0",
+  "author": "Parable Work, Inc.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parable-work/superscalar"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./backend": {
+      "types": "./dist/backend.d.ts",
+      "browser": "./dist/esm/backend.browser.mjs",
+      "edge-light": "./dist/esm/backend.browser.mjs",
+      "workerd": "./dist/esm/backend.browser.mjs",
+      "import": "./dist/esm/backend.js",
+      "require": "./dist/backend.js",
+      "default": "./dist/backend.js"
+    },
+    "./validation": {
+      "types": "./dist/esm/validation.d.ts",
+      "import": "./dist/esm/validation.js",
+      "require": "./dist/validation.js"
+    },
+    "./scalars": {
+      "types": "./dist/esm/generated.d.ts",
+      "import": "./dist/esm/generated.js",
+      "require": "./dist/generated.js"
+    }
+  },
+  "napi": {
+    "name": "superscalar-napi"
+  },
+  "scripts": {
+    "build:napi": "napi build --platform --release --cargo-cwd ../../crates/napi native",
+    "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.browser.json && node scripts/fix-esm-extensions.mjs",
+    "build": "npm run build:napi && npm run build:ts",
+    "test": "node test/conformance.cjs && node test/comparability.cjs"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,4 @@
+# Clippy config for the superscalar workspace. msrv pins clippy suggestions to
+# the toolchain version (rust-toolchain.toml channel 1.95.0); clippy resolves
+# clippy.toml at the workspace root it runs in.
+msrv = "1.95.0"

@@ -1,0 +1,27 @@
+[package]
+name = "acme-scalars-napi"
+description = "Node addon over the assembled Acme registry: export_napi! applied to acme_scalars::registry."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "acme_scalars_napi"
+crate-type = ["cdylib"]
+
+[dependencies]
+acme-scalars.workspace = true
+superscalar-napi.workspace = true
+# The macro expansion names the framework as ::napi and ::napi_derive, so the
+# addon crate depends on both directly, pinned as the built-in addon pins them.
+napi = { version = "2", default-features = false, features = ["napi8"] }
+napi-derive = "2"
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true

@@ -1,0 +1,24 @@
+[package]
+name = "superscalar-codegen"
+description = "superscalar's own codegen: emits per-language ScalarId constants, canonical maps, and per-scalar parse/normalize/validate wrappers from the core registry. No generated unsafe."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "superscalar"
+path = "src/main.rs"
+
+[dependencies]
+minijinja = "2.21.0"
+superscalar = { path = "../core" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.149", features = ["preserve_order"] }
+serde_yaml_ng = "0.10"
+toml = "0.9"
+
+[lints]
+workspace = true

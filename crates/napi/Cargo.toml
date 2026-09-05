@@ -1,0 +1,37 @@
+[package]
+name = "superscalar-napi"
+description = "napi-rs binding of superscalar. The Node backend of the superscalar npm package; the browser backend is the wasm crate."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "superscalar_napi"
+# cdylib: the addon `napi build` ships. rlib: lets a downstream addon crate
+# depend on the export_napi! macro and the run_* helpers.
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[features]
+default = ["builtin"]
+# Emit the built-in assembly: export_napi! over Registry::builtin(). A downstream
+# that applies export_napi! to its own registry depends on this crate with
+# default-features = false; export_napi! rejects a build with this feature on
+# at compile time (BUILTIN_ASSEMBLY), since both registrations would otherwise
+# run and the built-in one would win.
+builtin = []
+
+[dependencies]
+superscalar = { path = "../core" }
+napi = { version = "2", default-features = false, features = ["napi8"] }
+napi-derive = "2"
+serde_json = "1.0.149"
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true
