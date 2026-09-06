@@ -136,11 +136,12 @@ jobs:
             manylinux: auto
             staticlib_only: "1"
             cargo_build: "cargo build"
-            napi_zig_flags: ""
+            napi_cross_flags: ""
           # linux: the ffi crate also emits a cdylib, so a cross target needs a
-          # linker; zig (via cargo-zigbuild) links both musl staticlib targets
-          # and both glibc napi targets, the latter against glibc 2.17 so the
-          # addon loads on older distributions than the runner's.
+          # linker; zig (via cargo-zigbuild) links both musl staticlib targets.
+          # The glibc napi addons link with the gcc toolchains that
+          # @napi-rs/cli v3 fetches for --use-napi-cross (glibc 2.17), so they
+          # load on older distributions than the runner's.
           - os: ubuntu-latest
             name: linux
             staticlib_targets: "x86_64-unknown-linux-musl aarch64-unknown-linux-musl"
@@ -150,7 +151,7 @@ jobs:
             manylinux: "2_17"
             staticlib_only: ""
             cargo_build: "cargo zigbuild"
-            napi_zig_flags: "--zig --zig-abi-suffix 2.17"
+            napi_cross_flags: "--use-napi-cross"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     env:
@@ -202,8 +203,8 @@ jobs:
 
       - name: "Install zig (linux: cross linker)"
         if: matrix.name == 'linux'
-        # The pip package bundles ziglang, so one pin covers both tools. napi's
-        # --zig looks for a `zig` executable; the wrapper provides one.
+        # The pip package bundles ziglang, so one pin covers both tools; the
+        # `zig` wrapper is what cargo-zigbuild execs for the musl staticlibs.
         run: |
           set -euo pipefail
           python3 -m pip install --quiet "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION"
@@ -218,7 +219,7 @@ jobs:
         working-directory: bindings/typescript
         env:
           NAPI_TARGETS: ${{ matrix.napi_targets }}
-          NAPI_ZIG_FLAGS: ${{ matrix.napi_zig_flags }}
+          NAPI_CROSS_FLAGS: ${{ matrix.napi_cross_flags }}
         run: |
           set -euo pipefail
           npm ci
@@ -226,7 +227,7 @@ jobs:
           for t in $NAPI_TARGETS; do
             echo "==> napi $t"
             # shellcheck disable=SC2086
-            npx napi build --platform --release --target "$t" --cargo-cwd ../../crates/napi $NAPI_ZIG_FLAGS "napi-out/$t"
+            npx napi build --platform --release --target "$t" --manifest-path ../../crates/napi/Cargo.toml $NAPI_CROSS_FLAGS --output-dir "napi-out/$t"
             cp "napi-out/$t"/*.node "$DIST_DIR/napi/"
           done
           # Only the addons travel. The CLI's generated index.js is not shipped:
@@ -368,9 +369,10 @@ jobs:
           cp -R "$DIST/wasm-node" wasm-node
           cp -R "$DIST/wasm-bundler" wasm-bundler
           npm run build:ts
-          # One npm dir per triple in package.json "napi.triples"; the addons
-          # from both runners are sorted into them by their platform suffix.
-          npx napi create-npm-dir -t .
+          # One npm dir per triple in package.json "napi.targets"; the addons
+          # from both runners are sorted into them by their platform suffix,
+          # and `napi artifacts` fails if any configured target is missing.
+          npx napi create-npm-dirs
           mkdir -p artifacts
           cp "$DIST"/napi/*.node artifacts/
           npx napi artifacts -d artifacts
