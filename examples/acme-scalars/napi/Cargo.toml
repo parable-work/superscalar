@@ -17,8 +17,8 @@ acme-scalars.workspace = true
 superscalar-napi.workspace = true
 # The macro expansion names the framework as ::napi and ::napi_derive, so the
 # addon crate depends on both directly, pinned as the built-in addon pins them.
-napi = { version = "2", default-features = false, features = ["napi8"] }
-napi-derive = "2"
+napi = { version = "3", default-features = false, features = ["napi8"] }
+napi-derive = "3"
 
 [build-dependencies]
 napi-build = "2"

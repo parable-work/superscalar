@@ -12,11 +12,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 export const NATIVE_PACKAGE_SCOPE = "@superscalar";
-// package.json "napi.name": the basename of the .node file the CLI emits.
+// package.json "napi.binaryName": the basename of the .node file the CLI emits.
 export const NATIVE_BINARY_NAME = "superscalar-napi";
 
 // `${process.platform}-${process.arch}` -> napi platformArchABI. Exactly the
-// triples in package.json "napi.triples"; linux is glibc only.
+// triples in package.json "napi.targets"; linux is glibc only.
 const TRIPLES: Readonly<Record<string, string>> = {
   "darwin-arm64": "darwin-arm64",
   "darwin-x64": "darwin-x64",
