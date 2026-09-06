@@ -21,11 +21,13 @@ cp -R "$WORKSPACE/crates/wasm/pkg-bundler" "$TS_DIR/wasm-bundler"
 
 cd "$TS_DIR" || exit 1
 npm install --silent
-# napi addon (Node backend, crate crates/napi) -> native/index.js + native/*.node
+# napi addon (Node backend, crate crates/napi) -> native/superscalar-napi.<triple>.node,
+# which src/native-addon.ts loads ahead of the @superscalar/<triple> package.
 npx napi build --platform --release --cargo-cwd ../../crates/napi native
 # CJS wrappers (backend.js/napi, generated, index) + ESM browser backend (.mjs).
 npx tsc -p tsconfig.json
 npx tsc -p tsconfig.browser.json
 node scripts/fix-esm-extensions.mjs
+node test/native-addon.cjs
 node test/conformance.cjs
 node test/comparability.cjs

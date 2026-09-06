@@ -221,7 +221,14 @@ publishing stops. The three publish jobs are gated on the repository variable
 crates.io only accepts a trusted publisher for a crate that already exists, so
 the first version of each crate is published by hand with a personal token
 before the publisher is registered; the exact registrations are written at
-the top of each publish job in `release.yml`.
+the top of each publish job in `release.yml`. On npm the main package is
+`superscalar` and the four native platform packages are `@superscalar/<triple>`
+(`darwin-arm64`, `darwin-x64`, `linux-x64-gnu`, `linux-arm64-gnu`); the
+`@superscalar` scope is an npmjs.com organization that must exist and be
+owned by the publisher before `RELEASE_PUBLISH_ENABLED` is set. The napi CLI
+can only name platform packages `<package>-<triple>`, so the assemble job
+renames the manifests it generates and `bindings/typescript/src/native-addon.ts`
+is the runtime loader; the CLI's generated `index.js` is not shipped.
 
 ### Behaviour changes and the changelog
 

@@ -1,5 +1,7 @@
 // Node backend selection: napi addon in Node, wasm in the browser (swapped via
 // the `browser` package.json condition). Both throw on reject.
+import { join } from "node:path";
+import { loadNativeAddon } from "./native-addon";
 
 export interface ScalarBackend {
   parse(id: number, value: string): string;
@@ -13,8 +15,10 @@ export interface ScalarBackend {
   coerceLenient(id: number, jsonIn: string): string;
 }
 
+// dist/backend.js -> ../native holds the locally built addon in a checkout;
+// a published install resolves @superscalar/<triple> instead.
 export function napiBackend(): ScalarBackend {
-  return require("../native/index.js") as ScalarBackend;
+  return loadNativeAddon<ScalarBackend>(require, join(__dirname, "..", "native"));
 }
 
 export function wasmBackend(): ScalarBackend {
@@ -42,9 +46,15 @@ export function wrapWasm(wasm: WasmExports): ScalarBackend {
 
 let cached: ScalarBackend | null = null;
 
+// The native addon when this host has one installed, else the wasm-node bundle
+// the main package ships; the two cores pass the same conformance corpus.
 export function loadBackend(): ScalarBackend {
   if (cached === null) {
-    cached = napiBackend();
+    try {
+      cached = napiBackend();
+    } catch {
+      cached = wasmBackend();
+    }
   }
   return cached;
 }

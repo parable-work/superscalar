@@ -10,8 +10,6 @@
   },
   "files": [
     "dist",
-    "native/index.js",
-    "native/index.d.ts",
     "wasm-node",
     "wasm-bundler"
   ],
@@ -63,7 +61,7 @@
     "build:napi": "napi build --platform --release --cargo-cwd ../../crates/napi native",
     "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.browser.json && node scripts/fix-esm-extensions.mjs",
     "build": "npm run build:napi && npm run build:ts",
-    "test": "node test/conformance.cjs && node test/comparability.cjs"
+    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs"
   },
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",

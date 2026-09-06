@@ -21,7 +21,11 @@ bump they require (minor when loosening, major when tightening).
   SBOM, and publishes to crates.io, npm and PyPI through trusted publishing.
   `release-pr.yml` and `scripts/bump_version.py` set the one shared version;
   `go-module-tag.yml` cuts `go/vX.Y.Z` once the Go module is pinned to a
-  release.
+  release. The npm native platform packages are scoped:
+  `@superscalar/darwin-arm64`, `@superscalar/darwin-x64`,
+  `@superscalar/linux-x64-gnu`, `@superscalar/linux-arm64-gnu`; the main
+  package `superscalar` loads the one for the host and falls back to its
+  WASM build when none is installed.
 - Go module: the module lives at `go/` so that its path
   `github.com/parable-work/superscalar/go` and its `go/vX.Y.Z` tags resolve;
   `include/superscalar.h` is committed inside the module, `release.pin`

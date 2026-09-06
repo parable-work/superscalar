@@ -1,7 +1,8 @@
 // Isolation conformance for the TypeScript binding: the full v2 corpus runs
 // through BOTH backends (napi and wasm), catching native-vs-WASM divergence.
 // Both backend factories are exported from the CJS Node entry (dist/backend.js):
-//  - napiBackend() binds the napi addon (native/index.js).
+//  - napiBackend() binds the napi addon (native/superscalar-napi.<triple>.node
+//    in this checkout; @superscalar/<triple> in a published install).
 //  - wasmBackend() binds the nodejs-target wasm bundle (wasm-node/).
 // Running the full corpus through each proves both cores agree and the wasm
 // path is live (reachable, not dead code). The browser/edge consumer resolves

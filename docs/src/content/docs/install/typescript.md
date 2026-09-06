@@ -19,12 +19,15 @@ Nothing is on npm yet. From v0.1.0:
 npm install superscalar
 ```
 
-The main package depends on per-platform optional packages
-(`superscalar-darwin-arm64`, `superscalar-darwin-x64`,
-`superscalar-linux-x64-gnu`, `superscalar-linux-arm64-gnu`) that carry the
-native addon; npm installs only the one for your platform. Pre-releases are
-published under the `next` dist-tag (`npm install superscalar@next`). The main package also ships a WASM
-fallback, so a platform without a prebuilt addon still works in Node.
+The main package depends on four optional platform packages under the
+`@superscalar` scope (`@superscalar/darwin-arm64`, `@superscalar/darwin-x64`,
+`@superscalar/linux-x64-gnu`, `@superscalar/linux-arm64-gnu`) that carry the
+native addon; npm installs only the one whose os, cpu and libc match. Never
+depend on a platform package directly: the main package requires the right
+one for the host at load time. Pre-releases are published under the `next`
+dist-tag (`npm install superscalar@next`). The main package also ships a WASM
+build of the same core; when no platform package is installed (another
+platform, musl, or optional dependencies skipped), Node falls back to it.
 
 ## Node or browser
 
