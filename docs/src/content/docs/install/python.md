@@ -14,9 +14,10 @@ built with PyO3 and maturin; there is nothing to compile on install.
 Python 3.9 or newer. Wheels use the stable ABI (`abi3-py39`), so one wheel
 per platform covers every supported interpreter version.
 
-Planned wheel matrix for the first release: manylinux and musllinux on
-x86_64 and aarch64, macOS arm64 and x86_64, plus a source distribution.
-Installing from the source distribution needs a Rust toolchain and maturin.
+Wheel matrix: manylinux (2_17) on x86_64 and aarch64, macOS arm64 and
+x86_64, plus a source distribution. Installing from the source distribution
+needs a Rust toolchain and maturin. Pre-releases are uploaded as PEP 440
+pre-release versions (`0.1.0a1`), which `pip` skips unless asked for `--pre`.
 
 ## Install
 

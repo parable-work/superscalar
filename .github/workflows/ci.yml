@@ -275,7 +275,7 @@ jobs:
         env:
           GOTOOLCHAIN: go${{ env.GO_VERSION }}
           CGO_ENABLED: "1"
-        run: bindings/go/scripts/go_smoke.sh
+        run: go/scripts/go_smoke.sh
 
       - name: codegen drift (all languages, incl gofmt)
         run: |

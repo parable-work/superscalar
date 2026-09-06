@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the superscalar-ffi static archive for the HOST platform and stage it
-# at bindings/go/lib/<goos>_<goarch>/libsuperscalar_ffi.a, where the cgo binding
+# at go/lib/<goos>_<goarch>/libsuperscalar_ffi.a, where the cgo binding
 # (cgo_ldflags_<goos>_<goarch>.go) links it. This is the local/CI host build path;
 # cross-platform release archives come from the release fetch script.
 # A Rust-free consumer build just needs this archive present.
@@ -8,7 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GO_DIR="$(dirname "$SCRIPT_DIR")"
-WORKSPACE="$(dirname "$(dirname "$GO_DIR")")"
+WORKSPACE="$(dirname "$GO_DIR")"
 
 GOOS="$(go env GOOS)"
 GOARCH="$(go env GOARCH)"

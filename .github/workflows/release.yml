@@ -1,24 +1,45 @@
 name: release
 
-# SKELETON. Cut from one `vX.Y.Z` tag: verify (full CI) -> per-platform build
-# matrix -> assemble (merge the per-platform manifests, refuse a set whose
-# artifacts disagree on the core commit SHA) -> publish to crates.io, npm and
-# PyPI via trusted publishing (OIDC, no stored tokens) -> GitHub release with
-# build provenance attestations -> docs site to GitHub Pages.
+# Cut from one `vX.Y.Z` tag (scripts/tag_release.sh). Job graph:
 #
-# Steps marked `TODO(W4)` are placeholders for the release-engineering
-# workstream; they print what they will do and exit 0. Nothing in this file
-# publishes anything until those steps are filled in, and every registry's
-# trusted-publisher entry must be registered against this filename
-# (release.yml) before the first publish.
+#   preflight -> verify (full ci.yml) -> build [darwin, linux] -> assemble
+#     -> github-release -> publish-crates, publish-npm, publish-pypi, go-pin, docs-deploy
+#
+# preflight reads the version from the tag and refuses a tag whose version the
+# tree does not carry (scripts/bump_version.py). build produces, per runner,
+# the static archives, the napi addons and the wheels for its two targets; the
+# linux runner also builds the header, the wasm bundles and the sdist. Each
+# runner writes a manifest.json stamped with the commit it built from.
+# assemble merges the two manifests without re-stamping and refuses a set whose
+# artifacts disagree on the core commit (scripts/verify_pinned.py), then packs
+# the release assets and the npm tarballs. github-release attaches everything
+# to a GitHub release with build provenance and an SBOM. The three publish jobs
+# use trusted publishing (OIDC; no registry tokens in this repository) and are
+# gated on the repository variable RELEASE_PUBLISH_ENABLED. go-pin opens the
+# pull request that pins the Go module to this release's manifest digest; its
+# merge cuts the go/vX.Y.Z tag (go-module-tag.yml).
+#
+# `workflow_dispatch` with dry_run runs preflight, verify, build and assemble on
+# any branch and uploads the assembled assets as a workflow artifact
+# (release-assets). It creates no release, publishes nothing and deploys
+# nothing.
+#
+# Every action is pinned to a commit SHA; tool versions come from tools.env and
+# rust-toolchain.toml only.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and assemble only (no release, publish or deploy). The only supported value is true; releases come from a v* tag."
+        type: boolean
+        default: true
 
-# Least-privilege default; every job that publishes escalates only the scopes
-# it needs (id-token for trusted publishing, contents for the GitHub release,
-# attestations for provenance, pages for the docs deploy).
+# Least-privilege default; every job that needs more escalates only the scopes
+# it needs (id-token for trusted publishing and provenance, contents for the
+# release and the pin branch, attestations for provenance, pages for docs).
 permissions:
   contents: read
 
@@ -29,55 +50,251 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  preflight:
+    name: preflight (tag matches the tree)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      pep440: ${{ steps.v.outputs.pep440 }}
+      tag: ${{ steps.v.outputs.tag }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      npm_dist_tag: ${{ steps.v.outputs.npm_dist_tag }}
+      dry_run: ${{ steps.v.outputs.dry_run }}
+      rust_channel: ${{ steps.v.outputs.rust_channel }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve the version and release mode
+        id: v
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$DRY_RUN_INPUT" != "true" ]; then
+              echo "workflow_dispatch only supports dry_run=true; a release is cut from a v* tag (scripts/tag_release.sh)" >&2
+              exit 1
+            fi
+            dry_run=true
+            python3 scripts/bump_version.py check
+            version="$(python3 scripts/bump_version.py current)"
+            tag="v$version"
+          else
+            dry_run=false
+            tag="$REF_NAME"
+            version="${tag#v}"
+            # Refuses a tag whose version the tree does not carry, and a
+            # version without a CHANGELOG section.
+            python3 scripts/bump_version.py check --expect "$version"
+          fi
+          prerelease=false
+          case "$version" in *-*) prerelease=true ;; esac
+          npm_dist_tag=latest
+          if [ "$prerelease" = true ]; then npm_dist_tag=next; fi
+          rust_channel="$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)"
+          {
+            echo "version=$version"
+            echo "pep440=$(python3 scripts/bump_version.py pep440 "$version")"
+            echo "tag=$tag"
+            echo "prerelease=$prerelease"
+            echo "npm_dist_tag=$npm_dist_tag"
+            echo "dry_run=$dry_run"
+            echo "rust_channel=$rust_channel"
+          } | tee -a "$GITHUB_OUTPUT"
+
   verify:
     name: verify (full ci)
+    needs: preflight
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml
 
   build:
     name: build ${{ matrix.name }}
-    needs: verify
+    needs: [preflight, verify]
     permissions:
       contents: read
     strategy:
       fail-fast: true
       matrix:
         include:
+          # macOS: both apple targets cross-build on the arm64 runner with the
+          # system linker. Header, wasm and sdist come from the linux runner.
           - os: macos-latest
             name: darwin
-            targets: "aarch64-apple-darwin x86_64-apple-darwin"
+            staticlib_targets: "aarch64-apple-darwin x86_64-apple-darwin"
+            napi_targets: "aarch64-apple-darwin x86_64-apple-darwin"
+            wheel_target_1: aarch64-apple-darwin
+            wheel_target_2: x86_64-apple-darwin
+            manylinux: auto
+            staticlib_only: "1"
+            cargo_build: "cargo build"
+            napi_zig_flags: ""
+          # linux: the ffi crate also emits a cdylib, so a cross target needs a
+          # linker; zig (via cargo-zigbuild) links both musl staticlib targets
+          # and both glibc napi targets, the latter against glibc 2.17 so the
+          # addon loads on older distributions than the runner's.
           - os: ubuntu-latest
             name: linux
-            targets: "x86_64-unknown-linux-musl aarch64-unknown-linux-musl"
-          - os: ubuntu-latest
-            name: wasm
-            targets: "wasm32-unknown-unknown"
+            staticlib_targets: "x86_64-unknown-linux-musl aarch64-unknown-linux-musl"
+            napi_targets: "x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu"
+            wheel_target_1: x86_64-unknown-linux-gnu
+            wheel_target_2: aarch64-unknown-linux-gnu
+            manylinux: "2_17"
+            staticlib_only: ""
+            cargo_build: "cargo zigbuild"
+            napi_zig_flags: "--zig --zig-abi-suffix 2.17"
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      DIST_DIR: ${{ github.workspace }}/dist-${{ matrix.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Load pinned tool versions
         # Emit only real KEY=VALUE pins; $GITHUB_ENV rejects '#' comments/blanks.
         run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain + targets
         # rustup reads rust-toolchain.toml from the repository root.
+        env:
+          TARGETS: ${{ matrix.staticlib_targets }} ${{ matrix.napi_targets }} ${{ matrix.wheel_target_1 }} ${{ matrix.wheel_target_2 }}
         run: |
+          set -euo pipefail
           rustup toolchain install
           rustup show active-toolchain
+          for t in $TARGETS; do rustup target add "$t"; done
 
-      - name: Install wasm-pack (wasm only)
-        if: matrix.name == 'wasm'
-        run: cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: release-${{ matrix.name }}
+          cache-on-failure: true
 
-      - name: Build artifacts pinned to the checked-out core commit
-        env:
-          DIST_DIR: ${{ github.workspace }}/dist-${{ matrix.name }}
-          BUILD_TARGETS: ${{ matrix.targets }}
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: "Install nightly + cbindgen + wasm-pack (linux: header and wasm bundle)"
+        if: matrix.name == 'linux'
+        # check_header.sh --write regenerates the shipped header with cbindgen,
+        # which expands the export macro on nightly (see that script).
         run: |
-          mkdir -p "$DIST_DIR"
-          echo "TODO(W4): build staticlibs, header and wasm bundle for: $BUILD_TARGETS into $DIST_DIR, then write $DIST_DIR/manifest.json stamped with $GITHUB_SHA"
+          set -euo pipefail
+          rustup toolchain install nightly --profile minimal
+          cargo install cbindgen --version "$CBINDGEN_VERSION" --locked
+          cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
+
+      - name: "Install zig (linux: cross linker)"
+        if: matrix.name == 'linux'
+        # The pip package bundles ziglang, so one pin covers both tools. napi's
+        # --zig looks for a `zig` executable; the wrapper provides one.
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION"
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nexec python3 -m ziglang "$@"\n' > "$HOME/.local/bin/zig"
+          chmod +x "$HOME/.local/bin/zig"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          cargo-zigbuild --version
+          "$HOME/.local/bin/zig" version
+
+      - name: Build napi addons
+        working-directory: bindings/typescript
+        env:
+          NAPI_TARGETS: ${{ matrix.napi_targets }}
+          NAPI_ZIG_FLAGS: ${{ matrix.napi_zig_flags }}
+          MATRIX_NAME: ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          npm ci
+          mkdir -p "$DIST_DIR/napi"
+          for t in $NAPI_TARGETS; do
+            echo "==> napi $t"
+            # shellcheck disable=SC2086
+            npx napi build --platform --release --target "$t" --cargo-cwd ../../crates/napi $NAPI_ZIG_FLAGS "napi-out/$t"
+            cp "napi-out/$t"/*.node "$DIST_DIR/napi/"
+          done
+          # The loader (index.js) and its types are platform-independent and
+          # list every configured triple; assemble copies them into the main
+          # package from the linux build.
+          if [ "$MATRIX_NAME" = linux ]; then
+            mkdir -p "$DIST_DIR/napi-js"
+            cp napi-out/x86_64-unknown-linux-gnu/index.js napi-out/x86_64-unknown-linux-gnu/index.d.ts "$DIST_DIR/napi-js/"
+          fi
+          ls -l "$DIST_DIR/napi"
+
+      - name: Build wheel (${{ matrix.wheel_target_1 }})
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          working-directory: bindings/python
+          target: ${{ matrix.wheel_target_1 }}
+          manylinux: ${{ matrix.manylinux }}
+          maturin-version: v${{ env.MATURIN_VERSION }}
+          rust-toolchain: ${{ needs.preflight.outputs.rust_channel }}
+          args: --release --locked --out ${{ env.DIST_DIR }}/python
+
+      - name: Build wheel (${{ matrix.wheel_target_2 }})
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          working-directory: bindings/python
+          target: ${{ matrix.wheel_target_2 }}
+          manylinux: ${{ matrix.manylinux }}
+          maturin-version: v${{ env.MATURIN_VERSION }}
+          rust-toolchain: ${{ needs.preflight.outputs.rust_channel }}
+          args: --release --locked --out ${{ env.DIST_DIR }}/python
+
+      - name: Build sdist (linux)
+        if: matrix.name == 'linux'
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          working-directory: bindings/python
+          command: sdist
+          maturin-version: v${{ env.MATURIN_VERSION }}
+          args: --out ${{ env.DIST_DIR }}/python
+
+      - name: Build wasm bundles for the npm package (linux)
+        if: matrix.name == 'linux'
+        # nodejs target: the Node fallback backend; bundler target: the browser
+        # backend (bindings/typescript/src/backend.browser.mts). The `web`
+        # bundle attached to the GitHub release is built by the script below.
+        working-directory: crates/wasm
+        run: |
+          set -euo pipefail
+          wasm-pack build --target nodejs --out-dir "$DIST_DIR/wasm-node" --release
+          wasm-pack build --target bundler --out-dir "$DIST_DIR/wasm-bundler" --release
+          rm -f "$DIST_DIR"/wasm-node/.gitignore "$DIST_DIR"/wasm-bundler/.gitignore
+
+      - name: Build staticlibs (+ header and wasm on linux), write the pinned manifest
+        # Runs last: gen_manifest.py walks the whole dist dir, so the wheels,
+        # addons and wasm bundles above are pinned to the same commit as the
+        # archives. STATICLIB_ONLY skips header + wasm on the macOS runner.
+        env:
+          STATICLIB_ONLY: ${{ matrix.staticlib_only }}
+          WASM_PROFILE: release
+          CARGO_BUILD: ${{ matrix.cargo_build }}
+          BUILD_TARGETS: ${{ matrix.staticlib_targets }}
+        run: |
+          # BUILD_TARGETS is a space-separated list passed as several positional
+          # args (the script does TARGETS=("$@")); the word split is intentional.
+          # shellcheck disable=SC2086
+          scripts/build_release_artifacts.sh "$DIST_DIR" $BUILD_TARGETS
+          find "$DIST_DIR" -type f | sort
 
       - name: Upload platform dist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -87,75 +304,262 @@ jobs:
           if-no-files-found: error
 
   assemble:
-    name: merge + verify pinned matrix
-    needs: build
+    name: merge + verify pinned matrix, pack assets
+    needs: [preflight, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
+    env:
+      DIST: ${{ github.workspace }}/dist
+      DISTS: ${{ github.workspace }}/_dists
+      ASSETS: ${{ github.workspace }}/release-assets
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Load pinned tool versions
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Download platform dists
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: _dists
 
       - name: Merge per-platform manifests + verify the full matrix is pinned
-        env:
-          DIST: ${{ github.workspace }}/dist
-          DISTS: ${{ github.workspace }}/_dists
         run: |
           set -euo pipefail
           mkdir -p "$DIST"
           cp -R "$DISTS"/dist-darwin/. "$DIST"/
           cp -R "$DISTS"/dist-linux/. "$DIST"/
-          cp -R "$DISTS"/dist-wasm/. "$DIST"/
           # MERGE the per-platform manifests so every artifact keeps the real
           # core_sha its runner built from; do NOT rm + regenerate, which would
           # stamp one SHA over the whole set and silently mask a mismatch.
           python3 scripts/merge_manifests.py "$DIST/manifest.json" \
             "$DISTS/dist-darwin/manifest.json" \
-            "$DISTS/dist-linux/manifest.json" \
-            "$DISTS/dist-wasm/manifest.json"
-          # verify_pinned aborts the release if any preserved core_sha disagrees.
+            "$DISTS/dist-linux/manifest.json"
+          # verify_pinned aborts the release if any preserved core_sha
+          # disagrees or a required archive is missing.
           python3 scripts/verify_pinned.py "$DIST/manifest.json" \
             --require-platforms darwin_arm64,darwin_amd64,linux_amd64,linux_arm64
 
-      - name: Upload merged dist
+      - name: Pack archives, header + wasm, wheels
+        working-directory: ${{ github.workspace }}/dist
+        run: |
+          set -euo pipefail
+          mkdir -p "$ASSETS/python"
+          for plat in darwin_arm64 darwin_amd64 linux_amd64 linux_arm64; do
+            tar -czf "$ASSETS/superscalar-$plat.tar.gz" "lib/$plat"
+          done
+          tar -czf "$ASSETS/superscalar-shared.tar.gz" include wasm
+          cp manifest.json "$ASSETS/manifest.json"
+          cp python/*.whl python/*.tar.gz "$ASSETS/python/"
+
+      - name: Pack the npm packages (main + per-platform)
+        working-directory: bindings/typescript
+        env:
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm ci
+          mkdir -p native "$ASSETS/npm"
+          cp "$DIST/napi-js/index.js" "$DIST/napi-js/index.d.ts" native/
+          rm -rf wasm-node wasm-bundler
+          cp -R "$DIST/wasm-node" wasm-node
+          cp -R "$DIST/wasm-bundler" wasm-bundler
+          npm run build:ts
+          # One npm dir per triple in package.json "napi.triples"; the addons
+          # from both runners are sorted into them by their platform suffix.
+          npx napi create-npm-dir -t .
+          mkdir -p artifacts
+          cp "$DIST"/napi/*.node artifacts/
+          npx napi artifacts -d artifacts
+          # The main package depends on the platform packages at exactly this
+          # version. Written here, not committed, so a checkout never asks npm
+          # for a platform package that is not published yet.
+          python3 - "$VERSION" <<'PY'
+          import json, pathlib, sys
+          version = sys.argv[1]
+          root = json.loads(pathlib.Path("package.json").read_text())
+          deps = {}
+          for pkg in sorted(pathlib.Path("npm").glob("*/package.json")):
+              meta = json.loads(pkg.read_text())
+              assert meta["version"] == version, (pkg, meta["version"], version)
+              node = list(pkg.parent.glob("*.node"))
+              assert len(node) == 1, (pkg.parent, node)
+              deps[meta["name"]] = version
+          root["optionalDependencies"] = deps
+          pathlib.Path("package.json").write_text(json.dumps(root, indent=2) + "\n")
+          print("optionalDependencies:", json.dumps(deps, indent=2))
+          PY
+          for d in npm/*/; do
+            npm pack "./$d" --pack-destination "$ASSETS/npm"
+          done
+          npm pack . --pack-destination "$ASSETS/npm"
+          ls -l "$ASSETS/npm"
+
+      - name: List the release set
+        run: find "$ASSETS" -type f | sort
+
+      - name: Upload release assets
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dist
-          path: dist
+          name: release-assets
+          path: release-assets
           if-no-files-found: error
+
+  github-release:
+    name: github release + attestations
+    needs: [preflight, assemble]
+    if: needs.preflight.outputs.dry_run == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download release assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Generate the SBOM (SPDX) for the release commit
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          path: .
+          format: spdx-json
+          output-file: release-assets/superscalar-${{ needs.preflight.outputs.version }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Attest build provenance
+        # The org is on GitHub Enterprise Cloud, so attestations work while the
+        # repository is private; they are free once it is public.
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release-assets/*.tar.gz
+            release-assets/manifest.json
+            release-assets/python/*
+            release-assets/npm/*.tgz
+
+      - name: Attest the SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: release-assets/superscalar-${{ needs.preflight.outputs.version }}.spdx.json
+          sbom-path: release-assets/superscalar-${{ needs.preflight.outputs.version }}.spdx.json
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+          PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          CORE_SHA="$(python3 -c 'import json; print(json.load(open("release-assets/manifest.json"))["core_sha"])')"
+          {
+            python3 scripts/bump_version.py notes "$VERSION"
+            echo
+            echo "## Artifacts"
+            echo
+            echo "Every asset was built from core commit \`$CORE_SHA\` and is listed in \`manifest.json\` with its SHA-256."
+            echo "Verify provenance with: \`gh attestation verify <asset> --repo ${GITHUB_REPOSITORY}\`."
+          } > notes.md
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "superscalar $TAG" \
+            --notes-file notes.md \
+            "${flags[@]}" \
+            release-assets/*.tar.gz release-assets/manifest.json release-assets/*.spdx.json \
+            release-assets/python/* release-assets/npm/*.tgz
+
+  # ---------------------------------------------------------------------------
+  # Trusted publishing. All three jobs are gated on the repository variable
+  # RELEASE_PUBLISH_ENABLED: Clinton sets it to "true" (Settings -> Secrets and
+  # variables -> Actions -> Variables) after registering the trusted publisher
+  # on each registry. Until then the release stops at the GitHub release. Each
+  # job header states the exact registration it expects.
+  # ---------------------------------------------------------------------------
 
   publish-crates:
     name: publish crates.io
-    needs: assemble
+    # Registration (crates.io -> crate -> Settings -> Trusted Publishing, once
+    # per crate: superscalar, superscalar-ffi, superscalar-wasm,
+    # superscalar-codegen, superscalar-napi, superscalar-python):
+    #   repository owner: parable-work, repository: superscalar,
+    #   workflow filename: release.yml, environment: crates-io
+    # crates.io only accepts a trusted publisher for a crate that already
+    # exists, so the first version of each crate is published by hand with a
+    # personal token, then the publishers are registered and this variable is
+    # flipped.
+    needs: [preflight, github-release]
+    if: needs.preflight.outputs.dry_run == 'false' && vars.RELEASE_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: crates-io
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Rust toolchain
         run: |
           rustup toolchain install
           rustup show active-toolchain
 
-      - name: Publish every crate at the tag version, in dependency order
-        run: |
-          echo "TODO(W4): exchange the OIDC token with rust-lang/crates-io-auth-action, then cargo publish superscalar, superscalar-ffi, superscalar-wasm, superscalar-codegen, superscalar-napi, superscalar-python in that order (first version of each crate is published manually before the repo can be linked)"
+      - name: Exchange the OIDC token for a crates.io token
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Publish every workspace crate at the tag version
+        # --workspace publishes the members in dependency order and resolves
+        # the intra-workspace path dependencies against the crates being
+        # published. --no-verify: the wasm, napi and python cdylibs only link
+        # inside their host runtime; ci.yml (the verify job) already built and
+        # tested every crate at this commit.
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --workspace --locked --no-verify
 
   publish-npm:
     name: publish npm
-    needs: assemble
+    # Registration (npmjs.com -> package -> Settings -> Trusted Publisher, once
+    # per package: superscalar, superscalar-darwin-arm64, superscalar-darwin-x64,
+    # superscalar-linux-x64-gnu, superscalar-linux-arm64-gnu):
+    #   organization or user: parable-work, repository: superscalar,
+    #   workflow filename: release.yml, environment name: npm
+    # npm generates provenance on its own for trusted publishing. Pre-releases
+    # go to the `next` dist-tag, releases to `latest`.
+    needs: [preflight, github-release]
+    if: needs.preflight.outputs.dry_run == 'false' && vars.RELEASE_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Load pinned tool versions
         run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
@@ -166,83 +570,145 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: https://registry.npmjs.org
 
-      - name: Publish napi prebuilds, wasm fallback and the main package with provenance
+      - name: Download release assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Publish the platform packages, then the main package
+        # Platform packages first so the main package's optionalDependencies
+        # resolve the moment it lands. The tarballs are the attested release
+        # assets, byte for byte.
+        env:
+          DIST_TAG: ${{ needs.preflight.outputs.npm_dist_tag }}
+          NPM_CONFIG_PROVENANCE: "true"
         run: |
-          echo "TODO(W4): set the version from the tag, napi create-npm-dirs / napi artifacts / napi pre-publish for the per-platform optional packages, then npm publish --provenance for superscalar"
+          set -euo pipefail
+          npm --version
+          node -e 'const [maj, min, pat] = process.versions.npm.split(".").map(Number); if (maj < 11 || (maj === 11 && (min < 5 || (min === 5 && pat < 1)))) { console.error("npm >= 11.5.1 is required for trusted publishing"); process.exit(1); }'
+          cd release-assets/npm
+          # The main tarball is superscalar-<version>.tgz; the platform ones are
+          # superscalar-<platform>-<version>.tgz.
+          main="$(ls superscalar-[0-9]*.tgz)"
+          for tgz in superscalar-*.tgz; do
+            if [ "$tgz" = "$main" ]; then continue; fi
+            echo "==> $tgz"
+            npm publish "./$tgz" --access public --tag "$DIST_TAG"
+          done
+          echo "==> $main"
+          npm publish "./$main" --access public --tag "$DIST_TAG"
 
   publish-pypi:
     name: publish PyPI
-    needs: assemble
+    # Registration (pypi.org -> Your projects -> Publishing -> "Add a new
+    # pending publisher" for the project superscalar):
+    #   owner: parable-work, repository name: superscalar,
+    #   workflow name: release.yml, environment name: pypi
+    # PyPI accepts a pending publisher for a project that does not exist yet;
+    # the first publish creates it. Pre-release versions (0.1.0a1 and the
+    # like) are ordinary uploads that pip skips unless asked for --pre.
+    needs: [preflight, github-release]
+    if: needs.preflight.outputs.dry_run == 'false' && vars.RELEASE_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: pypi
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Load pinned tool versions
-        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
-
-      - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Download release assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          name: release-assets
+          path: release-assets
 
-      - name: Build wheels and publish with trusted publishing
-        run: |
-          echo "TODO(W4): maturin-action wheel matrix (manylinux + musllinux x86_64/aarch64, macOS arm64 + x86_64, abi3-py39, sdist) with an explicit manylinux per target, then pypa/gh-action-pypi-publish"
+      - name: Publish wheels + sdist with trusted publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: release-assets/python
 
-  github-release:
-    name: github release + attestations
-    needs: [assemble, publish-crates, publish-npm, publish-pypi]
+  go-pin:
+    name: pin the Go module to this release (pull request)
+    # Writes go/release.pin (tag, core commit, manifest digest) and
+    # opens a pull request. Merging it cuts the go/vX.Y.Z tag
+    # (go-module-tag.yml). Needs the repository setting "Allow GitHub Actions
+    # to create and approve pull requests" (Settings -> Actions -> General);
+    # without it `gh pr create` is refused. A pull request opened with the
+    # workflow token does not start ci.yml on its own: close and reopen it
+    # once (or push an empty commit) so ci-pass runs, then merge.
+    needs: [preflight, github-release]
+    if: needs.preflight.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
-      id-token: write
-      attestations: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Download merged dist
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: dist
-          path: dist
+          ref: main
 
-      - name: Package release assets
-        working-directory: ${{ github.workspace }}/dist
-        run: |
-          set -euo pipefail
-          for plat in darwin_arm64 darwin_amd64 linux_amd64 linux_arm64; do
-            tar -czf "superscalar-$plat.tar.gz" "lib/$plat"
-          done
-          tar -czf "superscalar-shared.tar.gz" include wasm
-          echo "TODO(W4): generate an SBOM for the release set"
-
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+      - name: Download release assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          subject-path: |
-            dist/superscalar-*.tar.gz
-            dist/manifest.json
+          name: release-assets
+          path: release-assets
 
-      - name: Create the GitHub release
-        working-directory: ${{ github.workspace }}/dist
+      - name: Write release.pin and open the pull request
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.preflight.outputs.tag }}
         run: |
           set -euo pipefail
-          CORE_SHA="$(python3 -c 'import json; print(json.load(open("manifest.json"))["core_sha"])')"
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes "SuperScalar ${GITHUB_REF_NAME}; artifacts pinned to core commit ${CORE_SHA}" \
-            superscalar-*.tar.gz manifest.json
-          echo "TODO(W4): also push the go/${GITHUB_REF_NAME} tag so go get resolves the bindings/go module"
+          CORE_SHA="$(python3 -c 'import json; print(json.load(open("release-assets/manifest.json"))["core_sha"])')"
+          MANIFEST_SHA="$(python3 -c 'import hashlib; print(hashlib.sha256(open("release-assets/manifest.json", "rb").read()).hexdigest())')"
+          python3 - "$TAG" "$CORE_SHA" "$MANIFEST_SHA" <<'PY'
+          import pathlib, re, sys
+          tag, core, digest = sys.argv[1:]
+          p = pathlib.Path("go/release.pin")
+          text = p.read_text()
+          for key, value in (("version", tag), ("core_sha", core), ("manifest_sha256", digest)):
+              text, n = re.subn(rf"^{key}=.*$", f"{key}={value}", text, count=1, flags=re.M)
+              assert n == 1, key
+          p.write_text(text)
+          PY
+          cat go/release.pin
+          branch="chore/go-pin-$TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add go/release.pin
+          git commit -s -m "chore(go): pin the Go module to the $TAG archives" \
+            -m "release.pin now points at the $TAG GitHub release (core $CORE_SHA, manifest sha256 $MANIFEST_SHA). Merging this cuts the go/$TAG tag."
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore(go): pin the Go module to the $TAG archives" \
+            --body "$(printf '%s\n' \
+              "## What and why" \
+              "" \
+              "Pins go/release.pin to the $TAG release: core commit $CORE_SHA, manifest.json sha256 $MANIFEST_SHA. Merging cuts the go/$TAG tag (go-module-tag.yml), so the Go module at that tag fetches the archives built from $TAG." \
+              "" \
+              "Opened by release.yml with the workflow token, which does not start ci.yml: close and reopen this pull request once so ci-pass runs, then merge." \
+              "" \
+              "## Checklist" \
+              "" \
+              "- [x] Every commit is signed off" \
+              "- [x] Conformance vectors unchanged" \
+              "- [x] Scalar ids unchanged" \
+              "- [x] No generated files touched" \
+              "- [x] No behaviour or API change")"
 
   docs-deploy:
     name: docs (Starlight) to GitHub Pages
-    needs: github-release
+    # GitHub Pages is not available on a private repository on this plan
+    # without GitHub Enterprise Pages settings, so the deploy waits for the
+    # visibility flip; docs still build in ci. Enable Pages (Settings -> Pages,
+    # source: GitHub Actions) when the repository goes public.
+    needs: [preflight, github-release]
+    if: needs.preflight.outputs.dry_run == 'false' && github.event.repository.private == false
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       pages: write
@@ -252,9 +718,19 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Load pinned tool versions
         run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' tools.env >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustup show active-toolchain
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -265,11 +741,8 @@ jobs:
 
       # The per-scalar reference pages are generated, not committed
       # (docs/.gitignore excludes src/content/docs/reference/ apart from index.md).
-      # The generator ships with the codegen CLI (W3); until then the site builds
-      # with the committed reference/index.md placeholder only.
       - name: Generate scalar reference pages
-        run: |
-          echo "TODO(W4): cargo run -p superscalar-codegen -- docs --out docs/src/content/docs/reference/"
+        run: cargo run -p superscalar-codegen -- docs --out docs/src/content/docs/reference/
 
       - name: Build the site
         working-directory: docs
@@ -287,4 +760,4 @@ jobs:
       - name: Deploy to GitHub Pages
         if: hashFiles('docs/dist/index.html') != ''
         id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

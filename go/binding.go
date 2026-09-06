@@ -2,15 +2,19 @@
 package superscalar
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../crates/ffi
+#cgo CFLAGS: -I${SRCDIR}/include
 #include <stdlib.h>
 #include "superscalar.h"
 
+// include/superscalar.h is a committed copy of crates/ffi/superscalar.h, kept
+// in sync by crates/ffi/scripts/check_header.sh, so the module zip that
+// `go get` downloads carries its own header.
+//
 // Link (LDFLAGS) directives are per-platform in cgo_ldflags_<goos>_<goarch>.go so
 // a Rust-free build links the prebuilt static archive under
 // lib/<goos>_<goarch> (hermetic delivery: no Rust toolchain needed). Populate
-// that dir with scripts/build_ffi.sh (host build) or the release fetch script
-// (release assets) before building a consumer.
+// that dir with scripts/build_ffi.sh (host build) or
+// scripts/fetch_release_archive.sh (release assets) before building a consumer.
 */
 import "C"
 

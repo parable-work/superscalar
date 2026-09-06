@@ -19,27 +19,34 @@ binary has no runtime shared-library dependency.
 
 ## Install
 
-Nothing is published yet. From v0.1.0 the module is tagged `go/v0.1.0`
-alongside the repository tag `v0.1.0`, and the install is:
+Nothing is published yet. Every release `vX.Y.Z` also tags the module
+`go/vX.Y.Z` (the first release is `v0.1.0-alpha.1`), and the install is:
 
 ```
-go get github.com/parable-work/superscalar/go@v0.1.0
+go get github.com/parable-work/superscalar/go@vX.Y.Z
 ```
 
 Then fetch the static archive for your platform. The module commits the C
-header and the per-platform cgo link directives; the archive itself is a
-GitHub release asset, fetched and verified by a script committed in the
-module:
+header, the per-platform cgo link directives and `release.pin`, which names
+the release its archives come from and the SHA-256 of that release's
+`manifest.json`; the archive itself is a GitHub release asset, fetched and
+verified by a script committed in the module. The module directory in the Go
+module cache is read-only, so give the script a writable output directory
+and add it to the cgo link flags:
 
 ```
-go/scripts/fetch.sh v0.1.0
+mod="$(go list -m -f '{{.Dir}}' github.com/parable-work/superscalar/go)"
+bash "$mod/scripts/fetch_release_archive.sh" --out "$PWD/third_party/superscalar"
+export CGO_LDFLAGS="-L$PWD/third_party/superscalar/darwin_arm64"   # your platform
 ```
 
-The script downloads `superscalar-<platform>.tar.gz` from the matching GitHub
-release and checks it against `manifest.json`, which pins every archive in a
-release to one core commit. A release whose archives disagree on that commit
-is refused at publish time, so a verified archive is guaranteed to match the
-header and the other bindings of the same version.
+The script downloads `superscalar-<platform>.tar.gz` and `manifest.json`
+from the pinned release, checks the manifest against the digest in
+`release.pin`, checks that every artifact in the manifest was built from one
+core commit, and checks the archive against its manifest entry. A release
+whose archives disagree on that commit is refused at publish time, so a
+verified archive is guaranteed to match the header and the other bindings of
+the same version. The module's README lists the cgo flags per platform.
 
 For a fully static Linux binary, add external linking flags:
 

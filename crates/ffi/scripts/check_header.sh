@@ -34,6 +34,19 @@ REDUCED_NOTE="reduced check: names only; no nightly toolchain for cbindgen expan
 
 cd "$WORKSPACE" || exit 1
 
+# The Go module ships its own copy of the header (go/include) because
+# `go get` only downloads the module directory. --write refreshes the copy;
+# both check modes require it to be byte-identical to the ffi header.
+GO_HEADER="$WORKSPACE/go/include/superscalar.h"
+
+check_go_copy() {
+  if ! cmp -s "$HEADER" "$GO_HEADER"; then
+    echo "ERROR: $GO_HEADER differs from $HEADER." >&2
+    echo "Run: cp crates/ffi/superscalar.h go/include/superscalar.h" >&2
+    exit 1
+  fi
+}
+
 # `rustup toolchain list`, not `rustup run nightly ...`: rustup 1.28.1 and later
 # auto-install a toolchain named on `run`, and a check must never download one.
 have_nightly() {
@@ -72,7 +85,8 @@ if [[ "${1:-}" == "--write" ]]; then
     echo "ERROR: cbindgen failed; $HEADER was not rewritten." >&2
     exit 1
   fi
-  echo "wrote $HEADER"
+  cp "$HEADER" "$GO_HEADER"
+  echo "wrote $HEADER (and the Go module copy $GO_HEADER)"
   exit 0
 fi
 
@@ -90,6 +104,7 @@ if have_nightly; then
     echo "ERROR: superscalar.h is out of date. Run: crates/ffi/scripts/check_header.sh --write" >&2
     exit 1
   fi
+  check_go_copy
   echo "superscalar.h is up to date (full check: $(cbindgen --version) on nightly)."
   exit 0
 fi
@@ -112,4 +127,5 @@ if [[ "$DECLARED" != "$EXPORTED" ]]; then
   echo "Install nightly and run: crates/ffi/scripts/check_header.sh --write" >&2
   exit 1
 fi
+check_go_copy
 echo "superscalar.h declares the exported function set ($REDUCED_NOTE)."

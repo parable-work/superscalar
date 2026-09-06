@@ -73,7 +73,7 @@ setup:
 	echo "==> setup ok"
 
 go:
-	bindings/go/scripts/go_smoke.sh
+	go/scripts/go_smoke.sh
 
 python:
 	bindings/python/scripts/py_smoke.sh

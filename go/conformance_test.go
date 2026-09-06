@@ -52,7 +52,7 @@ type paritySpec struct {
 
 func loadCorpus(t *testing.T) paritySpec {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join("..", "..", "conformance", "core-scalars.v2.json"))
+	data, err := os.ReadFile(filepath.Join("..", "conformance", "core-scalars.v2.json"))
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
 	}
