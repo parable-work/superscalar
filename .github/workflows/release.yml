@@ -219,7 +219,6 @@ jobs:
         env:
           NAPI_TARGETS: ${{ matrix.napi_targets }}
           NAPI_ZIG_FLAGS: ${{ matrix.napi_zig_flags }}
-          MATRIX_NAME: ${{ matrix.name }}
         run: |
           set -euo pipefail
           npm ci
@@ -230,13 +229,9 @@ jobs:
             npx napi build --platform --release --target "$t" --cargo-cwd ../../crates/napi $NAPI_ZIG_FLAGS "napi-out/$t"
             cp "napi-out/$t"/*.node "$DIST_DIR/napi/"
           done
-          # The loader (index.js) and its types are platform-independent and
-          # list every configured triple; assemble copies them into the main
-          # package from the linux build.
-          if [ "$MATRIX_NAME" = linux ]; then
-            mkdir -p "$DIST_DIR/napi-js"
-            cp napi-out/x86_64-unknown-linux-gnu/index.js napi-out/x86_64-unknown-linux-gnu/index.d.ts "$DIST_DIR/napi-js/"
-          fi
+          # Only the addons travel. The CLI's generated index.js is not shipped:
+          # src/native-addon.ts is the loader, because the CLI can only name
+          # platform packages <package>-<triple> and ours are @superscalar/<triple>.
           ls -l "$DIST_DIR/napi"
 
       - name: Build wheel (${{ matrix.wheel_target_1 }})
@@ -368,8 +363,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci
-          mkdir -p native "$ASSETS/npm"
-          cp "$DIST/napi-js/index.js" "$DIST/napi-js/index.d.ts" native/
+          mkdir -p "$ASSETS/npm"
           rm -rf wasm-node wasm-bundler
           cp -R "$DIST/wasm-node" wasm-node
           cp -R "$DIST/wasm-bundler" wasm-bundler
@@ -380,19 +374,30 @@ jobs:
           mkdir -p artifacts
           cp "$DIST"/napi/*.node artifacts/
           npx napi artifacts -d artifacts
-          # The main package depends on the platform packages at exactly this
-          # version. Written here, not committed, so a checkout never asks npm
-          # for a platform package that is not published yet.
+          # The napi CLI names the platform packages superscalar-<triple>; the
+          # published names are @superscalar/<triple> (the scope Clinton owns on
+          # npmjs.com), which is what src/native-addon.ts requires at runtime.
+          # Rename them here, then make the main package depend on them at
+          # exactly this version. Written at pack time, not committed, so a
+          # checkout never asks npm for a platform package that is not
+          # published yet.
           python3 - "$VERSION" <<'PY'
           import json, pathlib, sys
           version = sys.argv[1]
           root = json.loads(pathlib.Path("package.json").read_text())
           deps = {}
           for pkg in sorted(pathlib.Path("npm").glob("*/package.json")):
+              triple = pkg.parent.name
               meta = json.loads(pkg.read_text())
               assert meta["version"] == version, (pkg, meta["version"], version)
               node = list(pkg.parent.glob("*.node"))
               assert len(node) == 1, (pkg.parent, node)
+              meta["name"] = f"@superscalar/{triple}"
+              pkg.write_text(json.dumps(meta, indent=2) + "\n")
+              (pkg.parent / "README.md").write_text(
+                  f"# `@superscalar/{triple}`\n\nThe {triple} native addon for the npm package "
+                  f"`superscalar`, installed as its optional dependency. Do not depend on it directly.\n"
+              )
               deps[meta["name"]] = version
           root["optionalDependencies"] = deps
           pathlib.Path("package.json").write_text(json.dumps(root, indent=2) + "\n")
@@ -402,7 +407,27 @@ jobs:
             npm pack "./$d" --pack-destination "$ASSETS/npm"
           done
           npm pack . --pack-destination "$ASSETS/npm"
+          # npm names a scoped tarball scope-name-version.tgz, so the platform
+          # ones are superscalar-<triple>-<version>.tgz and only the manifest
+          # inside carries the scope. Show it and refuse a set that is not
+          # exactly the five published packages, each once: a missing addon
+          # would otherwise ship as a main package with a short
+          # optionalDependencies list and no native path on that platform.
           ls -l "$ASSETS/npm"
+          expected="@superscalar/darwin-arm64 @superscalar/darwin-x64 @superscalar/linux-arm64-gnu @superscalar/linux-x64-gnu superscalar"
+          found=""
+          for tgz in "$ASSETS"/npm/*.tgz; do
+            name="$(tar -xOzf "$tgz" package/package.json | python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])')"
+            echo "$(basename "$tgz") -> $name"
+            found="$found $name"
+          done
+          found="$(echo "$found" | tr ' ' '\n' | sed '/^$/d' | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')"
+          if [ "$found" != "$expected" ]; then
+            echo "npm package set mismatch" >&2
+            echo "  expected: $expected" >&2
+            echo "  found:    $found" >&2
+            exit 1
+          fi
 
       - name: List the release set
         run: find "$ASSETS" -type f | sort
@@ -542,10 +567,16 @@ jobs:
   publish-npm:
     name: publish npm
     # Registration (npmjs.com -> package -> Settings -> Trusted Publisher, once
-    # per package: superscalar, superscalar-darwin-arm64, superscalar-darwin-x64,
-    # superscalar-linux-x64-gnu, superscalar-linux-arm64-gnu):
-    #   organization or user: parable-work, repository: superscalar,
-    #   workflow filename: release.yml, environment name: npm
+    # per package; the five exact names are
+    #   superscalar
+    #   @superscalar/darwin-arm64
+    #   @superscalar/darwin-x64
+    #   @superscalar/linux-x64-gnu
+    #   @superscalar/linux-arm64-gnu
+    # with organization or user: parable-work, repository: superscalar,
+    #   workflow filename: release.yml, environment name: npm).
+    # The @superscalar scope is an organization on npmjs.com that must exist
+    # and be owned by the publisher before RELEASE_PUBLISH_ENABLED is set.
     # npm generates provenance on its own for trusted publishing. Pre-releases
     # go to the `next` dist-tag, releases to `latest`.
     needs: [preflight, github-release]
@@ -589,7 +620,9 @@ jobs:
           node -e 'const [maj, min, pat] = process.versions.npm.split(".").map(Number); if (maj < 11 || (maj === 11 && (min < 5 || (min === 5 && pat < 1)))) { console.error("npm >= 11.5.1 is required for trusted publishing"); process.exit(1); }'
           cd release-assets/npm
           # The main tarball is superscalar-<version>.tgz; the platform ones are
-          # superscalar-<platform>-<version>.tgz.
+          # superscalar-<triple>-<version>.tgz (npm pack spells the scope
+          # @superscalar/<triple> as superscalar-<triple> in the file name; the
+          # manifest inside carries the scoped name npm publishes under).
           main="$(ls superscalar-[0-9]*.tgz)"
           for tgz in superscalar-*.tgz; do
             if [ "$tgz" = "$main" ]; then continue; fi
