@@ -69,18 +69,28 @@ export function nativePackageName(triple: string): string {
 export function loadNativeAddon<T>(req: (id: string) => unknown, nativeDir: string): T {
   const triple = nativeTriple();
   const local = join(nativeDir, `${NATIVE_BINARY_NAME}.${triple}.node`);
+  // A local file that exists but does not load (stale, truncated, wrong ABI)
+  // must not hide an installed platform package; its error rides along.
+  let localDetail = "";
   if (existsSync(local)) {
-    return req(local) as T;
+    try {
+      return req(local) as T;
+    } catch (err) {
+      localDetail = `; the checkout's ${local} failed to load: ${errorMessage(err)}`;
+    }
   }
   const pkg = nativePackageName(triple);
   try {
     return req(pkg) as T;
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `superscalar: cannot load the native addon package ${pkg} (${detail}). ` +
+      `superscalar: cannot load the native addon package ${pkg} (${errorMessage(err)}). ` +
         "npm installs it as an optional dependency of superscalar; check that optional " +
-        "dependencies were not skipped (npm install --no-optional / --omit=optional).",
+        `dependencies were not skipped (npm install --no-optional / --omit=optional)${localDetail}.`,
     );
   }
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

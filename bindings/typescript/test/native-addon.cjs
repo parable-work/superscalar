@@ -55,4 +55,18 @@ assert.throws(
   },
 );
 
+// A local file that exists but does not load must fall through to the platform
+// package, and the error must carry both failures.
+const brokenDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "superscalar-broken-"));
+fs.writeFileSync(path.join(brokenDir, `${NATIVE_BINARY_NAME}.${triple}.node`), "not an addon");
+assert.throws(
+  () => loadNativeAddon(require, brokenDir),
+  (err) => {
+    assert.match(err.message, new RegExp(`^superscalar: cannot load the native addon package ${nativePackageName(triple)} `));
+    assert.match(err.message, /; the checkout's .*\.node failed to load: /);
+    return true;
+  },
+);
+fs.rmSync(brokenDir, { recursive: true });
+
 console.log(`ts native-addon: ok (${triple} -> ${nativePackageName(triple)})`);

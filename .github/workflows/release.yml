@@ -409,17 +409,25 @@ jobs:
           npm pack . --pack-destination "$ASSETS/npm"
           # npm names a scoped tarball scope-name-version.tgz, so the platform
           # ones are superscalar-<triple>-<version>.tgz and only the manifest
-          # inside carries the scope. Show it and refuse a tarball whose name
-          # is not one of the five published packages.
+          # inside carries the scope. Show it and refuse a set that is not
+          # exactly the five published packages, each once: a missing addon
+          # would otherwise ship as a main package with a short
+          # optionalDependencies list and no native path on that platform.
           ls -l "$ASSETS/npm"
+          expected="@superscalar/darwin-arm64 @superscalar/darwin-x64 @superscalar/linux-arm64-gnu @superscalar/linux-x64-gnu superscalar"
+          found=""
           for tgz in "$ASSETS"/npm/*.tgz; do
             name="$(tar -xOzf "$tgz" package/package.json | python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])')"
             echo "$(basename "$tgz") -> $name"
-            case "$name" in
-              superscalar|@superscalar/darwin-arm64|@superscalar/darwin-x64|@superscalar/linux-x64-gnu|@superscalar/linux-arm64-gnu) ;;
-              *) echo "unexpected npm package name $name in $tgz" >&2; exit 1 ;;
-            esac
+            found="$found $name"
           done
+          found="$(echo "$found" | tr ' ' '\n' | sed '/^$/d' | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')"
+          if [ "$found" != "$expected" ]; then
+            echo "npm package set mismatch" >&2
+            echo "  expected: $expected" >&2
+            echo "  found:    $found" >&2
+            exit 1
+          fi
 
       - name: List the release set
         run: find "$ASSETS" -type f | sort
