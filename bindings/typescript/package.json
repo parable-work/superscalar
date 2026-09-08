@@ -46,25 +46,22 @@
     }
   },
   "napi": {
-    "name": "superscalar-napi",
-    "triples": {
-      "defaults": false,
-      "additional": [
-        "aarch64-apple-darwin",
-        "x86_64-apple-darwin",
-        "x86_64-unknown-linux-gnu",
-        "aarch64-unknown-linux-gnu"
-      ]
-    }
+    "binaryName": "superscalar-napi",
+    "targets": [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu"
+    ]
   },
   "scripts": {
-    "build:napi": "napi build --platform --release --cargo-cwd ../../crates/napi native",
+    "build:napi": "napi build --platform --release --manifest-path ../../crates/napi/Cargo.toml --output-dir native",
     "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.browser.json && node scripts/fix-esm-extensions.mjs",
     "build": "npm run build:napi && npm run build:ts",
     "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.4",
+    "@napi-rs/cli": "^3.9.0",
     "@types/node": "^26.4.1",
     "typescript": "^7.0.2"
   }

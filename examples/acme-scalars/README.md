@@ -64,7 +64,7 @@ The bindings are loaded without their packaging tools: the napi cdylib is
 loaded as a `.node` file, the PyO3 cdylib is copied under an extension-module
 suffix and imported as `_native`, the wasm bundle comes from `wasm-pack`. A
 published extension would wrap the same crates with `napi build` (package.json
-`napi.name`), `maturin` (pyproject `module-name = "acme_scalars._native"`, which
+`napi.binaryName`), `maturin` (pyproject `module-name = "acme_scalars._native"`, which
 is why the module identifier is `_native`), and `wasm-pack` for the browser
 target. The C header is the generic `superscalar.h`; an extension with
 extra C entry points writes its own header that includes it.
