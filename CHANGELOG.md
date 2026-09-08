@@ -32,5 +32,11 @@ bump they require (minor when loosening, major when tightening).
   records the release the archives come from, and
   `scripts/fetch_release_archive.sh` downloads and verifies them against the
   pinned manifest digest.
+- Conformance: `Temporal.Date` gains rejected vectors for bare epoch strings
+  (`1736899200000`, `173689920000`, `1736899200`). The scalar is
+  calendar-date-only and already rejected them; the vectors pin that so a
+  consumer that converts epoch inputs itself at a storage boundary can rely
+  on the rejection. No accept-set change, no bump required. Carried from
+  parable-platform PR #5870.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

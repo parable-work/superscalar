@@ -4,6 +4,13 @@ use crate::registry::{Registry, Scalar};
 use crate::scalars::datetime::{NAIVE_DATETIME_FORMATS, OFFSET_DATETIME_FORMATS};
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime};
 
+// Temporal.Date is calendar-date-only. Bare digit strings (epoch milliseconds,
+// epoch seconds, compact YYYYMMDD) are rejected: a digit run carries no unit and
+// no calendar, so the scalar refuses to guess. A consumer that must accept epoch
+// inputs at a storage boundary (for example a lenient cast into a date column)
+// converts them itself after the scalar rejects. That rejection is what makes
+// such a fallback safe, and the conformance vectors pin it.
+
 // 2-digit-year formats are deliberately excluded: dropping 2-digit-year support is the
 // intended narrowing. The remaining slash/dash formats are still satisfied by chrono for
 // 1-3 digit leading years (e.g. "01/02/24" matches "%Y/%m/%d" as year 1), so the final guard
@@ -131,6 +138,19 @@ mod tests {
         assert_eq!(parse("2024"), None); // bare year
         assert_eq!(parse("02/2024"), None); // MM/YYYY
         assert_eq!(parse("24-06-15T09:00:00"), None); // 2-digit year datetime must still reject
+    }
+
+    #[test]
+    fn rejects_bare_digit_strings() {
+        // Epoch and compact forms carry no unit; reject rather than guess. Consumers rely on
+        // this rejection to route such inputs to their own epoch handling (see the note at
+        // the top of the file); the conformance vectors pin the three epoch forms.
+        assert_eq!(parse("1736899200000"), None); // 13-digit epoch milliseconds
+        assert_eq!(parse("173689920000"), None); // 12-digit epoch milliseconds
+        assert_eq!(parse("1736899200"), None); // 10-digit epoch seconds
+        assert_eq!(parse("20250115"), None); // compact YYYYMMDD
+        assert_eq!(parse("-1736899200000"), None); // signed epoch
+        assert_eq!(parse("1736899200000.0"), None); // fractional epoch
     }
 
     #[test]
