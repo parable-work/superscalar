@@ -403,6 +403,21 @@
         {
           "input": "12/31/24",
           "validator": "parse"
+        },
+        {
+          "input": "1736899200000",
+          "validator": "parse",
+          "note": "13-digit epoch-millisecond string. Temporal.Date is calendar-date-only; a bare digit run carries no unit or calendar, so the scalar refuses to guess. A consumer that must accept epoch inputs at a storage boundary converts them itself after the scalar rejects; this vector keeps that fallback safe."
+        },
+        {
+          "input": "173689920000",
+          "validator": "parse",
+          "note": "12-digit epoch-millisecond string; rejected on the same terms as the 13-digit form."
+        },
+        {
+          "input": "1736899200",
+          "validator": "parse",
+          "note": "10-digit epoch-second string; rejected on the same terms as the millisecond forms."
         }
       ]
     },
