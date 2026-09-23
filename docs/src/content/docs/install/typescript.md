@@ -71,6 +71,12 @@ the core's `normalize` directly and does not enforce shape.
 tuple. `<Name>` is the canonical name with the dot removed (`ContactEmail`,
 `IdentityUUID`).
 
+`Generic.JSON` is the one exception, because `null` is one of its values:
+its lenient `parse` and `normalize` take an already-decoded JSON value and
+return `undefined`, not `null`, for an absent or non-portable input (`NaN`, a
+cycle, a `Set`). The strict forms take JSON text. `JSONValue` and the guard
+`isJSONValue` are exported beside them.
+
 Branded types are plain strings at runtime with a phantom `__brand` field, so
 a `ContactEmail` cannot be passed where an `IdentityUUID` is expected without
 going through a parse function.
