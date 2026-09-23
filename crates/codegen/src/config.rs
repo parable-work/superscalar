@@ -48,6 +48,10 @@ fn default_scalar_list_type() -> String {
     "string".to_string()
 }
 
+fn default_json_value_module() -> String {
+    "./json-value".to_string()
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PackageConfig {
@@ -123,6 +127,11 @@ pub struct TypeScriptConfig {
     pub backend_module: String,
     /// `import type { ScalarValidationResult, ValidationError } from "<validation_module>"`.
     pub validation_module: String,
+    /// `import { isJSONValue } from "<json_value_module>"`: the hand-written
+    /// module that declares the `JSONValue` type and its runtime guard, which
+    /// the wrappers of a scalar whose value is any JSON value use.
+    #[serde(default = "default_json_value_module")]
+    pub json_value_module: String,
     /// `type_mappings["typescript"]` value -> emitted TS type.
     #[serde(default)]
     pub type_renames: BTreeMap<String, String>,

@@ -46,6 +46,10 @@ SCALAR_ID_BY_CANONICAL = {
     "Crypto.SHA256": 58,
     "Network.DnsLabel": 59,
     "Temporal.RecurrenceRule": 60,
+    "Ordering.Rank": 63,
+    "Version.SemVer": 64,
+    "Git.PathPattern": 66,
+    "AgentSkill.Name": 67,
 }
 
 # Semantic facts, one row per scalar with a metadata row.
@@ -110,6 +114,10 @@ SCALAR_METADATA = {
     "Crypto.SHA256": {"comparability_class": None, "is_sortable": True},
     "Network.DnsLabel": {"comparability_class": None, "is_sortable": True},
     "Temporal.RecurrenceRule": {"comparability_class": None, "is_sortable": True},
+    "Ordering.Rank": {"comparability_class": None, "is_sortable": True},
+    "Version.SemVer": {"comparability_class": None, "is_sortable": True},
+    "Git.PathPattern": {"comparability_class": None, "is_sortable": True},
+    "AgentSkill.Name": {"comparability_class": None, "is_sortable": True},
 }
 
 # Maps an alias scalar's canonical name to its target's. `alias_of` means one
@@ -554,3 +562,39 @@ def normalize_temporal_recurrence_rule(value: str) -> str:
 
 def validate_temporal_recurrence_rule(value: str) -> None:
     _native.validate(60, value)
+
+def parse_ordering_rank(value: str) -> str:
+    return _native.parse(63, value)
+
+def normalize_ordering_rank(value: str) -> str:
+    return _native.normalize(63, value)
+
+def validate_ordering_rank(value: str) -> None:
+    _native.validate(63, value)
+
+def parse_version_sem_ver(value: str) -> str:
+    return _native.parse(64, value)
+
+def normalize_version_sem_ver(value: str) -> str:
+    return _native.normalize(64, value)
+
+def validate_version_sem_ver(value: str) -> None:
+    _native.validate(64, value)
+
+def parse_git_path_pattern(value: str) -> str:
+    return _native.parse(66, value)
+
+def normalize_git_path_pattern(value: str) -> str:
+    return _native.normalize(66, value)
+
+def validate_git_path_pattern(value: str) -> None:
+    _native.validate(66, value)
+
+def parse_agent_skill_name(value: str) -> str:
+    return _native.parse(67, value)
+
+def normalize_agent_skill_name(value: str) -> str:
+    return _native.normalize(67, value)
+
+def validate_agent_skill_name(value: str) -> None:
+    _native.validate(67, value)

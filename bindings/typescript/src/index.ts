@@ -1,16 +1,16 @@
+// JSONValue and isJSONValue are re-exported through ./generated, whose
+// Generic.JSON wrappers use them; the namespaces below use the type.
+import type { JSONValue } from './json-value';
+
 export * as validation from './validation';
 export * from './generated';
 export * from './pem';
 
 export type Brand<T, TName extends string> = T & { readonly __brand: TName };
 
-export type JSONValue =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly JSONValue[]
-  | { readonly [key: string]: JSONValue };
+export namespace AgentSkill {
+  export type Name = Brand<string, 'AgentSkill.Name'>;
+}
 
 export namespace Auth {
   export type JWT = Brand<string, 'Auth.JWT'>;
@@ -51,6 +51,10 @@ export namespace Generic {
   export type StringMap = Brand<Readonly<Record<string, string>>, 'Generic.StringMap'>;
 }
 
+export namespace Git {
+  export type PathPattern = Brand<string, 'Git.PathPattern'>;
+}
+
 export namespace Geo {
   export type Location = Brand<{ readonly lat: number; readonly lon: number }, 'Geo.Location'>;
 }
@@ -72,6 +76,10 @@ export namespace Network {
   export type IpAddress = Brand<string, 'Network.IpAddress'>;
   export type Uri = Brand<string, 'Network.Uri'>;
   export type Url = Brand<string, 'Network.Url'>;
+}
+
+export namespace Ordering {
+  export type Rank = Brand<number, 'Ordering.Rank'>;
 }
 
 export namespace Temporal {
@@ -96,6 +104,10 @@ export namespace Temporal {
 export namespace Text {
   export type Markdown = Brand<string, 'Text.Markdown'>;
   export type Sql = Brand<string, 'Text.Sql'>;
+}
+
+export namespace Version {
+  export type SemVer = Brand<string, 'Version.SemVer'>;
 }
 
 export type { ScalarBackend } from './backend';

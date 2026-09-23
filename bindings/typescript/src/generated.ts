@@ -1,6 +1,10 @@
 // @generated; do not edit
 import { backend } from "./backend";
+import { isJSONValue } from "./json-value";
+import type { JSONValue } from "./json-value";
 import type { ScalarValidationResult, ValidationError } from "./validation";
+export { isJSONValue } from "./json-value";
+export type { JSONValue } from "./json-value";
 export type JSDate = globalThis.Date;
 
 export interface ScalarMetadata {
@@ -81,6 +85,10 @@ export const scalarIdByCanonical: Record<string, number> = {
   "Crypto.SHA256": 58,
   "Network.DnsLabel": 59,
   "Temporal.RecurrenceRule": 60,
+  "Ordering.Rank": 63,
+  "Version.SemVer": 64,
+  "Git.PathPattern": 66,
+  "AgentSkill.Name": 67,
 };
 
 interface LenientScalarError {
@@ -145,11 +153,55 @@ function validateWithBackend(id: number, value: unknown | null | undefined): Sca
   return [false, [validationErrorFromLenient(result.error)]];
 }
 
+function canonicalizeJSONValue(
+  id: number,
+  value: unknown,
+  operation: "parse" | "normalize",
+): JSONValue | undefined {
+  if (!isJSONValue(value)) {
+    return undefined;
+  }
+  try {
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined) {
+      return undefined;
+    }
+    const canonical = operation === "parse"
+      ? backend.parse(id, encoded)
+      : backend.normalize(id, encoded);
+    return JSON.parse(canonical) as JSONValue;
+  } catch {
+    return undefined;
+  }
+}
+
+function validateJSONValueWithBackend(id: number, value: unknown): ScalarValidationResult {
+  // Scalar validators treat undefined as an absent optional field. Required
+  // generated field validators reject it before reaching this function.
+  if (value === undefined) {
+    return [true, null];
+  }
+  if (!isJSONValue(value)) {
+    return [false, [{ validator: "type", message: "must be a valid JSON value" }]];
+  }
+  try {
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined) {
+      return [false, [{ validator: "type", message: "must be a valid JSON value" }]];
+    }
+    backend.validate(id, encoded);
+    return [true, null];
+  } catch (error) {
+    return [false, [validationErrorFromLenient(scalarErrorFromUnknown(error))]];
+  }
+}
+
 export type AuthJWT = string & { readonly __brand: "Auth.JWT" };
 function convertAuthJWTValue(value: unknown | null): AuthJWT | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as AuthJWT;
 }
 export function parseAuthJWT(value: unknown): AuthJWT | null {
@@ -181,6 +233,7 @@ function convertAuthPasswordValue(value: unknown | null): AuthPassword | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as AuthPassword;
 }
 export function parseAuthPassword(value: unknown): AuthPassword | null {
@@ -212,6 +265,7 @@ function convertContactEmailValue(value: unknown | null): ContactEmail | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as ContactEmail;
 }
 export function parseContactEmail(value: unknown): ContactEmail | null {
@@ -243,6 +297,7 @@ function convertContactPhoneNumberValue(value: unknown | null): ContactPhoneNumb
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as ContactPhoneNumber;
 }
 export function parseContactPhoneNumber(value: unknown): ContactPhoneNumber | null {
@@ -274,6 +329,7 @@ function convertCryptoRSAPrivateKeyValue(value: unknown | null): CryptoRSAPrivat
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as CryptoRSAPrivateKey;
 }
 export function parseCryptoRSAPrivateKey(value: unknown): CryptoRSAPrivateKey | null {
@@ -305,6 +361,7 @@ function convertCryptoRSAPublicKeyValue(value: unknown | null): CryptoRSAPublicK
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as CryptoRSAPublicKey;
 }
 export function parseCryptoRSAPublicKey(value: unknown): CryptoRSAPublicKey | null {
@@ -336,6 +393,7 @@ function convertDesignColorValue(value: unknown | null): DesignColor | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as DesignColor;
 }
 export function parseDesignColor(value: unknown): DesignColor | null {
@@ -367,6 +425,7 @@ function convertEmbeddingVectorValue(value: unknown | null): EmbeddingVector | n
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as EmbeddingVector;
 }
 export function parseEmbeddingVector(value: unknown): EmbeddingVector | null {
@@ -398,6 +457,7 @@ function convertFileSizeBytesValue(value: unknown | null): FileSizeBytes | null 
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as FileSizeBytes;
 }
 export function parseFileSizeBytes(value: unknown): FileSizeBytes | null {
@@ -429,6 +489,7 @@ function convertFinanceMoneyValue(value: unknown | null): FinanceMoney | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as FinanceMoney;
 }
 export function parseFinanceMoney(value: unknown): FinanceMoney | null {
@@ -460,6 +521,7 @@ function convertGenericInt64Value(value: unknown | null): GenericInt64 | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as GenericInt64;
 }
 export function parseGenericInt64(value: unknown): GenericInt64 | null {
@@ -486,35 +548,45 @@ export function validateGenericInt64(value: unknown | null | undefined): ScalarV
   return validateWithBackend(16, value);
 }
 
-export type GenericJSON = Record<string, any>;
-function convertGenericJSONValue(value: unknown | null): GenericJSON | null {
-  if (value === null || value === undefined) {
-    return null;
+export type GenericJSON = JSONValue;
+function convertGenericJSONValue(value: unknown | null): GenericJSON | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as GenericJSON;
+    } catch {
+      return undefined;
+    }
   }
   return value as GenericJSON;
 }
-export function parseGenericJSON(value: unknown): GenericJSON | null {
-  return convertGenericJSONValue(coerceValue(17, value));
+// The lenient API accepts an already-decoded host JSON value. Use the
+// strict API when the input is serialized JSON text.
+export function parseGenericJSON(value: unknown): GenericJSON | undefined {
+  return canonicalizeJSONValue(17, value, "parse") as GenericJSON | undefined;
 }
-export function normalizeGenericJSON(value: unknown): GenericJSON | null {
-  return convertGenericJSONValue(coerceValue(17, value));
+export function normalizeGenericJSON(value: unknown): GenericJSON | undefined {
+  return canonicalizeJSONValue(17, value, "normalize") as GenericJSON | undefined;
 }
 export function parseGenericJSONStrict(value: string): GenericJSON {
   const parsed = convertGenericJSONValue(backend.parse(17, value));
-  if (parsed === null) {
+  if (parsed === undefined) {
     throw new Error("invalid Generic.JSON");
   }
   return parsed;
 }
 export function normalizeGenericJSONStrict(value: string): GenericJSON {
   const normalized = convertGenericJSONValue(backend.normalize(17, value));
-  if (normalized === null) {
+  if (normalized === undefined) {
     throw new Error("invalid Generic.JSON");
   }
   return normalized;
 }
 export function validateGenericJSON(value: unknown | null | undefined): ScalarValidationResult {
-  return validateWithBackend(17, value);
+  return validateJSONValueWithBackend(17, value);
 }
 
 export type GenericProbability = number;
@@ -522,6 +594,7 @@ function convertGenericProbabilityValue(value: unknown | null): GenericProbabili
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as GenericProbability;
 }
 export function parseGenericProbability(value: unknown): GenericProbability | null {
@@ -553,6 +626,7 @@ function convertGenericStringMapValue(value: unknown | null): GenericStringMap |
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as GenericStringMap;
 }
 export function parseGenericStringMap(value: unknown): GenericStringMap | null {
@@ -584,6 +658,7 @@ function convertGeoLocationValue(value: unknown | null): GeoLocation | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   if (typeof value === "string") {
     const parsed = parseJsonObject(value);
     if (parsed === null) {
@@ -622,6 +697,7 @@ function convertIdentityNameValue(value: unknown | null): IdentityName | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as IdentityName;
 }
 export function parseIdentityName(value: unknown): IdentityName | null {
@@ -653,6 +729,7 @@ function convertIdentitySlugValue(value: unknown | null): IdentitySlug | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as IdentitySlug;
 }
 export function parseIdentitySlug(value: unknown): IdentitySlug | null {
@@ -684,6 +761,7 @@ function convertIdentityUUIDValue(value: unknown | null): IdentityUUID | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as IdentityUUID;
 }
 export function parseIdentityUUID(value: unknown): IdentityUUID | null {
@@ -715,6 +793,7 @@ function convertIdentityUserIDValue(value: unknown | null): IdentityUserID | nul
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as IdentityUserID;
 }
 export function parseIdentityUserID(value: unknown): IdentityUserID | null {
@@ -746,6 +825,7 @@ function convertLocalizationLocaleValue(value: unknown | null): LocalizationLoca
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as LocalizationLocale;
 }
 export function parseLocalizationLocale(value: unknown): LocalizationLocale | null {
@@ -777,6 +857,7 @@ function convertNetworkDomainNameValue(value: unknown | null): NetworkDomainName
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as NetworkDomainName;
 }
 export function parseNetworkDomainName(value: unknown): NetworkDomainName | null {
@@ -808,6 +889,7 @@ function convertNetworkIpAddressValue(value: unknown | null): NetworkIpAddress |
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as NetworkIpAddress;
 }
 export function parseNetworkIpAddress(value: unknown): NetworkIpAddress | null {
@@ -839,6 +921,7 @@ function convertNetworkUriValue(value: unknown | null): NetworkUri | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as NetworkUri;
 }
 export function parseNetworkUri(value: unknown): NetworkUri | null {
@@ -870,6 +953,7 @@ function convertNetworkUrlValue(value: unknown | null): NetworkUrl | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as NetworkUrl;
 }
 export function parseNetworkUrl(value: unknown): NetworkUrl | null {
@@ -901,6 +985,7 @@ function convertTemporalCronExpressionValue(value: unknown | null): TemporalCron
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalCronExpression;
 }
 export function parseTemporalCronExpression(value: unknown): TemporalCronExpression | null {
@@ -932,6 +1017,7 @@ function convertTemporalDateValue(value: unknown | null): TemporalDate | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalDate;
 }
 export function parseTemporalDate(value: unknown): TemporalDate | null {
@@ -963,6 +1049,7 @@ function convertTemporalDateTimeValue(value: unknown | null): TemporalDateTime |
   if (value === null || value === undefined) {
     return null;
   }
+
   if (typeof value !== "string") {
     return null;
   }
@@ -1001,6 +1088,7 @@ function convertTemporalDurationValue(value: unknown | null): TemporalDuration |
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalDuration;
 }
 export function parseTemporalDuration(value: unknown): TemporalDuration | null {
@@ -1032,6 +1120,7 @@ function convertTemporalMillisecondsValue(value: unknown | null): TemporalMillis
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalMilliseconds;
 }
 export function parseTemporalMilliseconds(value: unknown): TemporalMilliseconds | null {
@@ -1063,6 +1152,7 @@ function convertTemporalMonthValue(value: unknown | null): TemporalMonth | null 
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalMonth;
 }
 export function parseTemporalMonth(value: unknown): TemporalMonth | null {
@@ -1094,6 +1184,7 @@ function convertTemporalQuarterValue(value: unknown | null): TemporalQuarter | n
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalQuarter;
 }
 export function parseTemporalQuarter(value: unknown): TemporalQuarter | null {
@@ -1125,6 +1216,7 @@ function convertTemporalQuarterYearValue(value: unknown | null): TemporalQuarter
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalQuarterYear;
 }
 export function parseTemporalQuarterYear(value: unknown): TemporalQuarterYear | null {
@@ -1156,6 +1248,7 @@ function convertTemporalTimeValue(value: unknown | null): TemporalTime | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalTime;
 }
 export function parseTemporalTime(value: unknown): TemporalTime | null {
@@ -1187,6 +1280,7 @@ function convertTemporalTimeZoneValue(value: unknown | null): TemporalTimeZone |
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalTimeZone;
 }
 export function parseTemporalTimeZone(value: unknown): TemporalTimeZone | null {
@@ -1218,6 +1312,7 @@ function convertTemporalYearValue(value: unknown | null): TemporalYear | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalYear;
 }
 export function parseTemporalYear(value: unknown): TemporalYear | null {
@@ -1249,6 +1344,7 @@ function convertTextMarkdownValue(value: unknown | null): TextMarkdown | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TextMarkdown;
 }
 export function parseTextMarkdown(value: unknown): TextMarkdown | null {
@@ -1280,6 +1376,7 @@ function convertTemporalSecondsValue(value: unknown | null): TemporalSeconds | n
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalSeconds;
 }
 export function parseTemporalSeconds(value: unknown): TemporalSeconds | null {
@@ -1311,6 +1408,7 @@ function convertTemporalMinutesValue(value: unknown | null): TemporalMinutes | n
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalMinutes;
 }
 export function parseTemporalMinutes(value: unknown): TemporalMinutes | null {
@@ -1342,6 +1440,7 @@ function convertTemporalHoursValue(value: unknown | null): TemporalHours | null 
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalHours;
 }
 export function parseTemporalHours(value: unknown): TemporalHours | null {
@@ -1373,6 +1472,7 @@ function convertTemporalDaysValue(value: unknown | null): TemporalDays | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalDays;
 }
 export function parseTemporalDays(value: unknown): TemporalDays | null {
@@ -1404,6 +1504,7 @@ function convertTextSqlValue(value: unknown | null): TextSql | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TextSql;
 }
 export function parseTextSql(value: unknown): TextSql | null {
@@ -1435,6 +1536,7 @@ function convertCryptoSHA256Value(value: unknown | null): CryptoSHA256 | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as CryptoSHA256;
 }
 export function parseCryptoSHA256(value: unknown): CryptoSHA256 | null {
@@ -1466,6 +1568,7 @@ function convertNetworkDnsLabelValue(value: unknown | null): NetworkDnsLabel | n
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as NetworkDnsLabel;
 }
 export function parseNetworkDnsLabel(value: unknown): NetworkDnsLabel | null {
@@ -1497,6 +1600,7 @@ function convertTemporalRecurrenceRuleValue(value: unknown | null): TemporalRecu
   if (value === null || value === undefined) {
     return null;
   }
+
   return value as TemporalRecurrenceRule;
 }
 export function parseTemporalRecurrenceRule(value: unknown): TemporalRecurrenceRule | null {
@@ -1521,6 +1625,134 @@ export function normalizeTemporalRecurrenceRuleStrict(value: string): TemporalRe
 }
 export function validateTemporalRecurrenceRule(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend(60, value);
+}
+
+export type OrderingRank = number;
+function convertOrderingRankValue(value: unknown | null): OrderingRank | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as OrderingRank;
+}
+export function parseOrderingRank(value: unknown): OrderingRank | null {
+  return convertOrderingRankValue(coerceValue(63, value));
+}
+export function normalizeOrderingRank(value: unknown): OrderingRank | null {
+  return convertOrderingRankValue(coerceValue(63, value));
+}
+export function parseOrderingRankStrict(value: string): OrderingRank {
+  const parsed = convertOrderingRankValue(backend.parse(63, value));
+  if (parsed === null) {
+    throw new Error("invalid Ordering.Rank");
+  }
+  return parsed;
+}
+export function normalizeOrderingRankStrict(value: string): OrderingRank {
+  const normalized = convertOrderingRankValue(backend.normalize(63, value));
+  if (normalized === null) {
+    throw new Error("invalid Ordering.Rank");
+  }
+  return normalized;
+}
+export function validateOrderingRank(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend(63, value);
+}
+
+export type VersionSemVer = string & { readonly __brand: "Version.SemVer" };
+function convertVersionSemVerValue(value: unknown | null): VersionSemVer | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as VersionSemVer;
+}
+export function parseVersionSemVer(value: unknown): VersionSemVer | null {
+  return convertVersionSemVerValue(coerceValue(64, value));
+}
+export function normalizeVersionSemVer(value: unknown): VersionSemVer | null {
+  return convertVersionSemVerValue(coerceValue(64, value));
+}
+export function parseVersionSemVerStrict(value: string): VersionSemVer {
+  const parsed = convertVersionSemVerValue(backend.parse(64, value));
+  if (parsed === null) {
+    throw new Error("invalid Version.SemVer");
+  }
+  return parsed;
+}
+export function normalizeVersionSemVerStrict(value: string): VersionSemVer {
+  const normalized = convertVersionSemVerValue(backend.normalize(64, value));
+  if (normalized === null) {
+    throw new Error("invalid Version.SemVer");
+  }
+  return normalized;
+}
+export function validateVersionSemVer(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend(64, value);
+}
+
+export type GitPathPattern = string & { readonly __brand: "Git.PathPattern" };
+function convertGitPathPatternValue(value: unknown | null): GitPathPattern | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as GitPathPattern;
+}
+export function parseGitPathPattern(value: unknown): GitPathPattern | null {
+  return convertGitPathPatternValue(coerceValue(66, value));
+}
+export function normalizeGitPathPattern(value: unknown): GitPathPattern | null {
+  return convertGitPathPatternValue(coerceValue(66, value));
+}
+export function parseGitPathPatternStrict(value: string): GitPathPattern {
+  const parsed = convertGitPathPatternValue(backend.parse(66, value));
+  if (parsed === null) {
+    throw new Error("invalid Git.PathPattern");
+  }
+  return parsed;
+}
+export function normalizeGitPathPatternStrict(value: string): GitPathPattern {
+  const normalized = convertGitPathPatternValue(backend.normalize(66, value));
+  if (normalized === null) {
+    throw new Error("invalid Git.PathPattern");
+  }
+  return normalized;
+}
+export function validateGitPathPattern(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend(66, value);
+}
+
+export type AgentSkillName = string & { readonly __brand: "AgentSkill.Name" };
+function convertAgentSkillNameValue(value: unknown | null): AgentSkillName | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as AgentSkillName;
+}
+export function parseAgentSkillName(value: unknown): AgentSkillName | null {
+  return convertAgentSkillNameValue(coerceValue(67, value));
+}
+export function normalizeAgentSkillName(value: unknown): AgentSkillName | null {
+  return convertAgentSkillNameValue(coerceValue(67, value));
+}
+export function parseAgentSkillNameStrict(value: string): AgentSkillName {
+  const parsed = convertAgentSkillNameValue(backend.parse(67, value));
+  if (parsed === null) {
+    throw new Error("invalid AgentSkill.Name");
+  }
+  return parsed;
+}
+export function normalizeAgentSkillNameStrict(value: string): AgentSkillName {
+  const normalized = convertAgentSkillNameValue(backend.normalize(67, value));
+  if (normalized === null) {
+    throw new Error("invalid AgentSkill.Name");
+  }
+  return normalized;
+}
+export function validateAgentSkillName(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend(67, value);
 }
 
 
@@ -1684,13 +1916,13 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     canonicalName: "Generic.JSON",
     symbol: "GenericJSON",
     primitive: "String",
-    tsType: "Record<string, any>",
+    tsType: "JSONValue",
     format: "",
     maxLength: 0,
     minLength: 0,
     pattern: "",
     hasValidator: true,
-    examples: [],
+    examples: ["{\"k\":1}", "[1,2]", "\"text\"", "42", "true", "null"],
     comparabilityClass: null,
     isSortable: false,
   },
@@ -2139,6 +2371,62 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     pattern: "",
     hasValidator: true,
     examples: ["FREQ=WEEKLY;BYMINUTE=0;BYHOUR=9;BYDAY=MO,WE,FR"],
+    comparabilityClass: null,
+    isSortable: true,
+  },
+  {
+    canonicalName: "Ordering.Rank",
+    symbol: "OrderingRank",
+    primitive: "Int",
+    tsType: "number",
+    format: "",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["1", "1000"],
+    comparabilityClass: null,
+    isSortable: true,
+  },
+  {
+    canonicalName: "Version.SemVer",
+    symbol: "VersionSemVer",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 255,
+    minLength: 5,
+    pattern: "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$",
+    hasValidator: true,
+    examples: ["1.0.0", "2.4.1-rc.1+build.9"],
+    comparabilityClass: null,
+    isSortable: true,
+  },
+  {
+    canonicalName: "Git.PathPattern",
+    symbol: "GitPathPattern",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 1024,
+    minLength: 2,
+    pattern: "^!?/[^\\x00\\r\\n]+$",
+    hasValidator: true,
+    examples: ["/skills/**", "!/skills/shared/**", "/assets/"],
+    comparabilityClass: null,
+    isSortable: true,
+  },
+  {
+    canonicalName: "AgentSkill.Name",
+    symbol: "AgentSkillName",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 64,
+    minLength: 1,
+    pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    hasValidator: true,
+    examples: ["data-analysis", "careful-refactors"],
     comparabilityClass: null,
     isSortable: true,
   },

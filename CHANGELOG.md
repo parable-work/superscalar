@@ -49,6 +49,20 @@ bump they require (minor when loosening, major when tightening).
   invariants also reject a class spanning two SQL types with no coercion
   between them and a class declared on an alias. No relation changes for any
   built-in.
+- Scalars: `Ordering.Rank` (id 63, a positive JavaScript-safe integer),
+  `Version.SemVer` (64, canonical Semantic Versioning 2.0.0),
+  `Git.PathPattern` (66, a repository-rooted gitignore-style pattern, a deep
+  scalar) and `AgentSkill.Name` (67, an Agent Skills directory and
+  frontmatter name). Ids 61, 62 and 65 are held by a downstream extension and
+  join the permanent holes; the next free built-in id is 68. New accept sets
+  with vectors, a minor bump.
+- Go: `ScalarMetadata` carries `TypeScriptType`, `PythonType` and `RustType`
+  beside `GoType`; `GenericJSON` implements `driver.Valuer` and `sql.Scanner`
+  and keeps SQL NULL distinct from an explicit JSON `null`.
+- TypeScript: `JSONValue` and `isJSONValue` (`src/json-value.ts`), exported
+  from the package root and from the generated module. Codegen reads the
+  module path from the optional `[typescript] json_value_module` key
+  (default `./json-value`).
 
 ### Changed
 
@@ -60,5 +74,15 @@ bump they require (minor when loosening, major when tightening).
   `Network.DomainName` accept either case and do not move, and scalars with a
   hand-written impl are unaffected. `parse` stays strict. No accept-set
   change and no vector change; normalize output changes, a minor bump.
+- `Generic.JSON` is any JSON value, not only an object: `json_schema_type` is
+  `any`, the TypeScript type is `JSONValue`, the Python type is `Any`, and the
+  description, docstring and examples say so. The core already accepted every
+  JSON root, so the accept set does not change. The generated TypeScript
+  wrappers change shape: `parseGenericJSON` and `normalizeGenericJSON` take a
+  decoded host value and return `GenericJSON | undefined`, keeping an explicit
+  `null` as a value and reporting an absent or non-portable input (`NaN`, a
+  cycle, a `Set`) as `undefined`; `validateGenericJSON` rejects such inputs.
+  A breaking change for TypeScript callers of those wrappers. `Generic.JSON`
+  and `Git.PathPattern` set the `validate` hook.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

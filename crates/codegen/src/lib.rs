@@ -31,6 +31,11 @@ pub struct Entry {
     pub canonical: String,
     pub canonical_literal: String,
     pub is_object: bool,
+    /// The scalar's value is any JSON value, explicit `null` included
+    /// (`json_schema_type: "any"`). The TypeScript wrappers then report an
+    /// absent or invalid value as `undefined`, because `null` is a valid value
+    /// of the scalar and cannot also mean "no value".
+    pub allows_json_null: bool,
     pub is_metadata_alias: bool,
     /// The def is an alias or is aliased by another def, so Go emits it as a
     /// type alias of the shared Go type instead of a distinct named type.
@@ -42,6 +47,11 @@ pub struct Entry {
     pub ts_type: String,
     pub ts_type_literal: String,
     pub ts_alias: String,
+    /// `type_mappings["python"]` and `type_mappings["rust"]` as quoted source
+    /// literals, carried into the Go metadata table beside the TypeScript and
+    /// Go types.
+    pub python_type_literal: String,
+    pub rust_type_literal: String,
     pub go_type: String,
     pub go_type_literal: String,
     pub sql_type_literal: String,
@@ -187,6 +197,7 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 canonical,
                 canonical_literal: canonical_literal.clone(),
                 is_object,
+                allows_json_null: def.json_schema_type == "any",
                 is_metadata_alias: is_object && !go_type.starts_with("struct{"),
                 is_alias_member,
                 include_metadata: !def.metadata_omit,
@@ -196,6 +207,8 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 ts_type_literal: format!("{ts_type:?}"),
                 ts_alias: ts_alias_type(&canonical_literal, &ts_type),
                 ts_type,
+                python_type_literal: format!("{:?}", type_mapping(def, "python")),
+                rust_type_literal: format!("{:?}", type_mapping(def, "rust")),
                 go_type_literal: format!("{go_type:?}"),
                 go_type,
                 sql_type_literal: format!("{:?}", def.sql_type),

@@ -18,6 +18,9 @@ type ScalarMetadata struct {
 	Symbol         string
 	Primitive      string
 	Description    string
+	TypeScriptType string
+	PythonType     string
+	RustType       string
 	GoType         string
 	SQLType        string
 	JSONSchemaType string
@@ -96,6 +99,9 @@ var validScalarsMap = func() map[{{ go.scalar_list_type }}]struct{} {
 		Symbol:         "{{ e.camel }}",
 		Primitive:      {{ e.primitive_literal }},
 		Description:    {{ e.description_literal }},
+		TypeScriptType: {{ e.ts_type_literal }},
+		PythonType:     {{ e.python_type_literal }},
+		RustType:       {{ e.rust_type_literal }},
 		GoType:         {{ e.go_type_literal }},
 		SQLType:        {{ e.sql_type_literal }},
 		JSONSchemaType: {{ e.json_schema_type_literal }},

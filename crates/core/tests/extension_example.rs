@@ -132,7 +132,7 @@ fn builtin_scalars_behave_the_same_through_the_assembly() {
 fn the_builtin_registry_is_untouched_by_an_assembly() {
     let _registry = assembled();
     let builtin = Registry::builtin();
-    assert_eq!(builtin.len(), 44);
+    assert_eq!(builtin.len(), 48);
     assert!(builtin.by_canonical("Acme.OrderNumber").is_none());
     assert!(builtin.def(ORDER_NUMBER).is_none());
 }
@@ -141,11 +141,11 @@ fn the_builtin_registry_is_untouched_by_an_assembly() {
 fn dump_attributes_extension_scalars_to_their_owner() {
     let dump = assembled().dump();
     let scalars = dump["scalars"].as_array().expect("array");
-    assert_eq!(scalars.len(), 46);
-    let order = &scalars[44];
+    assert_eq!(scalars.len(), 50);
+    let order = &scalars[48];
     assert_eq!(order["canonical"], "Acme.OrderNumber");
     assert_eq!(order["extension"], "acme");
     assert_eq!(order["is_directive"], true);
-    assert_eq!(scalars[45]["is_directive"], false);
+    assert_eq!(scalars[49]["is_directive"], false);
     assert_eq!(dump["extensions"][1]["name"], "acme");
 }

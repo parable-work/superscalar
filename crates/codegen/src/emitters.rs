@@ -36,6 +36,7 @@ struct GoView<'a> {
 struct TypeScriptView<'a> {
     backend_module: &'a str,
     validation_module: &'a str,
+    json_value_module: &'a str,
     type_imports: &'a [TypeImport],
     /// Every name across `type_imports`; a legacy alias with one of these
     /// names skips its `export type` line.
@@ -162,6 +163,7 @@ impl Emitter for TypeScript {
         view.typescript = Some(TypeScriptView {
             backend_module: &ts.backend_module,
             validation_module: &ts.validation_module,
+            json_value_module: &ts.json_value_module,
             type_imports: &ts.type_imports,
             imported_type_names: ts
                 .type_imports

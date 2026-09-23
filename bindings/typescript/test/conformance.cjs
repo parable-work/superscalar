@@ -22,6 +22,10 @@ const {
   scalarIdByCanonical,
   parseContactEmail,
   SCALAR_METADATA_BY_CANONICAL,
+  parseGenericJSON,
+  parseGenericJSONStrict,
+  normalizeGenericJSON,
+  validateGenericJSON,
 } = require("../dist/generated.js");
 // validateNetworkUrl is the generated public wrapper over the Rust-backed core.
 // Exercise it directly so the regression test covers the package export surface.
@@ -174,6 +178,75 @@ if (missingFromMetadata.join(",") !== declaredExcluded.join(",")) {
 if (parseContactEmail("Foo@Bar.com") !== "foo@bar.com") {
   failures++;
   console.error("generated wrapper parseContactEmail did not route correctly");
+}
+
+// Generic.JSON is any JSON value, explicit null included: the generated
+// wrappers keep every root, keep null distinct from absence (undefined), and
+// refuse host values that are not portable JSON.
+const genericJSONRoots = [
+  [`{"k":1}`, { k: 1 }],
+  [`[1,2]`, [1, 2]],
+  [`"text"`, "text"],
+  ["42", 42],
+  ["true", true],
+  ["null", null],
+];
+for (const [encoded, expected] of genericJSONRoots) {
+  const strict = parseGenericJSONStrict(encoded);
+  if (JSON.stringify(strict) !== JSON.stringify(expected)) {
+    failures++;
+    console.error(
+      `generated wrapper parseGenericJSONStrict(${JSON.stringify(encoded)}) = ${JSON.stringify(strict)}, want ${JSON.stringify(expected)}`,
+    );
+  }
+
+  const parsed = parseGenericJSON(expected);
+  const normalized = normalizeGenericJSON(expected);
+  const [valid, validationErrors] = validateGenericJSON(expected);
+  if (
+    JSON.stringify(parsed) !== JSON.stringify(expected) ||
+    JSON.stringify(normalized) !== JSON.stringify(expected) ||
+    !valid ||
+    validationErrors !== null
+  ) {
+    failures++;
+    console.error(`generated Generic.JSON runtime wrapper rejected ${JSON.stringify(expected)}`);
+  }
+}
+
+if (parseGenericJSON(null) !== null || parseGenericJSON(undefined) !== undefined) {
+  failures++;
+  console.error("generated Generic.JSON wrapper collapsed explicit null and absence");
+}
+
+try {
+  parseGenericJSONStrict("{");
+  failures++;
+  console.error("generated Generic.JSON strict wrapper accepted malformed JSON text");
+} catch {
+  // Expected: strict textual parsing keeps malformed input distinct from null.
+}
+
+const cyclic = {};
+cyclic.self = cyclic;
+const sparse = [];
+sparse.length = 1;
+const invalidGenericJSONValues = [
+  ["NaN", Number.NaN],
+  ["Infinity", Number.POSITIVE_INFINITY],
+  ["bigint", 1n],
+  ["set", new Set([1])],
+  ["undefined property", { value: undefined }],
+  ["sparse array", sparse],
+  ["function", () => undefined],
+  ["cycle", cyclic],
+];
+for (const [name, value] of invalidGenericJSONValues) {
+  const [valid] = validateGenericJSON(value);
+  if (parseGenericJSON(value) !== undefined || valid) {
+    failures++;
+    console.error(`generated Generic.JSON wrapper accepted invalid ${name}`);
+  }
 }
 
 // Network.Url JS-path behavior + ReDoS regression. validateNetworkUrl returns

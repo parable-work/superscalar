@@ -1008,7 +1008,7 @@ mod sortability_rule_tests {
             assert!(json_shape_is_sortable(shape), "{shape} must be sortable");
         }
         for shape in [
-            "object", "array", "", "json", "Object", "objects", "String", "null",
+            "object", "array", "any", "", "json", "Object", "objects", "String", "null",
         ] {
             assert!(
                 !json_shape_is_sortable(shape),

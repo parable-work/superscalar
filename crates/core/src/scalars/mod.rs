@@ -4,6 +4,7 @@ pub mod duration;
 pub mod email;
 pub mod embedding_vector;
 pub mod generic_string_map;
+pub mod git_path_pattern;
 pub mod json_scalar;
 pub mod network_dns_label;
 pub mod network_url;

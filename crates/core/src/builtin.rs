@@ -35,6 +35,10 @@ pub(crate) fn impls() -> Vec<(ScalarId, Box<dyn Scalar>)> {
             Box::new(scalars::generic_string_map::GenericStringMap),
         ),
         (
+            ScalarId::GIT_PATH_PATTERN,
+            Box::new(scalars::git_path_pattern::GitPathPatternScalar),
+        ),
+        (
             ScalarId::NETWORK_DNS_LABEL,
             Box::new(scalars::network_dns_label::NetworkDnsLabelScalar),
         ),

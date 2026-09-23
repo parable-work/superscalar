@@ -12,7 +12,7 @@ what its id is, or what type it maps to in Go, the answer is a registry entry.
 
 It is two Rust files in the core crate. `registry.rs` holds the `ScalarDef`
 struct, the `PrimitiveKind` and `ScalarTag` enums and the `Scalar` trait.
-`catalog.rs` holds the `ScalarId` type and the 44 built-in definitions.
+`catalog.rs` holds the `ScalarId` type and the 48 built-in definitions.
 
 ## A definition
 
@@ -57,11 +57,12 @@ implementation built from the definition's rules.
 
 ## Ids are frozen, holes are permanent
 
-Built-in ids are `u32` values in the block `0..=4095`. The 44 built-ins do
-not occupy `0..=43`: the ids `0` to `4`, `7`, `30` to `38`, `51` and `57` are
-unused. Those ids belonged to scalars that were removed from the built-in set
-when the library was extracted and now live in an extension, and they are
-never reused. The next free built-in id is `61`.
+Built-in ids are `u32` values in the block `0..=4095`. The 48 built-ins do
+not occupy `0..=47`: the ids `0` to `4`, `7`, `30` to `38`, `51`, `57`, `61`,
+`62` and `65` are unused. Those ids belong to scalars that live in a
+downstream extension (most were removed from the built-in set when the
+library was extracted), and they are never reused. The next free built-in id
+is `68`.
 
 The reason is byte compatibility. Generated bindings and stored data carry
 the numeric id, and a renumbering would change what an existing consumer
@@ -87,7 +88,7 @@ in its own crate. The design is agreed and is being implemented; the shape is:
   4096 and at least 4096, a static slice of `ScalarDef`s, hand-written
   `Scalar` implementations, and optional legacy aliases for generated
   symbols.
-- `Registry::builtin()` returns the 44 built-ins.
+- `Registry::builtin()` returns the 48 built-ins.
   `Registry::assemble(&[&dyn Extension])` returns built-ins plus extensions
   and panics on any conflict: overlapping ids, duplicate canonical names, a
   definition outside its extension's block, a `CustomLogic` definition with

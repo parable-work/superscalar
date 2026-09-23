@@ -7,7 +7,7 @@ sidebar:
 
 An extension is a Rust crate that adds scalars to the registry without
 forking the core. You declare definitions and implementations, assemble a
-registry that holds the 44 built-ins plus yours, and apply four one-line
+registry that holds the 48 built-ins plus yours, and apply four one-line
 macros to produce native bindings that carry the whole assembled catalog.
 The code generator then emits Go, Python and TypeScript wrappers for your
 scalars from a configuration file you own.
@@ -220,7 +220,7 @@ scalars as well as yours, so your Go package has `ParseContactEmail` next to
 corpus. `Acme.ScalarRef` accepts `"Contact.Email"` and `"Acme.OrderNumber"`
 and rejects `"Nope.Nope"`. The runners in `go/`, `typescript/` and `python/`
 take a list of vector files and run both the built-in file and yours, so a
-downstream assembly proves that the 44 built-ins still behave and that your
+downstream assembly proves that the 48 built-ins still behave and that your
 scalars behave. See [conformance](/superscalar/guides/conformance/).
 
 The example's CI job runs, in order: `cargo test -p acme-scalars`, the xtask

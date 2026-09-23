@@ -81,6 +81,29 @@ fn relative_paths_resolve_against_the_config_directory() {
     fs::remove_dir_all(&dir).expect("remove temp dir");
 }
 
+/// `json_value_module` is optional: the checked-in config leaves it out and
+/// gets `./json-value`, so an existing config keeps parsing and its output
+/// imports the module from beside the generated file. A set value reaches the
+/// import lines.
+#[test]
+fn json_value_module_defaults_beside_the_generated_file_and_is_configurable() {
+    let config = common::config();
+    let ts = config.typescript.as_ref().expect("[typescript]");
+    assert_eq!(ts.json_value_module, "./json-value");
+
+    let text = checked_in_text().replace(
+        "validation_module = \"./validation\"",
+        "validation_module = \"./validation\"\njson_value_module = \"./json/value\"",
+    );
+    let config =
+        Config::parse(&text, common::config_path().parent().unwrap().to_path_buf()).expect("parse");
+    let ctx = common::context(&config);
+    let rendered = common::rendered(&ctx, "typescript");
+    assert!(rendered.contains("import { isJSONValue } from \"./json/value\";"));
+    assert!(rendered.contains("export type { JSONValue } from \"./json/value\";"));
+    assert!(!rendered.contains("\"./json-value\""));
+}
+
 #[test]
 fn go_output_without_inserts_has_no_extension_blocks() {
     // The built-in layout supplies no inserts, so the Go output carries only

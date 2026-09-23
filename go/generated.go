@@ -18,6 +18,9 @@ type ScalarMetadata struct {
 	Symbol             string
 	Primitive          string
 	Description        string
+	TypeScriptType     string
+	PythonType         string
+	RustType           string
 	GoType             string
 	SQLType            string
 	JSONSchemaType     string
@@ -104,6 +107,10 @@ const (
 	scalarIDCryptoSHA256           uint32 = 58
 	scalarIDNetworkDnsLabel        uint32 = 59
 	scalarIDTemporalRecurrenceRule uint32 = 60
+	scalarIDOrderingRank           uint32 = 63
+	scalarIDVersionSemVer          uint32 = 64
+	scalarIDGitPathPattern         uint32 = 66
+	scalarIDAgentSkillName         uint32 = 67
 )
 
 // ScalarIDByCanonical maps a canonical scalar string to its frozen u32 id.
@@ -152,6 +159,10 @@ var ScalarIDByCanonical = map[string]uint32{
 	"Crypto.SHA256":           58,
 	"Network.DnsLabel":        59,
 	"Temporal.RecurrenceRule": 60,
+	"Ordering.Rank":           63,
+	"Version.SemVer":          64,
+	"Git.PathPattern":         66,
+	"AgentSkill.Name":         67,
 }
 
 // VALID_SCALARS lists every canonical scalar name known to scalar-lib.
@@ -200,6 +211,10 @@ var VALID_SCALARS = []string{
 	string("Crypto.SHA256"),
 	string("Network.DnsLabel"),
 	string("Temporal.RecurrenceRule"),
+	string("Ordering.Rank"),
+	string("Version.SemVer"),
+	string("Git.PathPattern"),
+	string("AgentSkill.Name"),
 }
 
 var validScalarsMap = func() map[string]struct{} {
@@ -243,7 +258,7 @@ type FinanceMoney int64
 // Generic.Int64 - "Signed 64-bit integer; range bounded by JavaScript's safe-integer ceiling."
 type GenericInt64 int64
 
-// Generic.JSON - "A JSON object represented as a string"
+// Generic.JSON - "Any valid JSON value: object, array, primitive, or null"
 type GenericJSON json.RawMessage
 
 // Generic.Probability - "Probability value from 0.0 to 1.0 inclusive"
@@ -345,12 +360,27 @@ type NetworkDnsLabel string
 // Temporal.RecurrenceRule - "RFC 5545 recurrence rule, without DTSTART"
 type TemporalRecurrenceRule string
 
+// Ordering.Rank - "Positive JavaScript-safe ordering rank"
+type OrderingRank int64
+
+// Version.SemVer - "Canonical Semantic Versioning 2.0.0 value"
+type VersionSemVer string
+
+// Git.PathPattern - "Repository-rooted, case-sensitive gitignore-style path pattern"
+type GitPathPattern string
+
+// AgentSkill.Name - "Portable Agent Skills directory and frontmatter name"
+type AgentSkillName string
+
 var SCALAR_METADATA = []ScalarMetadata{
 	{
 		CanonicalName:      "Auth.JWT",
 		Symbol:             "AuthJWT",
 		Primitive:          "String",
 		Description:        "JSON Web Token string",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TEXT",
 		JSONSchemaType:     "string",
@@ -373,6 +403,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "AuthPassword",
 		Primitive:          "String",
 		Description:        "User password (minimum 8 characters)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(128)",
 		JSONSchemaType:     "string",
@@ -395,6 +428,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "ContactEmail",
 		Primitive:          "String",
 		Description:        "An email address",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "CITEXT",
 		JSONSchemaType:     "string",
@@ -417,6 +453,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "ContactPhoneNumber",
 		Primitive:          "String",
 		Description:        "Phone number in E.164 format",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(16)",
 		JSONSchemaType:     "string",
@@ -439,6 +478,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "CryptoRSAPrivateKey",
 		Primitive:          "String",
 		Description:        "RSA private key in PEM format",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TEXT",
 		JSONSchemaType:     "string",
@@ -461,6 +503,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "CryptoRSAPublicKey",
 		Primitive:          "String",
 		Description:        "RSA public key in PEM format",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TEXT",
 		JSONSchemaType:     "string",
@@ -483,6 +528,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "DesignColor",
 		Primitive:          "String",
 		Description:        "CSS color value normalized to 8-digit RGBA hex format (#RRGGBBAA)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(9)",
 		JSONSchemaType:     "string",
@@ -505,6 +553,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "EmbeddingVector",
 		Primitive:          "String",
 		Description:        "Fixed-dimensional float32 vector",
+		TypeScriptType:     "number[]",
+		PythonType:         "list[float]",
+		RustType:           "Vec<f32>",
 		GoType:             "[]float32",
 		SQLType:            "",
 		JSONSchemaType:     "array",
@@ -527,6 +578,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "FileSizeBytes",
 		Primitive:          "Int",
 		Description:        "File size in bytes (non-negative, BIGINT-backed)",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -549,6 +603,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "FinanceMoney",
 		Primitive:          "Int",
 		Description:        "Monetary amount in smallest currency unit (e.g., cents for USD)",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -571,6 +628,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "GenericInt64",
 		Primitive:          "Int",
 		Description:        "Signed 64-bit integer; range bounded by JavaScript's safe-integer ceiling.",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -592,10 +652,13 @@ var SCALAR_METADATA = []ScalarMetadata{
 		CanonicalName:      "Generic.JSON",
 		Symbol:             "GenericJSON",
 		Primitive:          "String",
-		Description:        "A JSON object represented as a string",
+		Description:        "Any valid JSON value: object, array, primitive, or null",
+		TypeScriptType:     "JSONValue",
+		PythonType:         "Any",
+		RustType:           "serde_json::Value",
 		GoType:             "json.RawMessage",
 		SQLType:            "JSONB",
-		JSONSchemaType:     "object",
+		JSONSchemaType:     "any",
 		Format:             "",
 		MaxLength:          0,
 		MinLength:          0,
@@ -604,9 +667,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Pattern:            "",
 		HasCustomNormalize: false,
 		HasCustomParse:     false,
-		HasCustomValidate:  false,
+		HasCustomValidate:  true,
 		HasValidator:       true,
-		Examples:           []string{},
+		Examples:           []string{"{\"k\":1}", "[1,2]", "\"text\"", "42", "true", "null"},
 		ComparabilityClass: "",
 		IsSortable:         false,
 	},
@@ -615,6 +678,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "GenericProbability",
 		Primitive:          "Float",
 		Description:        "Probability value from 0.0 to 1.0 inclusive",
+		TypeScriptType:     "number",
+		PythonType:         "float",
+		RustType:           "f64",
 		GoType:             "float64",
 		SQLType:            "DOUBLE PRECISION",
 		JSONSchemaType:     "number",
@@ -637,6 +703,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "GenericStringMap",
 		Primitive:          "String",
 		Description:        "A string-to-string map stored as JSON",
+		TypeScriptType:     "Record<string, string>",
+		PythonType:         "Dict[str, str]",
+		RustType:           "std::collections::HashMap<String, String>",
 		GoType:             "map[string]string",
 		SQLType:            "JSONB",
 		JSONSchemaType:     "object",
@@ -659,6 +728,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "GeoLocation",
 		Primitive:          "String",
 		Description:        "Geographic location with latitude and longitude",
+		TypeScriptType:     "{ lat: number; lon: number }",
+		PythonType:         "dict",
+		RustType:           "struct Location { lat: f64, lon: f64 }",
 		GoType:             "struct{ Lat float64; Lon float64 }",
 		SQLType:            "POINT",
 		JSONSchemaType:     "object",
@@ -681,6 +753,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "IdentityName",
 		Primitive:          "String",
 		Description:        "An objects name",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(80)",
 		JSONSchemaType:     "string",
@@ -703,6 +778,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "IdentitySlug",
 		Primitive:          "String",
 		Description:        "A URL friendly version of a string",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "CITEXT",
 		JSONSchemaType:     "string",
@@ -725,6 +803,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "IdentityUUID",
 		Primitive:          "String",
 		Description:        "UUID v4 with automatic base62 encoding for client-facing APIs",
+		TypeScriptType:     "string",
+		PythonType:         "uuid.UUID",
+		RustType:           "uuid::Uuid",
 		GoType:             "UUID",
 		SQLType:            "UUID",
 		JSONSchemaType:     "string",
@@ -747,6 +828,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "IdentityUserID",
 		Primitive:          "String",
 		Description:        "UUID v4 string as base62",
+		TypeScriptType:     "string",
+		PythonType:         "uuid.UUID",
+		RustType:           "uuid::Uuid",
 		GoType:             "UUID",
 		SQLType:            "UUID",
 		JSONSchemaType:     "string",
@@ -769,6 +853,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "LocalizationLocale",
 		Primitive:          "String",
 		Description:        "BCP 47 language tag (e.g., en-US, fr-FR)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(35)",
 		JSONSchemaType:     "string",
@@ -791,6 +878,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "NetworkDomainName",
 		Primitive:          "String",
 		Description:        "Valid domain name (RFC 1035 compliant)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "CITEXT",
 		JSONSchemaType:     "string",
@@ -813,6 +903,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "NetworkIpAddress",
 		Primitive:          "String",
 		Description:        "IPv4 or IPv6 address",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "INET",
 		JSONSchemaType:     "string",
@@ -835,6 +928,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "NetworkUri",
 		Primitive:          "String",
 		Description:        "RFC 3986 URI for connection strings and non-HTTP resources",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TEXT",
 		JSONSchemaType:     "string",
@@ -857,6 +953,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "NetworkUrl",
 		Primitive:          "String",
 		Description:        "Valid HTTP/HTTPS URL",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "varchar(4096)",
 		JSONSchemaType:     "string",
@@ -879,6 +978,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalCronExpression",
 		Primitive:          "String",
 		Description:        "Standard 5-field cron expression for scheduling",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(100)",
 		JSONSchemaType:     "string",
@@ -901,6 +1003,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalDate",
 		Primitive:          "String",
 		Description:        "Calendar date, normalized to ISO 'YYYY-MM-DD'. Accepts ISO ('2025-01-01'), slash-separated ('2025/01/15', '01/15/2025'), named-month ('January 15, 2025', 'Jan 15, 2025'), and full RFC3339 datetime (the time portion is dropped).",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "DATE",
 		JSONSchemaType:     "string",
@@ -923,6 +1028,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalDateTime",
 		Primitive:          "String",
 		Description:        "ISO8601 datetime string. Epoch wire values keep this scalar and declare x-temporal-format (unix, unix_millis, unix_micros, unix_nanos) on the property; the unit is never guessed from digit count.",
+		TypeScriptType:     "JSDate",
+		PythonType:         "datetime.datetime",
+		RustType:           "chrono::DateTime<chrono::Utc>",
 		GoType:             "time.Time",
 		SQLType:            "TIMESTAMPTZ",
 		JSONSchemaType:     "string",
@@ -945,6 +1053,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalDuration",
 		Primitive:          "String",
 		Description:        "Duration for timeouts and intervals",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "time.Duration",
 		SQLType:            "INTERVAL",
 		JSONSchemaType:     "string",
@@ -967,6 +1078,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalMilliseconds",
 		Primitive:          "Int",
 		Description:        "Signed integer count of milliseconds: an amount of elapsed time, never a point in time. An epoch timestamp is Temporal.DateTime with x-temporal-format: unix_millis.",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -989,6 +1103,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalMonth",
 		Primitive:          "String",
 		Description:        "Calendar month, normalized to two-digit numeric (01-12). Accepts '2', '02', 'Feb', 'February' (case-insensitive).",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(2)",
 		JSONSchemaType:     "string",
@@ -1011,6 +1128,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalQuarter",
 		Primitive:          "String",
 		Description:        "Calendar quarter (Q1-Q4)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(2)",
 		JSONSchemaType:     "string",
@@ -1033,6 +1153,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalQuarterYear",
 		Primitive:          "String",
 		Description:        "Quarter and year, normalized to 'YYYY-Q#'. Accepts '2025-Q1', 'Q1/2025', 'Q1-2025', 'Q1-25' (2-digit years interpreted as 20XX).",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(7)",
 		JSONSchemaType:     "string",
@@ -1055,6 +1178,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalTime",
 		Primitive:          "String",
 		Description:        "Time of day. 24-hour 'HH:MM' or 'HH:MM:SS' (hours 00-23), or 12-hour 'H:MM'/'HH:MM' with optional ':SS' and required AM/PM suffix (hours 1-12). Seconds and the AM/PM separator space are optional.",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TIME",
 		JSONSchemaType:     "string",
@@ -1077,6 +1203,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalTimeZone",
 		Primitive:          "String",
 		Description:        "IANA timezone identifier (e.g., America/New_York, UTC, Etc/UTC)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(100)",
 		JSONSchemaType:     "string",
@@ -1099,6 +1228,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalYear",
 		Primitive:          "String",
 		Description:        "Calendar year as a 4-digit string (e.g., 2025)",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(4)",
 		JSONSchemaType:     "string",
@@ -1121,6 +1253,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TextMarkdown",
 		Primitive:          "String",
 		Description:        "Markdown text",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TEXT",
 		JSONSchemaType:     "string",
@@ -1143,6 +1278,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalSeconds",
 		Primitive:          "Int",
 		Description:        "Signed integer count of seconds: an amount of elapsed time, never a point in time. An epoch timestamp is Temporal.DateTime with x-temporal-format: unix.",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -1165,6 +1303,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalMinutes",
 		Primitive:          "Int",
 		Description:        "Signed integer count of minutes: an amount of elapsed time, never a point in time.",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -1187,6 +1328,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalHours",
 		Primitive:          "Int",
 		Description:        "Signed integer count of hours: an amount of elapsed time, never a point in time.",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -1209,6 +1353,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalDays",
 		Primitive:          "Int",
 		Description:        "Signed integer count of days: an amount of elapsed time, never a point in time or a calendar date.",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
 		GoType:             "int64",
 		SQLType:            "BIGINT",
 		JSONSchemaType:     "integer",
@@ -1231,6 +1378,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TextSql",
 		Primitive:          "String",
 		Description:        "SQL text",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "TEXT",
 		JSONSchemaType:     "string",
@@ -1253,6 +1403,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "CryptoSHA256",
 		Primitive:          "String",
 		Description:        "Lowercase hexadecimal SHA-256 digest",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(64)",
 		JSONSchemaType:     "string",
@@ -1275,6 +1428,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "NetworkDnsLabel",
 		Primitive:          "String",
 		Description:        "Single DNS label (RFC 1035): one hostname segment, no dots",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "CITEXT",
 		JSONSchemaType:     "string",
@@ -1297,6 +1453,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Symbol:             "TemporalRecurrenceRule",
 		Primitive:          "String",
 		Description:        "RFC 5545 recurrence rule, without DTSTART",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
 		GoType:             "string",
 		SQLType:            "VARCHAR(512)",
 		JSONSchemaType:     "string",
@@ -1311,6 +1470,106 @@ var SCALAR_METADATA = []ScalarMetadata{
 		HasCustomValidate:  false,
 		HasValidator:       true,
 		Examples:           []string{"FREQ=WEEKLY;BYMINUTE=0;BYHOUR=9;BYDAY=MO,WE,FR"},
+		ComparabilityClass: "",
+		IsSortable:         true,
+	},
+	{
+		CanonicalName:      "Ordering.Rank",
+		Symbol:             "OrderingRank",
+		Primitive:          "Int",
+		Description:        "Positive JavaScript-safe ordering rank",
+		TypeScriptType:     "number",
+		PythonType:         "int",
+		RustType:           "i64",
+		GoType:             "int64",
+		SQLType:            "BIGINT",
+		JSONSchemaType:     "integer",
+		Format:             "",
+		MaxLength:          0,
+		MinLength:          0,
+		Maximum:            scalarInt64Ptr(9007199254740991),
+		Minimum:            scalarInt64Ptr(1),
+		Pattern:            "",
+		HasCustomNormalize: false,
+		HasCustomParse:     false,
+		HasCustomValidate:  false,
+		HasValidator:       true,
+		Examples:           []string{"1", "1000"},
+		ComparabilityClass: "",
+		IsSortable:         true,
+	},
+	{
+		CanonicalName:      "Version.SemVer",
+		Symbol:             "VersionSemVer",
+		Primitive:          "String",
+		Description:        "Canonical Semantic Versioning 2.0.0 value",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
+		GoType:             "string",
+		SQLType:            "VARCHAR(255)",
+		JSONSchemaType:     "string",
+		Format:             "",
+		MaxLength:          255,
+		MinLength:          5,
+		Maximum:            nil,
+		Minimum:            nil,
+		Pattern:            "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$",
+		HasCustomNormalize: false,
+		HasCustomParse:     false,
+		HasCustomValidate:  false,
+		HasValidator:       true,
+		Examples:           []string{"1.0.0", "2.4.1-rc.1+build.9"},
+		ComparabilityClass: "",
+		IsSortable:         true,
+	},
+	{
+		CanonicalName:      "Git.PathPattern",
+		Symbol:             "GitPathPattern",
+		Primitive:          "String",
+		Description:        "Repository-rooted, case-sensitive gitignore-style path pattern",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
+		GoType:             "string",
+		SQLType:            "VARCHAR(1024)",
+		JSONSchemaType:     "string",
+		Format:             "",
+		MaxLength:          1024,
+		MinLength:          2,
+		Maximum:            nil,
+		Minimum:            nil,
+		Pattern:            "^!?/[^\\x00\\r\\n]+$",
+		HasCustomNormalize: false,
+		HasCustomParse:     false,
+		HasCustomValidate:  true,
+		HasValidator:       true,
+		Examples:           []string{"/skills/**", "!/skills/shared/**", "/assets/"},
+		ComparabilityClass: "",
+		IsSortable:         true,
+	},
+	{
+		CanonicalName:      "AgentSkill.Name",
+		Symbol:             "AgentSkillName",
+		Primitive:          "String",
+		Description:        "Portable Agent Skills directory and frontmatter name",
+		TypeScriptType:     "string",
+		PythonType:         "str",
+		RustType:           "String",
+		GoType:             "string",
+		SQLType:            "CITEXT",
+		JSONSchemaType:     "string",
+		Format:             "",
+		MaxLength:          64,
+		MinLength:          1,
+		Maximum:            nil,
+		Minimum:            nil,
+		Pattern:            "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+		HasCustomNormalize: false,
+		HasCustomParse:     false,
+		HasCustomValidate:  false,
+		HasValidator:       true,
+		Examples:           []string{"data-analysis", "careful-refactors"},
 		ComparabilityClass: "",
 		IsSortable:         true,
 	},
@@ -1440,6 +1699,9 @@ var TextMarkdownPattern = ScalarPattern(patternForCanonical("Text.Markdown"))
 var TextSqlPattern = ScalarPattern(patternForCanonical("Text.Sql"))
 var CryptoSHA256Pattern = ScalarPattern(patternForCanonical("Crypto.SHA256"))
 var NetworkDnsLabelPattern = ScalarPattern(patternForCanonical("Network.DnsLabel"))
+var VersionSemVerPattern = ScalarPattern(patternForCanonical("Version.SemVer"))
+var GitPathPatternPattern = ScalarPattern(patternForCanonical("Git.PathPattern"))
+var AgentSkillNamePattern = ScalarPattern(patternForCanonical("AgentSkill.Name"))
 
 func validationErrorsFromError(err error) []ValidationError {
 	if err == nil {
@@ -1621,6 +1883,14 @@ func ValidatorFor(canonicalId string) func(string) error {
 		return func(value string) error { return callScalarValidate(59, value) }
 	case "Temporal.RecurrenceRule":
 		return func(value string) error { return callScalarValidate(60, value) }
+	case "Ordering.Rank":
+		return func(value string) error { return callScalarValidate(63, value) }
+	case "Version.SemVer":
+		return func(value string) error { return callScalarValidate(64, value) }
+	case "Git.PathPattern":
+		return func(value string) error { return callScalarValidate(66, value) }
+	case "AgentSkill.Name":
+		return func(value string) error { return callScalarValidate(67, value) }
 	default:
 		return nil
 	}
@@ -3038,6 +3308,146 @@ func (v TemporalRecurrenceRule) Validate() (bool, []ValidationError) {
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.
 func (v TemporalRecurrenceRule) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseOrderingRank validates and returns the canonical form of a Ordering.Rank value.
+func ParseOrderingRank(value string) (string, error) { return callScalarParse(63, value) }
+
+// NormalizeOrderingRank returns the canonical form of a Ordering.Rank value without enforcing shape.
+func NormalizeOrderingRank(value string) (string, error) { return callScalarNormalize(63, value) }
+
+// ValidateOrderingRank enforces the shape of a Ordering.Rank value.
+func ValidateOrderingRank(value string) error { return callScalarValidate(63, value) }
+
+func (v OrderingRank) String() string {
+	return scalarStringValue(v)
+}
+
+// Validate validates OrderingRank and returns whether validation passed along with any errors.
+func (v OrderingRank) Validate() (bool, []ValidationError) {
+	return validateScalarValue(63, scalarStringValue(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v OrderingRank) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseVersionSemVer validates and returns the canonical form of a Version.SemVer value.
+func ParseVersionSemVer(value string) (string, error) { return callScalarParse(64, value) }
+
+// NormalizeVersionSemVer returns the canonical form of a Version.SemVer value without enforcing shape.
+func NormalizeVersionSemVer(value string) (string, error) { return callScalarNormalize(64, value) }
+
+// ValidateVersionSemVer enforces the shape of a Version.SemVer value.
+func ValidateVersionSemVer(value string) error { return callScalarValidate(64, value) }
+
+func (v VersionSemVer) String() string {
+	return string(v)
+}
+
+func (v VersionSemVer) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v VersionSemVer) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v VersionSemVer) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates VersionSemVer and returns whether validation passed along with any errors.
+func (v VersionSemVer) Validate() (bool, []ValidationError) {
+	return validateScalarValue(64, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v VersionSemVer) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseGitPathPattern validates and returns the canonical form of a Git.PathPattern value.
+func ParseGitPathPattern(value string) (string, error) { return callScalarParse(66, value) }
+
+// NormalizeGitPathPattern returns the canonical form of a Git.PathPattern value without enforcing shape.
+func NormalizeGitPathPattern(value string) (string, error) { return callScalarNormalize(66, value) }
+
+// ValidateGitPathPattern enforces the shape of a Git.PathPattern value.
+func ValidateGitPathPattern(value string) error { return callScalarValidate(66, value) }
+
+func (v GitPathPattern) String() string {
+	return string(v)
+}
+
+func (v GitPathPattern) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v GitPathPattern) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v GitPathPattern) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates GitPathPattern and returns whether validation passed along with any errors.
+func (v GitPathPattern) Validate() (bool, []ValidationError) {
+	return validateScalarValue(66, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GitPathPattern) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseAgentSkillName validates and returns the canonical form of a AgentSkill.Name value.
+func ParseAgentSkillName(value string) (string, error) { return callScalarParse(67, value) }
+
+// NormalizeAgentSkillName returns the canonical form of a AgentSkill.Name value without enforcing shape.
+func NormalizeAgentSkillName(value string) (string, error) { return callScalarNormalize(67, value) }
+
+// ValidateAgentSkillName enforces the shape of a AgentSkill.Name value.
+func ValidateAgentSkillName(value string) error { return callScalarValidate(67, value) }
+
+func (v AgentSkillName) String() string {
+	return string(v)
+}
+
+func (v AgentSkillName) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v AgentSkillName) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v AgentSkillName) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates AgentSkillName and returns whether validation passed along with any errors.
+func (v AgentSkillName) Validate() (bool, []ValidationError) {
+	return validateScalarValue(67, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v AgentSkillName) ValidateRequired() (bool, []ValidationError) {
 	if scalarRequiredValueMissing(v) {
 		return false, []ValidationError{{Validator: "required", Message: "required field"}}
 	}

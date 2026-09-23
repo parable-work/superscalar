@@ -707,3 +707,83 @@ fn every_primitive_kind_reaches_the_go_table_with_both_spellings() {
         }
     });
 }
+
+/// The Go metadata row carries each scalar's TypeScript, Python and Rust
+/// types beside its Go type, read from the def's `type_mappings`. TypeScript
+/// goes through `[typescript.type_renames]`, so `Date` arrives as `JSDate`,
+/// the name the TypeScript binding exports.
+#[test]
+fn go_metadata_carries_language_types_with_typescript_compatibility() {
+    with_context(|ctx| {
+        let go = rendered(ctx, "go");
+        for def in Registry::builtin().defs().filter(|def| !def.metadata_omit) {
+            let marker = format!("CanonicalName:  {:?},", def.canonical);
+            let row = go
+                .split_once(&marker)
+                .expect("Go metadata row exists")
+                .1
+                .split_once("\n\t},")
+                .expect("Go metadata row ends")
+                .0;
+            for (language, field) in [
+                ("python", "PythonType"),
+                ("typescript", "TypeScriptType"),
+                ("rust", "RustType"),
+            ] {
+                let catalog_mapping = def
+                    .type_mappings
+                    .iter()
+                    .find_map(|(name, mapping)| (*name == language).then_some(*mapping))
+                    .expect("catalog scalar has a language mapping");
+                let emitted_mapping = match (language, catalog_mapping) {
+                    ("typescript", "Date") => "JSDate",
+                    _ => catalog_mapping,
+                };
+                assert!(
+                    row.contains(&format!(
+                        "{field}:{} {emitted_mapping:?},",
+                        " ".repeat(14 - field.len())
+                    )),
+                    "{} must expose its {language} mapping",
+                    def.canonical
+                );
+            }
+        }
+    });
+}
+
+/// A scalar whose value is any JSON value (`json_schema_type: "any"`) gets
+/// the JSON-value wrappers in TypeScript: explicit `null` is a value, so an
+/// absent or invalid input reads as `undefined`. Every other scalar keeps the
+/// `null`-for-absent wrappers. Derived from the def, so the set is exactly the
+/// `"any"`-shaped scalars.
+#[test]
+fn json_value_wrappers_follow_the_any_json_shape() {
+    with_context(|ctx| {
+        let any_shaped: Vec<&str> = Registry::builtin()
+            .defs()
+            .filter(|def| def.json_schema_type == "any")
+            .map(|def| def.canonical)
+            .collect();
+        assert_eq!(any_shaped, ["Generic.JSON"]);
+        let flagged: Vec<&str> = ctx
+            .entries
+            .iter()
+            .filter(|entry| entry.allows_json_null)
+            .map(|entry| entry.canonical.as_str())
+            .collect();
+        assert_eq!(flagged, any_shaped);
+
+        let ts = rendered(ctx, "typescript");
+        assert!(ts.contains("import { isJSONValue } from \"./json-value\";"));
+        assert!(ts.contains("export type { JSONValue } from \"./json-value\";"));
+        assert!(ts.contains(
+            "export function parseGenericJSON(value: unknown): GenericJSON | undefined {\n  return canonicalizeJSONValue("
+        ));
+        assert!(ts.contains("  return validateJSONValueWithBackend(17, value);"));
+        assert_eq!(ts.matches("canonicalizeJSONValue(17, value, ").count(), 2);
+        assert!(
+            ts.contains("export function parseContactEmail(value: unknown): ContactEmail | null {")
+        );
+    });
+}

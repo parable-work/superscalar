@@ -148,7 +148,7 @@ fn structural_and_object_scalars_declare_an_object_json_shape() {
 #[test]
 fn json_schema_type_domain_is_closed() {
     const KNOWN: &[&str] = &[
-        "string", "integer", "number", "boolean", "object", "array", "",
+        "string", "integer", "number", "boolean", "object", "array", "any", "",
     ];
     for id in Registry::builtin().ids() {
         let declared = scalar_def(id).json_schema_type;

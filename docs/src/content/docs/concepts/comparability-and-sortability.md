@@ -122,8 +122,9 @@ It is not a claim that the order means something. `Design.Color`,
 order over each is equally meaningless. It is a claim that a total order
 exists. `Embedding.Vector`, `Generic.JSON` and `Generic.StringMap` show the
 gap the rule closes: their primitive is `String` but their JSON shape is an
-array or an object, so a primitive-only rule would call them sortable. Among
-the 44 built-ins, four are non-sortable: `Geo.Location` (the structural
+array, an object or any JSON value (`Generic.JSON` declares `any`), so a
+primitive-only rule would call them sortable. Among
+the 48 built-ins, four are non-sortable: `Geo.Location` (the structural
 scalar) and those three.
 
 The rule is an allowlist and fails closed on purpose. A shape nobody has
