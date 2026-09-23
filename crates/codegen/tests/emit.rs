@@ -687,3 +687,23 @@ fn the_alias_shaper_marks_exactly_the_catalogued_aliases() {
         }
     });
 }
+
+/// Every `PrimitiveKind` reaches the Go table with both of its spellings.
+/// Driven off `PrimitiveKind::ALL`, not the catalog: no built-in is `Bool`
+/// backed, so a catalog-driven check would miss a dropped `Bool` row.
+#[test]
+fn every_primitive_kind_reaches_the_go_table_with_both_spellings() {
+    with_context(|ctx| {
+        let go = rendered(ctx, "go");
+        assert!(go.contains("var PRIMITIVE_KINDS = []PrimitiveKindNames{"));
+        assert!(go.contains("var PrimitiveDSLNameByTypeRefName = func() map[string]string {"));
+        for primitive in PrimitiveKind::ALL {
+            let row = format!(
+                "{{Name: \"{primitive:?}\", TypeRefName: \"{}\", DSLName: \"{}\"}},",
+                primitive.type_ref_name(),
+                primitive.dsl_name()
+            );
+            assert_eq!(go.matches(&row).count(), 1, "{primitive:?} row: {row}");
+        }
+    });
+}

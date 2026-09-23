@@ -38,6 +38,17 @@ bump they require (minor when loosening, major when tightening).
   consumer that converts epoch inputs itself at a storage boundary can rely
   on the rejection. No accept-set change, no bump required. Carried from
   parable-platform PR #5870.
+- Core: `PrimitiveKind` is declared once with both of its spellings.
+  `PrimitiveKind::ALL` lists every member; `from_dsl_name` inverts
+  `dsl_name`; `type_ref_name` and `from_type_ref_name` give the schema-IR
+  spelling (`Boolean` for `Bool`, `JSON` for `Object`). The Go binding emits
+  `PRIMITIVE_KINDS` and `PrimitiveDSLNameByTypeRefName` from the same table.
+- Core: the comparability rule behind `Registry::comparable_with` is one
+  function over an alias-and-class lookup, table-tested for alias inheritance,
+  transitivity over a three-member class and single-hop resolution. The class
+  invariants also reject a class spanning two SQL types with no coercion
+  between them and a class declared on an alias. No relation changes for any
+  built-in.
 
 ### Changed
 

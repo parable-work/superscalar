@@ -6,29 +6,94 @@ use serde::Serialize;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, LazyLock};
 
-/// Primitive backing of a scalar's canonical value. The DSL's object-shaped
-/// `"Type"` maps to `Object`; `Bool` is reserved (no current scalar uses it).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum PrimitiveKind {
-    String,
-    Int,
-    Float,
-    Bool,
-    Object,
+/// Declares `PrimitiveKind` and both of the spellings each member is written in.
+///
+/// One invocation owns the whole (member, IR type-ref name, DSL name) triple.
+/// A member cannot exist outside this list, so it cannot exist without both
+/// names, and the four accessors below are generated from the same row rather
+/// than restating it. That is the property a producer and a consumer on two
+/// sides of a wire need: one writes the IR spelling into an emitted schema,
+/// the other reads it back out as a DSL primitive, and neither can see the
+/// other's mapping.
+macro_rules! primitive_kinds {
+    ($(
+        $(#[$member_doc:meta])*
+        ($member:ident, $type_ref_name:literal, $dsl_name:literal)
+    ),+ $(,)?) => {
+        /// Primitive backing of a scalar's canonical value. The DSL's
+        /// object-shaped `"Type"` maps to `Object`; `Bool` is reserved (no
+        /// current scalar uses it).
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+        pub enum PrimitiveKind {
+            $(
+                $(#[$member_doc])*
+                $member,
+            )+
+        }
+
+        impl PrimitiveKind {
+            /// Every member, in declaration order. Generated with the enum, so
+            /// it can never fall behind it.
+            pub const ALL: &'static [PrimitiveKind] = &[$(PrimitiveKind::$member),+];
+
+            /// The DSL spelling, used by the schema catalog emitters
+            /// (`Object` -> `"Type"`).
+            pub fn dsl_name(self) -> &'static str {
+                match self {
+                    $(PrimitiveKind::$member => $dsl_name,)+
+                }
+            }
+
+            /// The inverse of [`PrimitiveKind::dsl_name`], `None` for any other
+            /// spelling.
+            ///
+            /// A consumer reading a primitive back off the wire would otherwise
+            /// write its own match over these names and become a mirror of
+            /// this enum that drifts the first time it gains a member.
+            pub fn from_dsl_name(name: &str) -> Option<Self> {
+                match name {
+                    $($dsl_name => Some(PrimitiveKind::$member),)+
+                    _ => None,
+                }
+            }
+
+            /// The schema-IR type-ref spelling, used when a primitive is named
+            /// as a `typeRef` inside an emitted schema.
+            ///
+            /// It is NOT [`PrimitiveKind::dsl_name`]: the IR writes `Boolean`
+            /// where the DSL writes `Bool`, and `JSON` where the DSL writes
+            /// `Type`. Both spellings are real and neither is a typo, so they
+            /// are declared side by side instead of being converted. `JSON` is
+            /// the BARE object spelling, not the dotted `Generic.JSON`: that is
+            /// a catalog scalar, and a column whose type was never resolved to
+            /// a scalar must not name one.
+            pub fn type_ref_name(self) -> &'static str {
+                match self {
+                    $(PrimitiveKind::$member => $type_ref_name,)+
+                }
+            }
+
+            /// The inverse of [`PrimitiveKind::type_ref_name`], `None` for any
+            /// other spelling -- including a `scalars/{canonical}` reference,
+            /// which names a scalar rather than a bare primitive and is resolved
+            /// through the scalar catalog instead.
+            pub fn from_type_ref_name(name: &str) -> Option<Self> {
+                match name {
+                    $($type_ref_name => Some(PrimitiveKind::$member),)+
+                    _ => None,
+                }
+            }
+        }
+    };
 }
 
-impl PrimitiveKind {
-    /// The DSL spelling, used by the schema catalog emitters (`Object` -> `"Type"`).
-    pub fn dsl_name(self) -> &'static str {
-        match self {
-            PrimitiveKind::String => "String",
-            PrimitiveKind::Int => "Int",
-            PrimitiveKind::Float => "Float",
-            PrimitiveKind::Bool => "Bool",
-            PrimitiveKind::Object => "Type",
-        }
-    }
-}
+primitive_kinds!(
+    (String, "String", "String"),
+    (Int, "Int", "Int"),
+    (Float, "Float", "Float"),
+    (Bool, "Boolean", "Bool"),
+    (Object, "JSON", "Type"),
+);
 
 /// How a scalar's behavior is realized.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -161,11 +226,28 @@ pub struct ScalarDef {
     /// text, and there is no `COMPARABILITY_CLASSES` constant to check a new
     /// value against. One class is a thin basis for freezing a four-language
     /// vocabulary, and tightening it later is a codegen break plus a corpus
-    /// rewrite, so the set stays open until more classes exist. Two standing
-    /// tests in `crates/core/tests/semantic_metadata.rs` bound what an open set can
-    /// silently get wrong: no class may have exactly one member, and no class
-    /// may span two `PrimitiveKind`s. A third bound lives outside Rust:
-    /// `meta.comparability_classes` in `conformance/core-scalars.v2.json` pins each
+    /// rewrite, so the set stays open until more classes exist. The bound a
+    /// closed enum would add already exists outside Rust and is stronger for
+    /// being independent: `meta.comparability_classes` in
+    /// `conformance/core-scalars.v2.json` is HAND-WRITTEN, and
+    /// `conformance/gen_core_scalars_metadata.py` cannot write it (it rewrites
+    /// exactly one other key and aborts if any other byte moved). A hand-typed
+    /// member list cross-checked by four readers against a machine-generated
+    /// transcript catches the one thing the in-Rust invariants cannot: two
+    /// scalars sharing a misspelling.
+    ///
+    /// Five standing invariants in `crates/core/tests/semantic_metadata.rs`
+    /// bound what an open set can silently get wrong: a class name must match
+    /// `[a-z0-9_]+` and may not be empty; no class may have exactly one member;
+    /// no class may span two `PrimitiveKind`s; no class may span two SQL types
+    /// with no coercion between them (`PrimitiveKind` is the backing of the
+    /// canonical STRING form and cannot see that `temporal_instant` spans `DATE`
+    /// and `TIMESTAMPTZ`); and an alias may not declare a class of its own,
+    /// since the class belongs to the alias target. All five are table-tested
+    /// against tables the catalog cannot produce, because a walk over an
+    /// almost-empty class table asserts nothing.
+    ///
+    /// A sixth bound lives outside Rust: `meta.comparability_classes` pins each
     /// class name to its exact member list, and all four bindings assert it.
     pub comparability_class: Option<&'static str>,
     /// Which hooks the generated schema runtimes delegate to the core.
@@ -185,6 +267,55 @@ fn json_shape_is_sortable(json_schema_type: &str) -> bool {
         json_schema_type,
         "string" | "integer" | "number" | "boolean"
     )
+}
+
+/// The comparability relation over an alias-and-class TABLE, extracted from
+/// [`Registry::comparable_with`] so both of its arms can be table-tested.
+///
+/// `lookup` answers, for one key, that row's two RAW fields as a pair:
+/// `(alias_of, comparability_class)`. Resolving the alias is this function's job
+/// and deliberately not the caller's. That is the entire reason the extraction
+/// exists: the defect this guards against is reading the class off the raw row
+/// instead of off the alias TARGET, so if the caller did the resolving, the
+/// mutation would live outside the unit under test and a table test would prove
+/// nothing.
+///
+/// Undischargeable against the built-in catalog, which is why it takes a lookup
+/// rather than reading a registry directly. Two separate holes, one cause -- a
+/// guard whose input the catalog cannot produce:
+///
+/// * The ALIAS arm. `Identity.UserID` -> `Identity.UUID` is the only alias pair
+///   and neither row carries a class, so the arm compares `None` against `None`
+///   and answers the same either way.
+/// * The TRANSITIVITY arm. With exactly one two-member class there is no
+///   pairwise-distinct triple `a ~ b`, `b ~ c`, so the transitivity loop in
+///   `comparability_is_an_equivalence_relation_over_the_catalog` can only reach
+///   the reflexive and symmetric cases it already covers.
+///
+/// A mutation probe measured both: swapping the resolved read for a raw-field
+/// read produced ZERO test failures across the workspace. Synthetic tables in
+/// `comparability_rule_tests` close them. Same remedy, and the same reason for
+/// it, as `json_shape_is_sortable` above and `check_class_invariants` in
+/// `crates/core/tests/semantic_metadata.rs`.
+///
+/// Alias resolution is SINGLE-HOP, matching [`Registry::resolved`] exactly
+/// rather than improving on it. A chain-following version here would be a
+/// second, more permissive rule than the one production runs, and the point of
+/// the extraction is that the tested rule and the shipped rule are one function.
+fn comparable_in<K, F>(left: K, right: K, lookup: F) -> bool
+where
+    K: Copy + PartialEq,
+    F: Fn(K) -> (Option<K>, Option<&'static str>),
+{
+    let left = lookup(left).0.unwrap_or(left);
+    let right = lookup(right).0.unwrap_or(right);
+    if left == right {
+        return true;
+    }
+    match (lookup(left).1, lookup(right).1) {
+        (Some(left), Some(right)) => left == right,
+        _ => false,
+    }
 }
 
 /// The dot-stripped symbol a canonical name becomes in every generated
@@ -426,18 +557,21 @@ impl Registry {
     /// the classes itself to tell those apart; what it must NOT do is treat raw
     /// field equality as the comparability answer, which is the trap this
     /// exists for.
+    ///
+    /// The rule itself is [`comparable_in`], which resolves the alias before it
+    /// reads either class. This method only supplies the registry as that
+    /// function's lookup. The indirection is load-bearing rather than stylistic:
+    /// reading the class off the raw row instead of off the alias TARGET breaks
+    /// transitivity one hop out (`UserID ~ UUID` true by the identity
+    /// short-circuit, `UUID ~ Other` true by the shared class, `UserID ~ Other`
+    /// false), and no walk over the built-in catalog can see that, because the
+    /// one alias pair carries no class on either side. Putting the resolution
+    /// inside the rule is what lets a synthetic table catch it.
     pub fn comparable_with(&self, a: ScalarId, b: ScalarId) -> bool {
-        let a = self.resolved(a);
-        let b = self.resolved(b);
-        if a == b {
-            return true;
-        }
-        let mine = self.def(a).and_then(|def| def.comparability_class);
-        let theirs = self.def(b).and_then(|def| def.comparability_class);
-        match (mine, theirs) {
-            (Some(mine), Some(theirs)) => mine == theirs,
-            _ => false,
-        }
+        comparable_in(a, b, |id| {
+            self.def(id)
+                .map_or((None, None), |def| (def.alias_of, def.comparability_class))
+        })
     }
 
     /// Every assembled id, ascending.
@@ -881,5 +1015,297 @@ mod sortability_rule_tests {
                 "{shape} must not be sortable"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod primitive_kind_tests {
+    use super::PrimitiveKind;
+
+    /// Round trip over EVERY member, driven by `PrimitiveKind::ALL` rather than
+    /// by the catalog: a member no scalar currently uses -- `Bool` is one -- is
+    /// still a spelling an emitted schema can carry, so a list bounded by the
+    /// catalog would leave it unchecked.
+    #[test]
+    fn from_dsl_name_inverts_dsl_name_over_every_primitive() {
+        for primitive in PrimitiveKind::ALL {
+            assert_eq!(
+                PrimitiveKind::from_dsl_name(primitive.dsl_name()),
+                Some(*primitive),
+                "{primitive:?} did not round trip"
+            );
+        }
+        for unknown in ["Object", "Boolean", "int", "", "Typeq"] {
+            assert_eq!(PrimitiveKind::from_dsl_name(unknown), None, "{unknown}");
+        }
+    }
+
+    /// The other half of the pair `primitive_kinds!` declares together. `JSON`
+    /// is the IR spelling, `Type` is the DSL one, and reading the wrong one is
+    /// how a derived column arrives at its consumer as an unknown type
+    /// reference.
+    #[test]
+    fn from_type_ref_name_inverts_type_ref_name_over_every_primitive() {
+        for primitive in PrimitiveKind::ALL {
+            assert_eq!(
+                PrimitiveKind::from_type_ref_name(primitive.type_ref_name()),
+                Some(*primitive),
+                "{primitive:?} did not round trip"
+            );
+        }
+        // A scalar-typed column is `scalars/{canonical}` and is resolved through
+        // the catalog, not here; the DSL spellings that differ from the IR ones
+        // are not type-ref names either. Nor is the dotted `Generic.JSON`: it
+        // names a catalog scalar, and a bare primitive must not read as one.
+        for unknown in [
+            "scalars/Contact.Email",
+            "Bool",
+            "Type",
+            "boolean",
+            "Generic.JSON",
+            "",
+        ] {
+            assert_eq!(
+                PrimitiveKind::from_type_ref_name(unknown),
+                None,
+                "{unknown}"
+            );
+        }
+    }
+
+    /// Both spellings are declared, and neither is empty or duplicated. A member
+    /// added to `primitive_kinds!` without real names would compile -- the macro
+    /// only requires two literals -- and this is what refuses it.
+    #[test]
+    fn every_primitive_declares_two_usable_spellings() {
+        let mut type_refs = std::collections::BTreeSet::new();
+        let mut dsl_names = std::collections::BTreeSet::new();
+        for primitive in PrimitiveKind::ALL {
+            assert!(
+                !primitive.type_ref_name().is_empty(),
+                "{primitive:?} has no IR type-ref name"
+            );
+            assert!(
+                !primitive.dsl_name().is_empty(),
+                "{primitive:?} has no DSL name"
+            );
+            assert!(
+                type_refs.insert(primitive.type_ref_name()),
+                "{primitive:?} repeats an IR type-ref name"
+            );
+            assert!(
+                dsl_names.insert(primitive.dsl_name()),
+                "{primitive:?} repeats a DSL name"
+            );
+        }
+        assert_eq!(type_refs.len(), PrimitiveKind::ALL.len());
+        assert_eq!(dsl_names.len(), PrimitiveKind::ALL.len());
+    }
+}
+
+/// The comparability relation against tables the catalog cannot produce.
+///
+/// Every test here is a table test on purpose. The catalog-walking versions in
+/// `crates/core/tests/semantic_metadata.rs` stay as the standing checks over
+/// shipped data, but neither of the two arms below is DISCHARGEABLE by them: the
+/// one alias pair carries no class, and one two-member class admits no
+/// pairwise-distinct triple. These tables supply both, so neither guard depends
+/// on any particular scalar being classed and both keep working when the class
+/// table changes.
+#[cfg(test)]
+mod comparability_rule_tests {
+    use super::comparable_in;
+
+    /// `(name, alias_of, class)`. The shape [`comparable_in`] reads, as raw rows.
+    type Row = (&'static str, Option<&'static str>, Option<&'static str>);
+
+    fn lookup(
+        rows: &[Row],
+    ) -> impl Fn(&'static str) -> (Option<&'static str>, Option<&'static str>) + '_ {
+        move |name| {
+            rows.iter()
+                .find(|(row, _, _)| *row == name)
+                .map(|(_, alias_of, class)| (*alias_of, *class))
+                .unwrap_or((None, None))
+        }
+    }
+
+    /// The alias arm, which the catalog cannot exercise.
+    ///
+    /// `Alias` declares NO class of its own and points at `Target`, which is
+    /// classed alongside `Other`. The relation must read `Alias`'s class through
+    /// `Target`. Reading the raw field instead answers `None` for `Alias`, so
+    /// `Alias ~ Other` comes back false while `Alias ~ Target` stays true on the
+    /// identity short-circuit -- the inconsistency is invisible at the row where
+    /// it was introduced and only surfaces one hop out, which is exactly why the
+    /// shipped catalog cannot catch it.
+    #[test]
+    fn an_alias_inherits_its_targets_class_one_hop_out() {
+        let rows: &[Row] = &[
+            ("Identity.UserID", Some("Identity.UUID"), None),
+            ("Identity.UUID", None, Some("opaque_id")),
+            ("Other.Id", None, Some("opaque_id")),
+        ];
+        let comparable = |a, b| comparable_in(a, b, lookup(rows));
+
+        assert!(
+            comparable("Identity.UserID", "Other.Id"),
+            "Identity.UserID is an alias of Identity.UUID, which shares the \
+             opaque_id class with Other.Id; reading the class off the raw alias \
+             row instead of off the alias target breaks this pair and leaves \
+             Identity.UserID ~ Identity.UUID true, so the break only shows one \
+             hop out"
+        );
+        assert!(comparable("Identity.UserID", "Identity.UUID"), "alias pair");
+        assert!(
+            comparable("Other.Id", "Identity.UserID"),
+            "and symmetrically"
+        );
+    }
+
+    /// The transitivity arm, which the catalog cannot exercise either: it needs a
+    /// pairwise-distinct triple, and one two-member class has none.
+    #[test]
+    fn transitivity_holds_over_a_three_member_class() {
+        let rows: &[Row] = &[
+            ("A.One", None, Some("shared")),
+            ("A.Two", None, Some("shared")),
+            ("A.Three", None, Some("shared")),
+            ("B.One", None, Some("other")),
+            ("B.Two", None, Some("other")),
+            ("C.Unclassed", None, None),
+        ];
+        let names = ["A.One", "A.Two", "A.Three", "B.One", "B.Two", "C.Unclassed"];
+        let comparable = |a, b| comparable_in(a, b, lookup(rows));
+
+        let mut distinct_triples = 0;
+        for &a in &names {
+            assert!(comparable(a, a), "{a} reflexive");
+            for &b in &names {
+                assert_eq!(comparable(a, b), comparable(b, a), "{a} / {b} symmetric");
+                if !comparable(a, b) {
+                    continue;
+                }
+                for &c in &names {
+                    if !comparable(b, c) {
+                        continue;
+                    }
+                    if a != b && b != c && a != c {
+                        distinct_triples += 1;
+                    }
+                    assert!(
+                        comparable(a, c),
+                        "transitivity: {a} ~ {b} and {b} ~ {c} but not {a} ~ {c}"
+                    );
+                }
+            }
+        }
+        assert!(
+            distinct_triples > 0,
+            "the transitivity loop must reach a pairwise-distinct triple, which \
+             is precisely what the shipped catalog cannot supply"
+        );
+    }
+
+    /// Two classed scalars in DIFFERENT classes never compare, and an unclassed
+    /// scalar is self-comparable only. The second half is the trap the doc
+    /// comment on `comparable_with` names: raw field equality answers true for
+    /// two class-less scalars, and `None` is what almost every catalog row
+    /// carries.
+    #[test]
+    fn distinct_classes_and_absent_classes_never_match_across() {
+        let rows: &[Row] = &[
+            ("A.One", None, Some("shared")),
+            ("B.One", None, Some("other")),
+            ("C.Unclassed", None, None),
+            ("D.Unclassed", None, None),
+        ];
+        let comparable = |a, b| comparable_in(a, b, lookup(rows));
+
+        assert!(!comparable("A.One", "B.One"), "different classes");
+        assert!(
+            !comparable("C.Unclassed", "D.Unclassed"),
+            "two class-less scalars are NOT comparable; field equality would say \
+             they are, and that is the majority of the catalog"
+        );
+        assert!(
+            !comparable("A.One", "C.Unclassed"),
+            "classed against absent"
+        );
+        assert!(comparable("C.Unclassed", "C.Unclassed"), "self");
+    }
+
+    /// Resolution is SINGLE-HOP, and this is the table that says so.
+    ///
+    /// [`comparable_in`]'s doc comment claims it matches `Registry::resolved`
+    /// exactly rather than improving on it, and that claim was undischargeable
+    /// until this table: the catalog's one alias pair is a single hop, so
+    /// replacing `unwrap_or` with a fixpoint loop passes every other test here.
+    ///
+    /// The chain is `A -> B -> C` with the class on `C`, and single-hop answers
+    /// FALSE for every pair that crosses it -- including `A ~ B`, the adjacent
+    /// alias pair. `A` resolves one hop to `B`; `B` resolves one hop to `C`, so
+    /// the two sides are not equal and the identity short-circuit does not fire;
+    /// `B` carries no class of its own because the alias arm of
+    /// `check_class_invariants` forbids it. So a chain does not merely fail to
+    /// propagate a class, it breaks the alias relation at its own first link.
+    ///
+    /// Assembly refuses a chain today (`AssemblyError::AliasChain`), so no
+    /// assembled registry reaches this shape. The test pins the rule rather than
+    /// the catalog: it is what fails if the assembly check is ever relaxed while
+    /// a chain-following `comparable_in` and a single-hop `resolved()` would
+    /// silently disagree about the same registry.
+    #[test]
+    fn resolution_is_single_hop_and_a_chain_breaks_at_its_first_link() {
+        let rows: &[Row] = &[
+            ("A.Head", Some("B.Middle"), None),
+            ("B.Middle", Some("C.Tail"), None),
+            ("C.Tail", None, Some("shared")),
+            ("D.Other", None, Some("shared")),
+        ];
+        let comparable = |a, b| comparable_in(a, b, lookup(rows));
+
+        assert!(
+            !comparable("A.Head", "B.Middle"),
+            "SINGLE-HOP: A.Head resolves to B.Middle and B.Middle resolves to \
+             C.Tail, so the identity short-circuit does not fire and B.Middle \
+             carries no class. A chain breaks even its own adjacent pair, which \
+             is why the catalog must not grow one without deciding first"
+        );
+        assert!(
+            !comparable("A.Head", "C.Tail"),
+            "and it does not reach the class at the end of the chain; a fixpoint \
+             resolver would answer true here and diverge from Registry::resolved"
+        );
+        assert!(!comparable("A.Head", "D.Other"));
+        assert!(
+            comparable("C.Tail", "D.Other"),
+            "the classed pair past the chain is unaffected"
+        );
+
+        // The contrast: the same shape WITHOUT a chain resolves cleanly, so the
+        // assertions above are about the chain and not about aliases generally.
+        let flat: &[Row] = &[
+            ("A.Head", Some("C.Tail"), None),
+            ("C.Tail", None, Some("shared")),
+            ("D.Other", None, Some("shared")),
+        ];
+        assert!(comparable_in("A.Head", "C.Tail", lookup(flat)));
+        assert!(comparable_in("A.Head", "D.Other", lookup(flat)));
+    }
+
+    /// An alias whose target is UNCLASSED stays self-comparable-only. Guards the
+    /// over-correction: resolving the alias must not invent a class.
+    #[test]
+    fn an_alias_of_an_unclassed_target_matches_nothing_else() {
+        let rows: &[Row] = &[
+            ("Identity.UserID", Some("Identity.UUID"), None),
+            ("Identity.UUID", None, None),
+            ("Other.Id", None, Some("opaque_id")),
+        ];
+        let comparable = |a, b| comparable_in(a, b, lookup(rows));
+
+        assert!(comparable("Identity.UserID", "Identity.UUID"), "alias pair");
+        assert!(!comparable("Identity.UserID", "Other.Id"));
     }
 }

@@ -1324,6 +1324,46 @@ var ScalarMetadataByCanonical = func() map[string]*ScalarMetadata {
 	return m
 }()
 
+// PrimitiveKindNames is one PrimitiveKind of the Rust core and both of the
+// spellings it is written in.
+//
+// The two differ, and the difference is not cosmetic. A primitive named as a
+// `typeRef` inside a schema IR -- a derived output schema, for example -- reads
+// `Boolean` and `JSON`; the same primitive in the schema DSL reads `Bool` and
+// `Type`. Emitting the pair keeps a Go reader from restating the mapping and
+// becoming a mirror of the core that drifts.
+type PrimitiveKindNames struct {
+	// Name is the Rust member name, carried so a failure can say which
+	// primitive it was about.
+	Name string
+	// TypeRefName is the schema-IR `typeRef` spelling.
+	TypeRefName string
+	// DSLName is the schema DSL spelling, which is also what a schema field's
+	// primitive carries on the wire.
+	DSLName string
+}
+
+// PRIMITIVE_KINDS is every primitive the Rust core knows, in declaration order.
+var PRIMITIVE_KINDS = []PrimitiveKindNames{
+	{Name: "String", TypeRefName: "String", DSLName: "String"},
+	{Name: "Int", TypeRefName: "Int", DSLName: "Int"},
+	{Name: "Float", TypeRefName: "Float", DSLName: "Float"},
+	{Name: "Bool", TypeRefName: "Boolean", DSLName: "Bool"},
+	{Name: "Object", TypeRefName: "JSON", DSLName: "Type"},
+}
+
+// PrimitiveDSLNameByTypeRefName turns a schema-IR type-ref name into the DSL
+// primitive name. Absent for a `scalars/{canonical}` reference, which names a
+// scalar rather than a bare primitive and is resolved through
+// ScalarMetadataByCanonical instead.
+var PrimitiveDSLNameByTypeRefName = func() map[string]string {
+	m := make(map[string]string, len(PRIMITIVE_KINDS))
+	for _, primitive := range PRIMITIVE_KINDS {
+		m[primitive.TypeRefName] = primitive.DSLName
+	}
+	return m
+}()
+
 // scalarAliasTargets maps an alias scalar's canonical name to its target's.
 // `alias_of` means one implementation under two ids, so the TARGET owns the
 // comparability class and the alias inherits it. ComparableWith resolves through

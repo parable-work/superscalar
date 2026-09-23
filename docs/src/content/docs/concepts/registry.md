@@ -23,7 +23,12 @@ Each `ScalarDef` records, among other fields:
   [ABI and versioning](/superscalar/policy/abi-and-versioning/).
 - `primitive` (`String`, `Int`, `Float`, `Bool`, `Object`), the storage
   primitive, plus `sql_type` (`CITEXT` for `Contact.Email`) and
-  `json_schema_type`.
+  `json_schema_type`. `PrimitiveKind::ALL` lists every member, and each one
+  carries two spellings: `dsl_name` for a schema DSL (`Bool`, `Type`) and
+  `type_ref_name` for a type reference in an emitted schema IR (`Boolean`,
+  `JSON`), with `from_dsl_name` and `from_type_ref_name` as the inverses. The
+  Go binding emits both as `PRIMITIVE_KINDS` and
+  `PrimitiveDSLNameByTypeRefName`, so no consumer restates the mapping.
 - `tag`: `PatternOnly`, `CustomLogic` or `Structural`, which decides how the
   scalar is implemented. See
   [scalar kinds](/superscalar/concepts/deep-directive-structural/).

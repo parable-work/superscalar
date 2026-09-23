@@ -9,7 +9,7 @@ use crate::{
 };
 use serde::Serialize;
 use std::path::PathBuf;
-use superscalar::{LegacyAlias, Registry};
+use superscalar::{LegacyAlias, PrimitiveKind, Registry};
 
 /// Go, TypeScript, Python and the Rust metadata table. Each reads its own
 /// `[section]` of the config and is disabled when the section is absent or
@@ -49,6 +49,29 @@ struct PythonView<'a> {
     native_name: &'a str,
 }
 
+/// One `PrimitiveKind` and both spellings it is written in, for the bindings
+/// that have to read a primitive back out of an emitted schema.
+#[derive(Serialize)]
+struct PrimitiveKindView {
+    /// The Rust member name, which is also the identifier the bindings use.
+    name: String,
+    /// The schema-IR `typeRef` spelling: `Boolean`, `JSON`.
+    type_ref_name: &'static str,
+    /// The DSL spelling: `Bool`, `Type`.
+    dsl_name: &'static str,
+}
+
+fn primitive_kind_views() -> Vec<PrimitiveKindView> {
+    PrimitiveKind::ALL
+        .iter()
+        .map(|primitive| PrimitiveKindView {
+            name: format!("{primitive:?}"),
+            type_ref_name: primitive.type_ref_name(),
+            dsl_name: primitive.dsl_name(),
+        })
+        .collect()
+}
+
 /// The shared template context for the three binding emitters.
 #[derive(Serialize)]
 struct EntriesView<'a> {
@@ -56,6 +79,7 @@ struct EntriesView<'a> {
     entries: &'a [Entry],
     metadata_entries: Vec<&'a Entry>,
     legacy_aliases: &'a [LegacyAlias],
+    primitive_kinds: Vec<PrimitiveKindView>,
     go: Option<GoView<'a>>,
     typescript: Option<TypeScriptView<'a>>,
     python: Option<PythonView<'a>>,
@@ -68,6 +92,7 @@ impl<'a> EntriesView<'a> {
             entries: &ctx.entries,
             metadata_entries: ctx.metadata_entries(),
             legacy_aliases: ctx.legacy_aliases,
+            primitive_kinds: primitive_kind_views(),
             go: None,
             typescript: None,
             python: None,
