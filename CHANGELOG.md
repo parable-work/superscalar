@@ -63,6 +63,17 @@ bump they require (minor when loosening, major when tightening).
   from the package root and from the generated module. Codegen reads the
   module path from the optional `[typescript] json_value_module` key
   (default `./json-value`).
+- WASM: `scalar_parse` throws an error named `ScalarParseError` when the core
+  rejects the input; an unknown scalar id still throws a plain `Error`, so a
+  caller can tell an invalid value from a runtime failure. `run_parse` and
+  the `scalar_parse` export of `export_wasm!` return `Result<String, JsValue>`
+  (was `JsError`); a downstream that applies the macro needs no change.
+- TypeScript: `firstAvailableBackend(loaders)`, used by `loadBackend` to try
+  the native addon and then the WASM build, and to name every failed attempt
+  when neither loads. The WASM bundle is found by package name
+  (`superscalar/wasm-node/superscalar_wasm.js`) when a bundler has moved the
+  backend module away from the package; `superscalar/wasm` exports the raw
+  WASM bindings.
 
 ### Changed
 

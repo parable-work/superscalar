@@ -27,14 +27,23 @@ depend on a platform package directly: the main package requires the right
 one for the host at load time. Pre-releases are published under the `next`
 dist-tag (`npm install superscalar@next`). The main package also ships a WASM
 build of the same core; when no platform package is installed (another
-platform, musl, or optional dependencies skipped), Node falls back to it.
+platform, musl, or optional dependencies skipped), Node falls back to it. If
+neither backend loads, the error names both attempts. A bundle that inlines
+the backend module finds the WASM build through the package name
+(`superscalar/wasm-node/superscalar_wasm.js`) when the relative path no
+longer points into the package.
 
 ## Node or browser
 
 Selection is by the package's `exports` map. The `browser`, `edge-light` and
 `workerd` conditions resolve the backend module to the WASM build; everything
 else resolves to the native addon. Bundlers and runtimes that honour those
-conditions need no configuration. You never import a backend directly.
+conditions need no configuration. You never import a backend directly;
+`superscalar/wasm` exposes the raw WASM exports (`scalar_parse` and friends)
+for a caller that wants that build explicitly. Its `scalar_parse` throws an
+error named `ScalarParseError` when the core rejects the input, and a plain
+`Error` for an unknown scalar id, so a caller can tell an invalid value from
+a runtime failure.
 
 ## Quickstart
 

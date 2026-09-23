@@ -24,10 +24,13 @@ npm install --silent
 # napi addon (Node backend, crate crates/napi) -> native/superscalar-napi.<triple>.node,
 # which src/native-addon.ts loads ahead of the @superscalar/<triple> package.
 npx napi build --platform --release --manifest-path ../../crates/napi/Cargo.toml --output-dir native
-# CJS wrappers (backend.js/napi, generated, index) + ESM browser backend (.mjs).
+# CJS wrappers (backend.js/napi, generated, index), the ESM Node entry
+# (dist/esm), and the ESM browser backend (.mjs): the same passes as build:ts.
 npx tsc -p tsconfig.json
+npx tsc -p tsconfig.esm.json
 npx tsc -p tsconfig.browser.json
 node scripts/fix-esm-extensions.mjs
 node test/native-addon.cjs
 node test/conformance.cjs
 node test/comparability.cjs
+node test/backend-fallback.cjs

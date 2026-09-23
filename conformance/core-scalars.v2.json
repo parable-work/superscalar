@@ -1632,7 +1632,7 @@
         { "input": "skill2", "normalized": "skill2" }
       ],
       "rejected": [
-        { "input": "Data-Analysis", "validator": "pattern" },
+        { "input": "Data-Analysis", "validator": "pattern", "note": "case_insensitive: parse stays strict, so this is rejected here; normalize folds it to data-analysis (pinned in crates/core/src/directive.rs)." },
         { "input": "data_analysis", "validator": "pattern" },
         { "input": "data--analysis", "validator": "pattern" },
         { "input": "-data", "validator": "pattern" },

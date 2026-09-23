@@ -227,6 +227,7 @@ mod case_fold_tests {
             (ScalarId::IDENTITY_SLUG, "HubSpot"),
             (ScalarId::NETWORK_DOMAIN_NAME, "Example.COM"),
             (ScalarId::TEMPORAL_QUARTER, "Q1"),
+            (ScalarId::AGENT_SKILL_NAME, "Data-Analysis"),
         ] {
             let scalar = scalar_for(id);
             let normalized = scalar
@@ -237,6 +238,25 @@ mod case_fold_tests {
                 "{id:?}: normalize({input:?}) = {normalized:?}, which validate refuses"
             );
         }
+    }
+
+    /// `AgentSkill.Name` is case-insensitive with a lowercase-only pattern:
+    /// its conformance vectors can only pin `parse` (strict), so the fold is
+    /// pinned here.
+    #[test]
+    fn agent_skill_name_normalize_folds_and_parse_stays_strict() {
+        let registry = Registry::builtin();
+        let name = scalar_for(ScalarId::AGENT_SKILL_NAME);
+        assert_eq!(
+            name.normalize(registry, "Data-Analysis")
+                .expect("normalize"),
+            "data-analysis"
+        );
+        assert!(name.parse(registry, "Data-Analysis").is_err());
+        assert_eq!(
+            name.parse(registry, "data-analysis").expect("parse"),
+            "data-analysis"
+        );
     }
 
     /// An already-valid value is returned untouched, which is what keeps the

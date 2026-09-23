@@ -34,6 +34,15 @@
       "require": "./dist/backend.js",
       "default": "./dist/backend.js"
     },
+    "./wasm": {
+      "types": "./wasm-node/superscalar_wasm.d.ts",
+      "browser": "./wasm-bundler/superscalar_wasm.js",
+      "edge-light": "./wasm-bundler/superscalar_wasm.js",
+      "workerd": "./wasm-bundler/superscalar_wasm.js",
+      "import": "./wasm-node/superscalar_wasm.js",
+      "require": "./wasm-node/superscalar_wasm.js",
+      "default": "./wasm-node/superscalar_wasm.js"
+    },
     "./validation": {
       "types": "./dist/esm/validation.d.ts",
       "import": "./dist/esm/validation.js",
@@ -43,7 +52,8 @@
       "types": "./dist/esm/generated.d.ts",
       "import": "./dist/esm/generated.js",
       "require": "./dist/generated.js"
-    }
+    },
+    "./wasm-node/superscalar_wasm.js": "./wasm-node/superscalar_wasm.js"
   },
   "napi": {
     "binaryName": "superscalar-napi",
@@ -58,7 +68,7 @@
     "build:napi": "napi build --platform --release --manifest-path ../../crates/napi/Cargo.toml --output-dir native",
     "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.browser.json && node scripts/fix-esm-extensions.mjs",
     "build": "npm run build:napi && npm run build:ts",
-    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs"
+    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/backend-fallback.cjs"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.9.0",
