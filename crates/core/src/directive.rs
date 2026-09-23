@@ -212,7 +212,7 @@ mod case_fold_tests {
         assert_eq!(normalized, "acme");
         assert!(
             slug.validate(registry, &normalized).is_ok(),
-            "normalize emitted {normalized:?}, which its own validator refuses"
+            "normalize(\"ACME\") emitted a value its own validator refuses"
         );
     }
 
@@ -235,7 +235,7 @@ mod case_fold_tests {
                 .expect("normalize does not refuse");
             assert!(
                 scalar.validate(registry, &normalized).is_ok(),
-                "{id:?}: normalize({input:?}) = {normalized:?}, which validate refuses"
+                "{id:?}: normalize({input:?}) emitted a value validate refuses"
             );
         }
     }
