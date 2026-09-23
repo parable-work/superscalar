@@ -567,7 +567,9 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: None,
-        hooks: ScalarHooks::NONE,
+        // parse: a generated runtime hands the value to the core parser and
+        // decodes its canonical JSON output back into a native map.
+        hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
     },
     ScalarDef {

@@ -787,3 +787,30 @@ fn json_value_wrappers_follow_the_any_json_shape() {
         );
     });
 }
+
+/// A string-map scalar's value crosses the core as JSON text. Its def sets
+/// the `parse` hook and declares an object shape, so the TypeScript converter
+/// decodes the core's canonical output into a native map. The set is derived
+/// from those two traits, not from a scalar name.
+#[test]
+fn typescript_json_parser_decodes_canonical_object_transport() {
+    with_context(|ctx| {
+        let object_parsers: Vec<&str> = ctx
+            .entries
+            .iter()
+            .filter(|entry| entry.has_json_parse)
+            .map(|entry| entry.canonical.as_str())
+            .collect();
+        assert_eq!(object_parsers, ["Generic.StringMap"]);
+
+        let typescript = rendered(ctx, "typescript");
+        let converter = typescript
+            .split("function convertGenericStringMapValue")
+            .nth(1)
+            .expect("StringMap converter")
+            .split("export function parseGenericStringMap")
+            .next()
+            .expect("converter body");
+        assert!(converter.contains("parseJsonObject(value)"));
+    });
+}

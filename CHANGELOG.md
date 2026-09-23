@@ -84,5 +84,11 @@ bump they require (minor when loosening, major when tightening).
   cycle, a `Set`) as `undefined`; `validateGenericJSON` rejects such inputs.
   A breaking change for TypeScript callers of those wrappers. `Generic.JSON`
   and `Git.PathPattern` set the `validate` hook.
+- `Generic.StringMap` sets the `parse` hook, so a generated schema runtime
+  hands its value to the core parser. The TypeScript strict wrappers decode
+  the core's canonical JSON into a `Record<string, string>` instead of
+  returning the JSON text; the converter is chosen from the def (`parse` hook
+  plus an object JSON shape), not from the scalar's name. No accept-set
+  change.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

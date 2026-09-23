@@ -26,6 +26,8 @@ const {
   parseGenericJSONStrict,
   normalizeGenericJSON,
   validateGenericJSON,
+  parseGenericStringMap,
+  parseGenericStringMapStrict,
 } = require("../dist/generated.js");
 // validateNetworkUrl is the generated public wrapper over the Rust-backed core.
 // Exercise it directly so the regression test covers the package export surface.
@@ -178,6 +180,18 @@ if (missingFromMetadata.join(",") !== declaredExcluded.join(",")) {
 if (parseContactEmail("Foo@Bar.com") !== "foo@bar.com") {
   failures++;
   console.error("generated wrapper parseContactEmail did not route correctly");
+}
+
+// Generic.StringMap crosses the core as JSON text; the generated wrappers hand
+// back the canonical map as an object, not as that text.
+for (const [label, got] of [
+  ["parseGenericStringMapStrict", parseGenericStringMapStrict('{"b":"2","a":"1"}')],
+  ["parseGenericStringMap", parseGenericStringMap({ b: "2", a: "1" })],
+]) {
+  if (typeof got !== "object" || got === null || JSON.stringify(got) !== '{"a":"1","b":"2"}') {
+    failures++;
+    console.error(`generated wrapper ${label} returned ${JSON.stringify(got)}, want the object {"a":"1","b":"2"}`);
+  }
 }
 
 // Generic.JSON is any JSON value, explicit null included: the generated

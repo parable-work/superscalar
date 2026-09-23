@@ -716,7 +716,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Minimum:            nil,
 		Pattern:            "",
 		HasCustomNormalize: false,
-		HasCustomParse:     false,
+		HasCustomParse:     true,
 		HasCustomValidate:  false,
 		HasValidator:       true,
 		Examples:           []string{},

@@ -182,7 +182,7 @@ function convert{{ e.camel }}Value(value: unknown | null): {{ e.camel }} | {% if
     return null;
   }
   return date as unknown as {{ e.camel }};
-{% elif e.is_object %}  if (typeof value === "string") {
+{% elif e.is_object or e.has_json_parse %}  if (typeof value === "string") {
     const parsed = parseJsonObject(value);
     if (parsed === null) {
       return null;

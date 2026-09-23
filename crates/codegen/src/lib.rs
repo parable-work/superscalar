@@ -31,6 +31,11 @@ pub struct Entry {
     pub canonical: String,
     pub canonical_literal: String,
     pub is_object: bool,
+    /// The scalar's canonical form is a JSON object carried as text and its
+    /// def sets the `parse` hook (`Generic.StringMap`): the TypeScript
+    /// converter decodes the core's JSON output into the object type instead
+    /// of returning the text. Derived from the def, not from a name.
+    pub has_json_parse: bool,
     /// The scalar's value is any JSON value, explicit `null` included
     /// (`json_schema_type: "any"`). The TypeScript wrappers then report an
     /// absent or invalid value as `undefined`, because `null` is a valid value
@@ -197,6 +202,7 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 canonical,
                 canonical_literal: canonical_literal.clone(),
                 is_object,
+                has_json_parse: def.hooks.parse && def.json_schema_type == "object",
                 allows_json_null: def.json_schema_type == "any",
                 is_metadata_alias: is_object && !go_type.starts_with("struct{"),
                 is_alias_member,

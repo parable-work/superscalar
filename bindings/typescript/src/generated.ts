@@ -627,6 +627,13 @@ function convertGenericStringMapValue(value: unknown | null): GenericStringMap |
     return null;
   }
 
+  if (typeof value === "string") {
+    const parsed = parseJsonObject(value);
+    if (parsed === null) {
+      return null;
+    }
+    return parsed as GenericStringMap;
+  }
   return value as GenericStringMap;
 }
 export function parseGenericStringMap(value: unknown): GenericStringMap | null {
