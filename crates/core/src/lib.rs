@@ -3,6 +3,7 @@
 mod builtin;
 pub mod catalog;
 pub mod coerce;
+pub mod definitions;
 pub mod directive;
 pub mod error;
 pub mod extension;
@@ -14,6 +15,7 @@ pub mod temporal_format;
 
 pub use catalog::ScalarId;
 pub use coerce::{coerce_bool, coerce_float, coerce_int, coerce_lenient, LenientCoerceResult};
+pub use definitions::{DefSource, Definitions};
 pub use error::{ErrorKind, ScalarError};
 pub use extension::{AssembleOptions, AssemblyError, Extension, ExtensionInfo, LegacyAlias};
 pub use registry::{

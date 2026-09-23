@@ -79,6 +79,18 @@ bump they require (minor when loosening, major when tightening).
   on a `serde_json::Value`, `Option`, `Vec` or `HashMap` field parses the
   value losslessly from text or from `serde_json::from_value`, and
   `parse_value` is the parser behind it.
+- Core: `Definitions`, the assembled scalar definitions without
+  implementations. `Definitions::builtin()`, `Definitions::assemble(&[(owner,
+  defs)])` and `try_assemble` build it from static `ScalarDef` slices, never
+  through `Extension`, so a consumer that only reads definitions links no
+  scalar implementation (a size-capped WASM bundle is the motivating case).
+  It answers `def`, `by_canonical`, `resolved`, `comparable_with`, `ids`,
+  `defs`, `len` and `is_empty` with the `Registry` semantics, and runs the
+  def-level assembly checks (duplicate id, duplicate canonical name,
+  namespace, dangling and chained alias) with the same `AssemblyError`.
+  `Registry` assembles one first and delegates those lookups to it;
+  `Registry::definitions()` returns it. `scalar_def` reads
+  `Definitions::builtin()`. Additive; no `Registry` behaviour changes.
 
 ### Changed
 

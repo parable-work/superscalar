@@ -10,9 +10,11 @@ behaves. Every binding, the code generator and the docs generator read it;
 nothing else defines a scalar. If you want to know whether a name is a scalar,
 what its id is, or what type it maps to in Go, the answer is a registry entry.
 
-It is two Rust files in the core crate. `registry.rs` holds the `ScalarDef`
-struct, the `PrimitiveKind` and `ScalarTag` enums and the `Scalar` trait.
-`catalog.rs` holds the `ScalarId` type and the 48 built-in definitions.
+It is three Rust files in the core crate. `registry.rs` holds the
+`ScalarDef` struct, the `PrimitiveKind` and `ScalarTag` enums, the `Scalar`
+trait and `Registry`. `catalog.rs` holds the `ScalarId` type and the 48
+built-in definitions. `definitions.rs` holds `Definitions`, the assembled
+definitions without implementations, and the comparability rule.
 
 ## A definition
 
@@ -99,7 +101,51 @@ in its own crate. The design is agreed and is being implemented; the shape is:
   one.
 - `Registry::dump()` serialises the assembled registry to JSON in a stable
   field order. The code generator and the docs generator consume the dump.
+- `Definitions` is the same catalog without implementations; see below.
 
 The [build an extension](/superscalar/guides/build-an-extension/) guide
 walks through the example extension that exercises all of this. Points the
 design has not closed are marked there.
+
+## Definitions without implementations
+
+`Registry` holds an implementation for every scalar, and assembling one calls
+the built-in implementation table and every extension's `impls()`. A
+consumer that only reads definitions pays for all of it anyway: the
+phone-number library with its metadata, the regex engine and every
+hand-written scalar are linked into its binary. For a WASM bundle with a size
+budget that is the difference between fitting and not.
+
+`Definitions` is the definitions-only view. It is assembled from static
+`ScalarDef` slices, never from an `Extension`, so no implementation is
+reachable from it:
+
+```rust
+use superscalar::Definitions;
+
+// The built-ins.
+let builtin = Definitions::builtin();
+let email = builtin.by_canonical("Contact.Email").expect("built-in");
+
+// The built-ins plus an extension's defs, each as an (owner, defs) pair.
+let assembled = Definitions::assemble(&[("acme", &acme_scalars::DEFS)]);
+assert!(assembled.comparable_with(email.id, email.id));
+```
+
+It answers `def`, `by_canonical`, `resolved`, `comparable_with`, `ids`,
+`defs`, `len` and `is_empty` with exactly the semantics of the `Registry`
+methods of the same names. That is by construction: a `Registry` assembles a
+`Definitions` first and delegates every one of those lookups to it
+(`Registry::definitions()` returns it), so the lookup and comparability rules
+live in one place. The free function `scalar_def` reads
+`Definitions::builtin()` for the same reason.
+
+`Definitions` assembly runs the checks that need only definitions, in the
+same order and with the same `AssemblyError` as `Registry` assembly:
+duplicate ids, duplicate canonical names, a namespace that is not the
+canonical prefix, and a dangling or chained alias. Pattern compilation, the
+implementation checks, the id-block checks and extension naming need
+implementations or a compiled pattern and stay with `Registry`, so a set of
+definitions can assemble here and still be refused by `Registry`; validate
+the full extension through `Registry` in its own tests.
+

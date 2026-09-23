@@ -110,6 +110,22 @@ definition with one, or a pattern that does not compile. A non-panicking
 `try_assemble` exists for tests. `Acme.OrderNumber` has no implementation and
 gets the generic directive validator built from its pattern.
 
+A consumer that only reads definitions (a def by id or name, alias
+resolution, comparability) should not link the implementations at all. Give
+it `Definitions`, assembled from the same static slice and never through the
+`Extension` trait, whose `impls()` would pull every implementation in:
+
+```rust
+pub fn definitions() -> &'static Definitions {
+    static DEFINITIONS: LazyLock<Definitions> =
+        LazyLock::new(|| Definitions::assemble(&[("acme", &DEFS)]));
+    &DEFINITIONS
+}
+```
+
+It answers every definition lookup exactly as the registry does; the example
+pins that in `ext/tests/definitions.rs`.
+
 Open points, each with the answer the example follows until decided:
 
 - Whether all three `Scalar` hooks take `&Registry` or only `validate`. The

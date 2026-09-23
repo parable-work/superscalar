@@ -10,8 +10,8 @@ use crate::registry::Scalar;
 use crate::scalars;
 
 /// Owner name the built-ins report in errors and the dump. No extension may
-/// take it.
-pub(crate) const NAME: &str = "builtin";
+/// take it. Shared with `Definitions` assembly, which reports the same owner.
+pub(crate) const NAME: &str = crate::definitions::BUILTIN_OWNER;
 
 pub(crate) fn impls() -> Vec<(ScalarId, Box<dyn Scalar>)> {
     vec![
