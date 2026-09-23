@@ -74,6 +74,11 @@ bump they require (minor when loosening, major when tightening).
   (`superscalar/wasm-node/superscalar_wasm.js`) when a bundler has moved the
   backend module away from the package; `superscalar/wasm` exports the raw
   WASM bindings.
+- Core: `scalars::json_scalar::serde`, serde adapters for `Generic.JSON`
+  fields. `deserialize_with = "superscalar::scalars::json_scalar::serde::deserialize"`
+  on a `serde_json::Value`, `Option`, `Vec` or `HashMap` field parses the
+  value losslessly from text or from `serde_json::from_value`, and
+  `parse_value` is the parser behind it.
 
 ### Changed
 
@@ -101,5 +106,14 @@ bump they require (minor when loosening, major when tightening).
   returning the JSON text; the converter is chosen from the def (`parse` hook
   plus an object JSON shape), not from the scalar's name. No accept-set
   change.
+- `Generic.JSON` and `Generic.StringMap` parse through
+  `scalars::json_scalar::serde::parse_value`: numbers keep their exact
+  digits instead of a floating-point round trip, and object keys that match
+  serde_json's private number and raw-value markers stay literal. Two new
+  accepted `Generic.JSON` vectors pin both. The accept set does not change;
+  the canonical form of a number beyond `f64` precision does, a minor bump.
+  The core's `serde_json` dependency now enables `arbitrary_precision` and
+  `raw_value`. Cargo unifies features, so every crate that shares the
+  `serde_json` build with the core sees them too.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

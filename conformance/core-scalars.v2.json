@@ -507,6 +507,16 @@
           "input": "{\"outer\": {\"y\": 1, \"x\": 2}, \"list\": [ 1 , 2 ]}",
           "normalized": "{\"outer\":{\"y\":1,\"x\":2},\"list\":[1,2]}",
           "note": "nested object key order preserved, inner array whitespace compacted"
+        },
+        {
+          "input": "{\"nested\":[{\"$serde_json::private::Number\":\"1\"},{\"$serde_json::private::RawValue\":\"true\"}]}",
+          "normalized": "{\"nested\":[{\"$serde_json::private::Number\":\"1\"},{\"$serde_json::private::RawValue\":\"true\"}]}",
+          "note": "JSON object names stay literal even when they match Serde's private numeric or raw-value markers"
+        },
+        {
+          "input": "{\"amount\":12345678901234567890.12345678901234567890123456789}",
+          "normalized": "{\"amount\":12345678901234567890.12345678901234567890123456789}",
+          "note": "normalization retains JSON numeric precision without a floating-point conversion"
         }
       ],
       "rejected": [

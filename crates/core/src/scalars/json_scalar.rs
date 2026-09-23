@@ -2,8 +2,10 @@ use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
+pub mod serde;
+
 fn normalize_json(input: &str) -> Result<String, ScalarError> {
-    let parsed: serde_json::Value = serde_json::from_str(input)
+    let parsed = serde::parse_value(input)
         .map_err(|e| ScalarError::new(ErrorKind::Parse, format!("failed to parse JSON: {e}")))?;
     serde_json::to_string(&parsed)
         .map_err(|e| ScalarError::new(ErrorKind::Parse, format!("failed to serialize JSON: {e}")))
