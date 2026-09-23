@@ -18,6 +18,14 @@ reserved words. It has no hand-written code. The core builds a generic
 validator from those fields at assembly time, so the definition is the whole
 rule.
 
+`parse` on a directive scalar is strict: it validates, then returns the
+canonical form (an integer rewritten as plain decimal, anything else as
+given). `normalize` does not validate. On a `case_insensitive` scalar it
+lowercases an input that fails validation when the lowercased form passes,
+so `Identity.Slug` normalizes `ACME` to `acme` while `parse("ACME")` still
+fails. An input that is already valid is returned unchanged, which is why
+`Temporal.Quarter` keeps `Q1`.
+
 27 of the 44 built-ins are directive scalars, including `Auth.JWT`,
 `Identity.Slug`, `Network.IpAddress`, `Temporal.Time` and `Text.Markdown`.
 

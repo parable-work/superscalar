@@ -39,4 +39,15 @@ bump they require (minor when loosening, major when tightening).
   on the rejection. No accept-set change, no bump required. Carried from
   parable-platform PR #5870.
 
+### Changed
+
+- Directive engine: `normalize` on a `case_insensitive` scalar now lowercases
+  an input that fails the scalar's own `validate` when the lowercased form
+  passes, so normalize never emits a value its validator refuses. An
+  already-valid input is returned unchanged. Of the built-ins this moves
+  `Identity.Slug` (`ACME` normalizes to `acme`); `Temporal.Quarter` and
+  `Network.DomainName` accept either case and do not move, and scalars with a
+  hand-written impl are unaffected. `parse` stays strict. No accept-set
+  change and no vector change; normalize output changes, a minor bump.
+
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main
