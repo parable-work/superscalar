@@ -126,9 +126,16 @@ bump they require (minor when loosening, major when tightening).
   serde_json's private number and raw-value markers stay literal. Two new
   accepted `Generic.JSON` vectors pin both. The accept set does not change;
   the canonical form of a number beyond `f64` precision does, a minor bump.
-  The core's `serde_json` dependency now enables `arbitrary_precision` and
-  `raw_value`. Cargo unifies features, so every crate that shares the
-  `serde_json` build with the core sees them too.
+  Exact numbers come from the `lossless-json` feature, on by default, which
+  enables serde_json's `arbitrary_precision`; `raw_value` is always on. Cargo
+  unifies features, so every crate that shares the `serde_json` build with
+  the core sees them too, and serde_json then fails on floats inside
+  `flatten` fields and untagged or tagged enums. A downstream with such types
+  depends on the core with `default-features = false`; the language bindings
+  always enable the feature. Text that cannot spell a serde_json marker name
+  as an object key (no `serde_json::private`, no `\u` escape) parses in one
+  pass; other text re-reads each container's slice, so its cost grows with
+  nesting depth.
 - The generated Rust and TypeScript metadata tables carry
   `ScalarDef::format` (`semver` for `Version.SemVer`) instead of an empty
   value. No accept-set change.

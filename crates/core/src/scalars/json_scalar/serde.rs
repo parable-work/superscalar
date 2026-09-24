@@ -66,11 +66,31 @@ impl<K: DeserializeOwned + Eq + Hash, T: JsonField> JsonField for HashMap<K, T> 
     }
 }
 
-/// Parse the Generic.JSON value using serde_json's grammar and exact numbers.
-/// Application-specific size/context limits belong to the caller.
+/// Parse the Generic.JSON value using serde_json's grammar, keeping numbers
+/// exact when the `lossless-json` feature is on.
+///
+/// Cost: one pass over `text`, unless the text could spell one of serde_json's
+/// private marker names as an object key (see [`may_spell_a_marker`]). Such
+/// text takes the marker-safe path, where each container re-reads its own
+/// slice, so the cost is proportional to the size times the nesting depth,
+/// which serde_json's recursion limit caps. Application-specific size and
+/// depth limits belong to the caller.
 pub fn parse_value(text: &str) -> serde_json::Result<Value> {
+    if !may_spell_a_marker(text) {
+        return serde_json::from_str(text);
+    }
     let raw = serde_json::from_str::<&RawValue>(text)?;
     parse_raw(raw, 0)
+}
+
+/// Whether an object key in `text` could decode to one of serde_json's private
+/// marker names (`$serde_json::private::Number`, `...::RawValue`), which its
+/// `Value` deserializer reads as a number or raw value instead of an object.
+/// A key spells a marker either literally or through `\u` escapes: the other
+/// JSON escapes decode to `"`, `\`, `/` or control characters, none of which
+/// a marker contains. Text with neither can go through serde_json directly.
+fn may_spell_a_marker(text: &str) -> bool {
+    text.contains("serde_json::private") || text.contains("\\u")
 }
 
 fn parse_raw(raw: &RawValue, depth: usize) -> serde_json::Result<Value> {
@@ -116,5 +136,82 @@ impl<'de> Visitor<'de> for ObjectVisitor {
             );
         }
         Ok(Value::Object(fields))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{may_spell_a_marker, parse_raw, parse_value};
+    use serde_json::{value::RawValue, Value};
+
+    fn single_pass(text: &str) -> serde_json::Result<Value> {
+        serde_json::from_str(text)
+    }
+
+    fn marker_safe(text: &str) -> serde_json::Result<Value> {
+        parse_raw(serde_json::from_str::<&RawValue>(text)?, 0)
+    }
+
+    fn assert_paths_agree(text: &str) {
+        match (single_pass(text), marker_safe(text)) {
+            (Ok(fast), Ok(safe)) => assert_eq!(fast, safe, "{text:?}"),
+            (Err(_), Err(_)) => {}
+            (fast, safe) => panic!("{text:?}: single pass {fast:?}, marker-safe {safe:?}"),
+        }
+    }
+
+    /// Text that cannot spell a marker goes through serde_json in one pass. The
+    /// marker-safe path must give the same value and the same accept set for it,
+    /// or the fast path would change what Generic.JSON accepts.
+    #[test]
+    fn both_paths_agree_on_text_without_markers() {
+        for text in [
+            r#"{"z":1,"a":2}"#,
+            r#"{"a":1,"a":2}"#,
+            r#"[1,-0,1.5e300,12345678901234567890.123456789012345678901234567890]"#,
+            r#"{"s":"line\nbreak \"q\" \\ \/","n":null,"t":true,"e":[],"o":{}}"#,
+            "  [ 1 , 2 ]  ",
+            "\"text\"",
+            "42",
+            "null",
+            r#"{"a":[{"b":[{"c":{}}]}]}"#,
+            "[1,]",
+            "{\"a\"}",
+            "[1] x",
+            "",
+            "01",
+            "NaN",
+        ] {
+            assert!(!may_spell_a_marker(text), "{text:?} takes the single pass");
+            assert_paths_agree(text);
+        }
+    }
+
+    #[test]
+    fn both_paths_share_the_depth_limit() {
+        for levels in 120..=135 {
+            for (open, close) in [("[", "]"), ("{\"k\":", "}")] {
+                assert_paths_agree(&format!(
+                    "{}null{}",
+                    open.repeat(levels),
+                    close.repeat(levels)
+                ));
+            }
+        }
+    }
+
+    /// A key can spell a marker literally or through `\u` escapes; both take
+    /// the marker-safe path and stay objects.
+    #[test]
+    fn a_key_that_could_spell_a_marker_stays_an_object() {
+        for text in [
+            r#"{"$serde_json::private::Number":"1"}"#,
+            r#"{"$serde_json::private::Number":"1"}"#,
+            r#"{"$serde_json::private::RawValue":"true"}"#,
+        ] {
+            assert!(may_spell_a_marker(text), "{text:?}");
+            let value = parse_value(text).expect("valid JSON");
+            assert!(value.is_object(), "{text:?} parsed as {value:?}");
+        }
     }
 }

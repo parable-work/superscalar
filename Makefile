@@ -8,11 +8,13 @@ all: test lint header
 
 test:
 	cargo test
+	cargo test -p superscalar --no-default-features
 
 lint:
 	cargo clippy --all-targets -- -D warnings
 	cargo clippy -p superscalar-wasm --target wasm32-unknown-unknown -- -D warnings
 	cargo clippy -p superscalar-python -p superscalar-napi --all-targets -- -D warnings
+	cargo clippy -p superscalar --no-default-features --all-targets -- -D warnings
 	cargo fmt --check
 
 fmt:

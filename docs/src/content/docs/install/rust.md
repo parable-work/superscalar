@@ -30,6 +30,25 @@ superscalar = { git = "https://github.com/parable-work/superscalar", tag = "v0.1
 No minimum supported Rust version has been declared yet. The repository
 itself builds with the toolchain pinned in its `rust-toolchain.toml`.
 
+### The `lossless-json` feature
+
+`lossless-json` is on by default. It keeps every number in a `Generic.JSON` or
+`Generic.StringMap` value exactly as written, which needs serde_json's
+`arbitrary_precision` feature. Cargo unifies features, so every crate in your
+build that shares the same `serde_json` gets `arbitrary_precision` too, and
+serde_json then fails to deserialize floats inside `#[serde(flatten)]` fields
+and untagged or tagged enums. If your build has such types, turn the feature
+off:
+
+```toml
+[dependencies]
+superscalar = { git = "https://github.com/parable-work/superscalar", tag = "v0.1.0-alpha.1", default-features = false }
+```
+
+Without it, a number beyond `f64` precision is canonicalized through `f64`,
+and the one conformance vector that pins exact digits does not hold. The
+language bindings always enable the feature.
+
 ## Quickstart
 
 ```rust
