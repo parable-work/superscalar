@@ -24,7 +24,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         primitive: {{ e.primitive_literal }},
         sql_type: {{ e.sql_type_literal }},
         json_schema_type: {{ e.json_schema_type_literal }},
-        format: None,
+        format: {{ e.format_literal }},
         max_length: {{ e.max_length_literal }},
         min_length: {{ e.min_length_literal }},
         pattern: {{ e.pattern_literal }},

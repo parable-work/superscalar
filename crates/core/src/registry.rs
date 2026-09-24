@@ -201,9 +201,10 @@ pub struct ScalarDef {
     /// No built-in sets it; a downstream secret-reference scalar is the
     /// motivating case.
     pub schema_omit: bool,
-    /// Named format hint carried into the TS builtin catalog (`format`).
-    /// No scalar declares one today; the registry field exists so the emitter
-    /// sources it here instead of hardcoding the empty default.
+    /// Named format hint, such as `semver` for `Version.SemVer`. The registry
+    /// dump, the generated Rust and TypeScript metadata tables (`format`) and a
+    /// downstream schema catalog read it from here; a def without one emits
+    /// `None` or `""`.
     pub format: Option<&'static str>,
     /// When true, reserved-word matching is case-insensitive. Carried into the
     /// TS builtin catalog (`reservedWordsCaseInsensitive`).

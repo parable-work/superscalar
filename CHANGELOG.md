@@ -129,5 +129,8 @@ bump they require (minor when loosening, major when tightening).
   The core's `serde_json` dependency now enables `arbitrary_precision` and
   `raw_value`. Cargo unifies features, so every crate that shares the
   `serde_json` build with the core sees them too.
+- The generated Rust and TypeScript metadata tables carry
+  `ScalarDef::format` (`semver` for `Version.SemVer`) instead of an empty
+  value. No accept-set change.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

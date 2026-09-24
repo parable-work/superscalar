@@ -61,6 +61,8 @@ pub struct Entry {
     pub go_type_literal: String,
     pub sql_type_literal: String,
     pub json_schema_type_literal: String,
+    /// `ScalarDef::format` as a string literal, `""` when the def has none.
+    pub format_literal: String,
     pub max_length: usize,
     pub min_length: usize,
     pub max_length_literal: String,
@@ -219,6 +221,7 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 go_type,
                 sql_type_literal: format!("{:?}", def.sql_type),
                 json_schema_type_literal: format!("{:?}", def.json_schema_type),
+                format_literal: format!("{:?}", def.format.unwrap_or_default()),
                 max_length: def.max_length.unwrap_or_default(),
                 min_length: def.min_length.unwrap_or_default(),
                 max_length_literal: optional_usize_literal(def.max_length),
