@@ -19,10 +19,11 @@ impl ScalarId {
     pub const BUILTIN_MAX: u32 = 4095;
     pub const EXTENSION_BLOCK: u32 = 4096;
 
-    // Ids 0..=4, 7, 30..=38, 51 and 57 are permanent holes: the scalars that
-    // held them moved to a downstream extension that keeps the original values
-    // (assembled with `AssembleOptions::allow_legacy_ids`). A new built-in
-    // takes the next id after the highest one below, never a hole.
+    // Ids 0..=4, 7, 30..=38, 51, 57, 61, 62 and 65 are permanent holes: the
+    // scalars that hold them live in a downstream extension that keeps the
+    // original values (assembled with `AssembleOptions::allow_legacy_ids`). A
+    // new built-in takes the next id after the highest one below, never a
+    // hole; the next is 68.
     pub const AUTH_JWT: ScalarId = ScalarId(5);
     pub const AUTH_PASSWORD: ScalarId = ScalarId(6);
     pub const CONTACT_EMAIL: ScalarId = ScalarId(8);
@@ -76,6 +77,17 @@ impl ScalarId {
     /// Validity only -- expanding a rule into occurrences needs a calendar and
     /// the zone database, and happens once, server-side, in Go.
     pub const TEMPORAL_RECURRENCE_RULE: ScalarId = ScalarId(60);
+    /// Positive JavaScript-safe ordering value. Append-only discriminant.
+    pub const ORDERING_RANK: ScalarId = ScalarId(63);
+    /// Canonical Semantic Versioning 2.0.0 string. Append-only discriminant.
+    pub const VERSION_SEM_VER: ScalarId = ScalarId(64);
+    /// Repository-rooted, case-sensitive gitignore-style path pattern.
+    /// Append-only discriminant.
+    pub const GIT_PATH_PATTERN: ScalarId = ScalarId(66);
+    /// Agent Skills specification name: portable lowercase kebab-case
+    /// directory/frontmatter identity. Append-only discriminant -- never
+    /// renumber (C ABI).
+    pub const AGENT_SKILL_NAME: ScalarId = ScalarId(67);
 
     /// The frozen u32 form keyed on by the C ABI.
     pub const fn as_u32(self) -> u32 {
@@ -104,7 +116,7 @@ impl From<ScalarId> for u32 {
 /// is APPENDED at the end and takes the next id, never inserted alphabetically
 /// and never into one of the holes listed on `ScalarId`.
 /// Reached only through `Registry::builtin()`.
-pub(crate) static CATALOG: [ScalarDef; 44] = [
+pub(crate) static CATALOG: [ScalarDef; 48] = [
     ScalarDef {
         id: ScalarId::AUTH_JWT,
         namespace: "Auth",
@@ -467,7 +479,9 @@ pub(crate) static CATALOG: [ScalarDef; 44] = [
         primitive: PrimitiveKind::String,
         sql_type: "JSONB",
         metadata_primitive: "String",
-        json_schema_type: "object",
+        // "any" is the JSON-Schema mapping sentinel for an unconstrained
+        // schema (`{}`): object, array, primitive, and explicit null roots all pass.
+        json_schema_type: "any",
         tag: ScalarTag::CustomLogic,
         pattern: None,
         min_length: None,
@@ -476,12 +490,12 @@ pub(crate) static CATALOG: [ScalarDef; 44] = [
         maximum: None,
         case_insensitive: false,
         reserved_words: &[],
-        examples: &[],
-        description: "A JSON object represented as a string",
-        type_mappings: &[("typescript", "Record<string, any>"), ("python", "dict"), ("go", "json.RawMessage"), ("rust", "serde_json::Value"), ("sql", "JSONB"), ("json_schema", "object")],
+        examples: &["{\"k\":1}", "[1,2]", "\"text\"", "42", "true", "null"],
+        description: "Any valid JSON value: object, array, primitive, or null",
+        type_mappings: &[("typescript", "JSONValue"), ("python", "Any"), ("go", "json.RawMessage"), ("rust", "serde_json::Value"), ("sql", "JSONB"), ("json_schema", "any")],
         file_upload: None,
         image_constraints: None,
-        docstring: "",
+        docstring: "An arbitrary JSON root value. Objects, arrays, strings, numbers, booleans,\nand explicit null are all valid. Parsing canonicalizes the input to compact\nJSON text without narrowing it to an object-shaped settings bag.",
         alias_of: None,
         schema_primitive_override: None,
         schema_omit: false,
@@ -489,7 +503,7 @@ pub(crate) static CATALOG: [ScalarDef; 44] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: None,
-        hooks: ScalarHooks::NONE,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
     },
     ScalarDef {
@@ -553,7 +567,9 @@ pub(crate) static CATALOG: [ScalarDef; 44] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: None,
-        hooks: ScalarHooks::NONE,
+        // parse: a generated runtime hands the value to the core parser and
+        // decodes its canonical JSON output back into a native map.
+        hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
     },
     ScalarDef {
@@ -1540,6 +1556,169 @@ pub(crate) static CATALOG: [ScalarDef; 44] = [
         schema_omit: false,
         format: None,
         reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks::NONE,
+        metadata_omit: false,
+    },
+    // APPENDED in id order. Ids 61, 62 and 65 between these are holes held by
+    // a downstream extension; never move one of these beside an alphabetically
+    // related entry.
+    ScalarDef {
+        id: ScalarId::ORDERING_RANK,
+        namespace: "Ordering",
+        canonical: "Ordering.Rank",
+        primitive: PrimitiveKind::Int,
+        sql_type: "BIGINT",
+        metadata_primitive: "Int",
+        json_schema_type: "integer",
+        tag: ScalarTag::PatternOnly,
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        minimum: Some(1.0),
+        maximum: Some(9_007_199_254_740_991.0),
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &["1", "1000"],
+        description: "Positive JavaScript-safe ordering rank",
+        type_mappings: &[
+            ("typescript", "number"),
+            ("python", "int"),
+            ("go", "int64"),
+            ("rust", "i64"),
+            ("sql", "BIGINT"),
+            ("json_schema", "integer"),
+        ],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "A positive integer from 1 through 9,007,199,254,740,991.\nIt is safe to compare and serialize exactly in JavaScript and is used for\nrelative ordering and priority, never as an array index or persistence identity.",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: None,
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks::NONE,
+        metadata_omit: false,
+    },
+    ScalarDef {
+        id: ScalarId::VERSION_SEM_VER,
+        namespace: "Version",
+        canonical: "Version.SemVer",
+        primitive: PrimitiveKind::String,
+        sql_type: "VARCHAR(255)",
+        metadata_primitive: "String",
+        json_schema_type: "string",
+        tag: ScalarTag::PatternOnly,
+        pattern: Some(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"),
+        min_length: Some(5),
+        max_length: Some(255),
+        minimum: None,
+        maximum: None,
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &["1.0.0", "2.4.1-rc.1+build.9"],
+        description: "Canonical Semantic Versioning 2.0.0 value",
+        type_mappings: &[
+            ("typescript", "string"),
+            ("python", "str"),
+            ("go", "string"),
+            ("rust", "String"),
+            ("sql", "VARCHAR(255)"),
+            ("json_schema", "string"),
+        ],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "A canonical Semantic Versioning 2.0.0 string. Major, minor, and patch\nare mandatory; numeric identifiers have no leading zero; prerelease and build\nidentifiers follow semver.org. Input is already canonical: no leading `v`,\nwhitespace, or case folding is accepted. Vendor model versions remain strings.",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: Some("semver"),
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks::NONE,
+        metadata_omit: false,
+    },
+    ScalarDef {
+        id: ScalarId::GIT_PATH_PATTERN,
+        namespace: "Git",
+        canonical: "Git.PathPattern",
+        primitive: PrimitiveKind::String,
+        sql_type: "VARCHAR(1024)",
+        metadata_primitive: "String",
+        json_schema_type: "string",
+        // The grammar (bracket classes, escapes, `**` only as a whole segment,
+        // no `.`/`..` segments) is more than a regex states, so the module in
+        // scalars/git_path_pattern.rs decides acceptance; the declared pattern
+        // documents the rooted shape and bounds the accept set from above.
+        tag: ScalarTag::CustomLogic,
+        pattern: Some(r"^!?/[^\x00\r\n]+$"),
+        min_length: Some(2),
+        max_length: Some(1024),
+        minimum: None,
+        maximum: None,
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &["/skills/**", "!/skills/shared/**", "/assets/"],
+        description: "Repository-rooted, case-sensitive gitignore-style path pattern",
+        type_mappings: &[
+            ("typescript", "string"),
+            ("python", "str"),
+            ("go", "string"),
+            ("rust", "String"),
+            ("sql", "VARCHAR(1024)"),
+            ("json_schema", "string"),
+        ],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "A repository-rooted gitignore-style pattern. Positive patterns begin `/`;\nnegated patterns begin `!/`. `/` is the only separator, `*`, `?`, bracket\nclasses, escapes, and `**` use gitignore semantics, and a trailing `/` selects\ndirectories. Matching is case-sensitive. The scalar validates canonical rooted\nsyntax; repository traversal and matching remain consumer behavior.",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: None,
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
+        metadata_omit: false,
+    },
+    ScalarDef {
+        id: ScalarId::AGENT_SKILL_NAME,
+        namespace: "AgentSkill",
+        canonical: "AgentSkill.Name",
+        primitive: PrimitiveKind::String,
+        sql_type: "CITEXT",
+        metadata_primitive: "String",
+        json_schema_type: "string",
+        tag: ScalarTag::PatternOnly,
+        pattern: Some(r"^[a-z0-9]+(?:-[a-z0-9]+)*$"),
+        min_length: Some(1),
+        max_length: Some(64),
+        minimum: None,
+        maximum: None,
+        case_insensitive: true,
+        reserved_words: &[],
+        examples: &["data-analysis", "careful-refactors"],
+        description: "Portable Agent Skills directory and frontmatter name",
+        type_mappings: &[
+            ("typescript", "string"),
+            ("python", "str"),
+            ("go", "string"),
+            ("rust", "String"),
+            ("sql", "CITEXT"),
+            ("json_schema", "string"),
+        ],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "The stable `name` from the Agent Skills specification and the matching\nskill directory name. Values are 1-64 lowercase ASCII letters, numbers, and\nsingle hyphen separators; they cannot start or end with a hyphen. This scalar\nintentionally differs from a camelCase code identifier.",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: None,
+        reserved_words_case_insensitive: true,
         reserved_words_match_partial: false,
         comparability_class: None,
         hooks: ScalarHooks::NONE,

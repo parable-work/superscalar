@@ -18,9 +18,22 @@ assert.strictEqual(wasm.scalar_normalize(CONTACT_EMAIL, "  MIXED@Case.COM "), "m
 assert.ok(wasm.scalar_parse(IDENTITY_UUID, "550e8400-e29b-41d4-a716-446655440000").length > 0);
 assert.ok(wasm.scalar_parse(DESIGN_COLOR, "#ff0000").length > 0);
 
-assert.throws(() => wasm.scalar_parse(CONTACT_EMAIL, "not-an-email"));
-assert.throws(() => wasm.scalar_parse(IDENTITY_UUID, "not-a-uuid"));
-assert.throws(() => wasm.scalar_parse(9999, "anything"));
+// A rejected value throws an error named ScalarParseError; an unknown scalar
+// id throws a plain error, so a caller can tell the two apart.
+assert.throws(() => wasm.scalar_parse(CONTACT_EMAIL, "not-an-email"), {
+  name: "ScalarParseError",
+});
+assert.throws(() => wasm.scalar_parse(IDENTITY_UUID, "not-a-uuid"), {
+  name: "ScalarParseError",
+});
+assert.throws(
+  () => wasm.scalar_parse(9999, "anything"),
+  (error) => {
+    assert.notStrictEqual(error.name, "ScalarParseError");
+    assert.match(error.message, /unknown scalar id/);
+    return true;
+  },
+);
 
 // validate returns undefined on success, throws on reject.
 assert.strictEqual(wasm.scalar_validate(CONTACT_EMAIL, "ok@example.com"), undefined);

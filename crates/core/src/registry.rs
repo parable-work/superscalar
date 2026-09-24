@@ -1,34 +1,100 @@
 use crate::catalog::{ScalarId, CATALOG};
+use crate::definitions::Definitions;
 use crate::directive::DirectiveScalar;
 use crate::error::ScalarError;
 use crate::extension::{AssembleOptions, AssemblyError, Extension, ExtensionInfo, LegacyAlias};
 use serde::Serialize;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::sync::{Arc, LazyLock};
 
-/// Primitive backing of a scalar's canonical value. The DSL's object-shaped
-/// `"Type"` maps to `Object`; `Bool` is reserved (no current scalar uses it).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum PrimitiveKind {
-    String,
-    Int,
-    Float,
-    Bool,
-    Object,
+/// Declares `PrimitiveKind` and both of the spellings each member is written in.
+///
+/// One invocation owns the whole (member, IR type-ref name, DSL name) triple.
+/// A member cannot exist outside this list, so it cannot exist without both
+/// names, and the four accessors below are generated from the same row rather
+/// than restating it. That is the property a producer and a consumer on two
+/// sides of a wire need: one writes the IR spelling into an emitted schema,
+/// the other reads it back out as a DSL primitive, and neither can see the
+/// other's mapping.
+macro_rules! primitive_kinds {
+    ($(
+        $(#[$member_doc:meta])*
+        ($member:ident, $type_ref_name:literal, $dsl_name:literal)
+    ),+ $(,)?) => {
+        /// Primitive backing of a scalar's canonical value. The DSL's
+        /// object-shaped `"Type"` maps to `Object`; `Bool` is reserved (no
+        /// current scalar uses it).
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+        pub enum PrimitiveKind {
+            $(
+                $(#[$member_doc])*
+                $member,
+            )+
+        }
+
+        impl PrimitiveKind {
+            /// Every member, in declaration order. Generated with the enum, so
+            /// it can never fall behind it.
+            pub const ALL: &'static [PrimitiveKind] = &[$(PrimitiveKind::$member),+];
+
+            /// The DSL spelling, used by the schema catalog emitters
+            /// (`Object` -> `"Type"`).
+            pub fn dsl_name(self) -> &'static str {
+                match self {
+                    $(PrimitiveKind::$member => $dsl_name,)+
+                }
+            }
+
+            /// The inverse of [`PrimitiveKind::dsl_name`], `None` for any other
+            /// spelling.
+            ///
+            /// A consumer reading a primitive back off the wire would otherwise
+            /// write its own match over these names and become a mirror of
+            /// this enum that drifts the first time it gains a member.
+            pub fn from_dsl_name(name: &str) -> Option<Self> {
+                match name {
+                    $($dsl_name => Some(PrimitiveKind::$member),)+
+                    _ => None,
+                }
+            }
+
+            /// The schema-IR type-ref spelling, used when a primitive is named
+            /// as a `typeRef` inside an emitted schema.
+            ///
+            /// It is NOT [`PrimitiveKind::dsl_name`]: the IR writes `Boolean`
+            /// where the DSL writes `Bool`, and `JSON` where the DSL writes
+            /// `Type`. Both spellings are real and neither is a typo, so they
+            /// are declared side by side instead of being converted. `JSON` is
+            /// the BARE object spelling, not the dotted `Generic.JSON`: that is
+            /// a catalog scalar, and a column whose type was never resolved to
+            /// a scalar must not name one.
+            pub fn type_ref_name(self) -> &'static str {
+                match self {
+                    $(PrimitiveKind::$member => $type_ref_name,)+
+                }
+            }
+
+            /// The inverse of [`PrimitiveKind::type_ref_name`], `None` for any
+            /// other spelling -- including a `scalars/{canonical}` reference,
+            /// which names a scalar rather than a bare primitive and is resolved
+            /// through the scalar catalog instead.
+            pub fn from_type_ref_name(name: &str) -> Option<Self> {
+                match name {
+                    $($type_ref_name => Some(PrimitiveKind::$member),)+
+                    _ => None,
+                }
+            }
+        }
+    };
 }
 
-impl PrimitiveKind {
-    /// The DSL spelling, used by the schema catalog emitters (`Object` -> `"Type"`).
-    pub fn dsl_name(self) -> &'static str {
-        match self {
-            PrimitiveKind::String => "String",
-            PrimitiveKind::Int => "Int",
-            PrimitiveKind::Float => "Float",
-            PrimitiveKind::Bool => "Bool",
-            PrimitiveKind::Object => "Type",
-        }
-    }
-}
+primitive_kinds!(
+    (String, "String", "String"),
+    (Int, "Int", "Int"),
+    (Float, "Float", "Float"),
+    (Bool, "Boolean", "Bool"),
+    (Object, "JSON", "Type"),
+);
 
 /// How a scalar's behavior is realized.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -161,11 +227,28 @@ pub struct ScalarDef {
     /// text, and there is no `COMPARABILITY_CLASSES` constant to check a new
     /// value against. One class is a thin basis for freezing a four-language
     /// vocabulary, and tightening it later is a codegen break plus a corpus
-    /// rewrite, so the set stays open until more classes exist. Two standing
-    /// tests in `crates/core/tests/semantic_metadata.rs` bound what an open set can
-    /// silently get wrong: no class may have exactly one member, and no class
-    /// may span two `PrimitiveKind`s. A third bound lives outside Rust:
-    /// `meta.comparability_classes` in `conformance/core-scalars.v2.json` pins each
+    /// rewrite, so the set stays open until more classes exist. The bound a
+    /// closed enum would add already exists outside Rust and is stronger for
+    /// being independent: `meta.comparability_classes` in
+    /// `conformance/core-scalars.v2.json` is HAND-WRITTEN, and
+    /// `conformance/gen_core_scalars_metadata.py` cannot write it (it rewrites
+    /// exactly one other key and aborts if any other byte moved). A hand-typed
+    /// member list cross-checked by four readers against a machine-generated
+    /// transcript catches the one thing the in-Rust invariants cannot: two
+    /// scalars sharing a misspelling.
+    ///
+    /// Five standing invariants in `crates/core/tests/semantic_metadata.rs`
+    /// bound what an open set can silently get wrong: a class name must match
+    /// `[a-z0-9_]+` and may not be empty; no class may have exactly one member;
+    /// no class may span two `PrimitiveKind`s; no class may span two SQL types
+    /// with no coercion between them (`PrimitiveKind` is the backing of the
+    /// canonical STRING form and cannot see that `temporal_instant` spans `DATE`
+    /// and `TIMESTAMPTZ`); and an alias may not declare a class of its own,
+    /// since the class belongs to the alias target. All five are table-tested
+    /// against tables the catalog cannot produce, because a walk over an
+    /// almost-empty class table asserts nothing.
+    ///
+    /// A sixth bound lives outside Rust: `meta.comparability_classes` pins each
     /// class name to its exact member list, and all four bindings assert it.
     pub comparability_class: Option<&'static str>,
     /// Which hooks the generated schema runtimes delegate to the core.
@@ -267,9 +350,14 @@ struct Slot {
 /// The assembled catalog: built-ins plus zero or more extensions, checked for
 /// collisions once and then read-only. The only thing bindings and codegen
 /// consume; `Registry::builtin()` is the process-wide built-in assembly.
+///
+/// Every definition lookup (`def`, `by_canonical`, `resolved`,
+/// `comparable_with`, `ids`, `defs`, `len`) is answered by the registry's
+/// [`Definitions`], which a consumer that needs no implementation can
+/// assemble on its own.
 pub struct Registry {
+    definitions: Definitions,
     slots: BTreeMap<u32, Slot>,
-    by_canonical: HashMap<&'static str, ScalarId>,
     legacy_aliases: Vec<LegacyAlias>,
     extensions: Vec<ExtensionInfo>,
 }
@@ -334,15 +422,12 @@ impl Registry {
         // extensions only and skip it. The phases run in the documented order
         // (extension-model.md section 2.6) and each stops at its first failure.
         check_id_blocks(&pending[1..], options)?;
-        let by_canonical = check_unique_identities(&pending)?;
-        let defs_by_id: BTreeMap<u32, &'static ScalarDef> = pending
-            .iter()
-            .flat_map(|ext| ext.defs.iter())
-            .map(|def| (def.id.0, def))
-            .collect();
-        check_def_consistency(&defs_by_id)?;
-        check_impls(&pending, &defs_by_id)?;
-        check_patterns_and_legacy_aliases(&pending, &defs_by_id)?;
+        check_extension_names(&pending)?;
+        let definitions =
+            Definitions::try_assemble_sources(pending.iter().map(|ext| (ext.name, ext.defs)))?;
+        let defs_by_id = definitions.by_id();
+        check_impls(&pending, defs_by_id)?;
+        check_patterns_and_legacy_aliases(&pending, defs_by_id)?;
 
         let mut legacy_aliases: Vec<LegacyAlias> = Vec::new();
         let mut infos: Vec<ExtensionInfo> = Vec::with_capacity(pending.len());
@@ -357,22 +442,28 @@ impl Registry {
             legacy_aliases.extend(ext.aliases.iter().copied());
         }
         Ok(Registry {
+            definitions,
             slots: build_slots(pending),
-            by_canonical,
             legacy_aliases,
             extensions: infos,
         })
     }
 
+    /// The definitions this registry was assembled from: every def lookup
+    /// below delegates to it.
+    pub fn definitions(&self) -> &Definitions {
+        &self.definitions
+    }
+
     /// The def for `id`, or `None` for an id no extension declared.
     pub fn def(&self, id: ScalarId) -> Option<&'static ScalarDef> {
-        self.slots.get(&id.0).map(|slot| slot.def)
+        self.definitions.def(id)
     }
 
     /// Look up a def by its canonical identity string, e.g. `"Contact.Email"`.
     /// Exact and case-sensitive.
     pub fn by_canonical(&self, name: &str) -> Option<&'static ScalarDef> {
-        self.by_canonical.get(name).and_then(|id| self.def(*id))
+        self.definitions.by_canonical(name)
     }
 
     /// The implementation serving `id` (hand-written or directive engine).
@@ -388,77 +479,35 @@ impl Registry {
     /// Resolve an alias to the id that carries the implementation. An unknown
     /// id resolves to itself.
     pub fn resolved(&self, id: ScalarId) -> ScalarId {
-        self.def(id).and_then(|def| def.alias_of).unwrap_or(id)
+        self.definitions.resolved(id)
     }
 
     /// Whether a comparison or join between a column of scalar `a` and one of
-    /// `b` is semantically meaningful. THIS is the comparability contract;
-    /// `ScalarDef::comparability_class` is the data it reads, not the relation
-    /// itself.
-    ///
-    /// The distinction matters because the obvious implementation is wrong.
-    /// `a.comparability_class == b.comparability_class` answers `true` for two
-    /// class-less scalars, and `None` is the value almost every scalar carries,
-    /// so naive field equality makes almost the entire catalog mutually comparable --
-    /// including `Contact.Email` against `Contact.PhoneNumber`, which
-    /// the semantic-types design names as the case the relation exists to
-    /// reject. Go has the sharper version of the same trap: it encodes absent
-    /// as `""`, which is also the zero value a failed map lookup returns.
-    ///
-    /// The rule: a scalar is always comparable with itself, and two DISTINCT
-    /// scalars are comparable only when both declare the SAME named class.
-    /// `None` on either side is self-comparable-only and never matches across.
-    /// An alias resolves first, since `alias_of` means one implementation under
-    /// two ids (`Identity.UserID` and `Identity.UUID` are the only such pair),
-    /// so they are the same scalar for this purpose. The class is read through
-    /// the RESOLVED def so the alias inherits the target's class; reading the
-    /// raw field on each side would break transitivity one hop out.
-    ///
-    /// Equivalence classes, not a subtype lattice. Reflexive, symmetric and
-    /// transitive, asserted over the whole catalog by
-    /// `comparability_is_an_equivalence_relation_over_the_catalog`.
-    ///
-    /// This answers ONE binary question: may these two be compared. It is not
-    /// the validator's severity rule, which is three-valued --
-    /// a query validator distinguishes different-class (error),
-    /// typed-vs-unknown (warn) and unknown-vs-unknown (no diagnostic), and this
-    /// predicate collapses the last two into `false`. The validator must read
-    /// the classes itself to tell those apart; what it must NOT do is treat raw
-    /// field equality as the comparability answer, which is the trap this
-    /// exists for.
+    /// `b` is semantically meaningful: [`Definitions::comparable_with`] over
+    /// this registry's definitions, which documents the rule.
     pub fn comparable_with(&self, a: ScalarId, b: ScalarId) -> bool {
-        let a = self.resolved(a);
-        let b = self.resolved(b);
-        if a == b {
-            return true;
-        }
-        let mine = self.def(a).and_then(|def| def.comparability_class);
-        let theirs = self.def(b).and_then(|def| def.comparability_class);
-        match (mine, theirs) {
-            (Some(mine), Some(theirs)) => mine == theirs,
-            _ => false,
-        }
+        self.definitions.comparable_with(a, b)
     }
 
     /// Every assembled id, ascending.
     pub fn ids(&self) -> impl Iterator<Item = ScalarId> + '_ {
-        self.slots.keys().map(|id| ScalarId(*id))
+        self.definitions.ids()
     }
 
     /// Every assembled def, in ascending id order.
     pub fn defs(&self) -> impl Iterator<Item = &'static ScalarDef> + '_ {
-        self.slots.values().map(|slot| slot.def)
+        self.definitions.defs()
     }
 
     /// Number of assembled scalars.
     pub fn len(&self) -> usize {
-        self.slots.len()
+        self.definitions.len()
     }
 
     /// Whether the registry holds no scalars. Never true for an assembly that
     /// includes the built-ins; present for `clippy::len_without_is_empty`.
     pub fn is_empty(&self) -> bool {
-        self.slots.is_empty()
+        self.definitions.is_empty()
     }
 
     /// Legacy flat names the generated bindings alias, concatenated in
@@ -607,82 +656,16 @@ fn check_id_blocks(exts: &[Pending], options: AssembleOptions) -> Result<(), Ass
     Ok(())
 }
 
-/// Assembly checks 3, 4 and 5: extension names are unique and none is
-/// `"builtin"` (`DuplicateExtensionName`); no two defs share an id
-/// (`DuplicateId`); no two defs share a canonical name, compared exact and
-/// case-sensitive (`DuplicateCanonical`). Returns the canonical-to-id index the
-/// registry keeps, which is well defined only once check 5 has passed.
-fn check_unique_identities(
-    pending: &[Pending],
-) -> Result<HashMap<&'static str, ScalarId>, AssemblyError> {
+/// Assembly check 3: extension names are unique and none is `"builtin"`
+/// (`DuplicateExtensionName`). Checks 4 to 8 run in `Definitions` assembly,
+/// which needs no extension names beyond the owner it reports.
+fn check_extension_names(pending: &[Pending]) -> Result<(), AssemblyError> {
     let exts = &pending[1..];
     for (i, ext) in exts.iter().enumerate() {
         let clashes = ext.name == crate::builtin::NAME
             || exts[..i].iter().any(|other| other.name == ext.name);
         if clashes {
             return Err(AssemblyError::DuplicateExtensionName { name: ext.name });
-        }
-    }
-    let mut owner_by_id: BTreeMap<u32, &'static str> = BTreeMap::new();
-    for ext in pending {
-        for def in ext.defs {
-            if let Some(first) = owner_by_id.insert(def.id.0, ext.name) {
-                return Err(AssemblyError::DuplicateId {
-                    id: def.id,
-                    first,
-                    second: ext.name,
-                });
-            }
-        }
-    }
-    let mut by_canonical: HashMap<&'static str, ScalarId> = HashMap::new();
-    let mut owner_by_canonical: HashMap<&'static str, &'static str> = HashMap::new();
-    for ext in pending {
-        for def in ext.defs {
-            if let Some(first) = owner_by_canonical.insert(def.canonical, ext.name) {
-                return Err(AssemblyError::DuplicateCanonical {
-                    canonical: def.canonical,
-                    first,
-                    second: ext.name,
-                });
-            }
-            by_canonical.insert(def.canonical, def.id);
-        }
-    }
-    Ok(by_canonical)
-}
-
-/// Assembly checks 6, 7 and 8, over every def in id order: `namespace` is the
-/// canonical prefix before the first `.` (`NamespaceMismatch`); every
-/// `alias_of` target exists (`DanglingAlias`) and is not itself an alias
-/// (`AliasChain`).
-fn check_def_consistency(
-    defs_by_id: &BTreeMap<u32, &'static ScalarDef>,
-) -> Result<(), AssemblyError> {
-    for def in defs_by_id.values() {
-        let prefix = def.canonical.split('.').next().unwrap_or_default();
-        if def.namespace != prefix {
-            return Err(AssemblyError::NamespaceMismatch {
-                canonical: def.canonical,
-                namespace: def.namespace,
-            });
-        }
-    }
-    for def in defs_by_id.values() {
-        let Some(target) = def.alias_of else {
-            continue;
-        };
-        let Some(target_def) = defs_by_id.get(&target.0) else {
-            return Err(AssemblyError::DanglingAlias {
-                canonical: def.canonical,
-                alias_of: target,
-            });
-        };
-        if target_def.alias_of.is_some() {
-            return Err(AssemblyError::AliasChain {
-                canonical: def.canonical,
-                alias_of: target,
-            });
         }
     }
     Ok(())
@@ -844,10 +827,11 @@ fn in_block(id: ScalarId, id_base: u32) -> bool {
     id.0 >= id_base && id.0 < id_base.saturating_add(ScalarId::EXTENSION_BLOCK)
 }
 
-/// Built-in catalog lookup. Panics on an id the built-in registry does not
-/// hold; callers with an untrusted id use `Registry::def`.
+/// Built-in catalog lookup. Panics on an id the built-in set does not hold;
+/// callers with an untrusted id use `Definitions::def` or `Registry::def`.
+/// Reads [`Definitions::builtin`], so it links no scalar implementation.
 pub fn scalar_def(id: ScalarId) -> &'static ScalarDef {
-    Registry::builtin()
+    Definitions::builtin()
         .def(id)
         .unwrap_or_else(|| panic!("scalar id {} is not a built-in scalar", id.0))
 }
@@ -874,12 +858,97 @@ mod sortability_rule_tests {
             assert!(json_shape_is_sortable(shape), "{shape} must be sortable");
         }
         for shape in [
-            "object", "array", "", "json", "Object", "objects", "String", "null",
+            "object", "array", "any", "", "json", "Object", "objects", "String", "null",
         ] {
             assert!(
                 !json_shape_is_sortable(shape),
                 "{shape} must not be sortable"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod primitive_kind_tests {
+    use super::PrimitiveKind;
+
+    /// Round trip over EVERY member, driven by `PrimitiveKind::ALL` rather than
+    /// by the catalog: a member no scalar currently uses -- `Bool` is one -- is
+    /// still a spelling an emitted schema can carry, so a list bounded by the
+    /// catalog would leave it unchecked.
+    #[test]
+    fn from_dsl_name_inverts_dsl_name_over_every_primitive() {
+        for primitive in PrimitiveKind::ALL {
+            assert_eq!(
+                PrimitiveKind::from_dsl_name(primitive.dsl_name()),
+                Some(*primitive),
+                "{primitive:?} did not round trip"
+            );
+        }
+        for unknown in ["Object", "Boolean", "int", "", "Typeq"] {
+            assert_eq!(PrimitiveKind::from_dsl_name(unknown), None, "{unknown}");
+        }
+    }
+
+    /// The other half of the pair `primitive_kinds!` declares together. `JSON`
+    /// is the IR spelling, `Type` is the DSL one, and reading the wrong one is
+    /// how a derived column arrives at its consumer as an unknown type
+    /// reference.
+    #[test]
+    fn from_type_ref_name_inverts_type_ref_name_over_every_primitive() {
+        for primitive in PrimitiveKind::ALL {
+            assert_eq!(
+                PrimitiveKind::from_type_ref_name(primitive.type_ref_name()),
+                Some(*primitive),
+                "{primitive:?} did not round trip"
+            );
+        }
+        // A scalar-typed column is `scalars/{canonical}` and is resolved through
+        // the catalog, not here; the DSL spellings that differ from the IR ones
+        // are not type-ref names either. Nor is the dotted `Generic.JSON`: it
+        // names a catalog scalar, and a bare primitive must not read as one.
+        for unknown in [
+            "scalars/Contact.Email",
+            "Bool",
+            "Type",
+            "boolean",
+            "Generic.JSON",
+            "",
+        ] {
+            assert_eq!(
+                PrimitiveKind::from_type_ref_name(unknown),
+                None,
+                "{unknown}"
+            );
+        }
+    }
+
+    /// Both spellings are declared, and neither is empty or duplicated. A member
+    /// added to `primitive_kinds!` without real names would compile -- the macro
+    /// only requires two literals -- and this is what refuses it.
+    #[test]
+    fn every_primitive_declares_two_usable_spellings() {
+        let mut type_refs = std::collections::BTreeSet::new();
+        let mut dsl_names = std::collections::BTreeSet::new();
+        for primitive in PrimitiveKind::ALL {
+            assert!(
+                !primitive.type_ref_name().is_empty(),
+                "{primitive:?} has no IR type-ref name"
+            );
+            assert!(
+                !primitive.dsl_name().is_empty(),
+                "{primitive:?} has no DSL name"
+            );
+            assert!(
+                type_refs.insert(primitive.type_ref_name()),
+                "{primitive:?} repeats an IR type-ref name"
+            );
+            assert!(
+                dsl_names.insert(primitive.dsl_name()),
+                "{primitive:?} repeats a DSL name"
+            );
+        }
+        assert_eq!(type_refs.len(), PrimitiveKind::ALL.len());
+        assert_eq!(dsl_names.len(), PrimitiveKind::ALL.len());
     }
 }

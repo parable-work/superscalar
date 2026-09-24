@@ -15,6 +15,24 @@ export interface ScalarBackend {
   coerceLenient(id: number, jsonIn: string): string;
 }
 
+// The wasm bundle lives beside this package, not beside whatever file this
+// module was bundled into. A bundler that inlines this module carries the
+// relative path along, so the package-relative path is tried first and the
+// package name second: the name resolves through node_modules from wherever
+// the bundle runs, which any consumer that installs or links superscalar can
+// satisfy. The error of the relative attempt is the one reported.
+function loadBundle(relativeEntry: string, packageEntry: string): unknown {
+  try {
+    return require(relativeEntry);
+  } catch (relativeError) {
+    try {
+      return require(packageEntry);
+    } catch {
+      throw relativeError;
+    }
+  }
+}
+
 // dist/backend.js -> ../native holds the locally built addon in a checkout;
 // a published install resolves @superscalar/<triple> instead.
 export function napiBackend(): ScalarBackend {
@@ -22,7 +40,10 @@ export function napiBackend(): ScalarBackend {
 }
 
 export function wasmBackend(): ScalarBackend {
-  const wasm = require("../wasm-node/superscalar_wasm.js") as WasmExports;
+  const wasm = loadBundle(
+    "../wasm-node/superscalar_wasm.js",
+    "superscalar/wasm-node/superscalar_wasm.js",
+  ) as WasmExports;
   return wrapWasm(wasm);
 }
 
@@ -44,17 +65,31 @@ export function wrapWasm(wasm: WasmExports): ScalarBackend {
   };
 }
 
+// Tries each loader in order and returns the first backend that loads. The
+// failure names every attempt, because "no addon" alone hides which host,
+// bundle, or package layout was wrong.
+export function firstAvailableBackend(loaders: ReadonlyArray<() => ScalarBackend>): ScalarBackend {
+  const failures: string[] = [];
+  for (const load of loaders) {
+    try {
+      return load();
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  throw new Error(`superscalar: no scalar backend could be loaded: ${failures.join("; ")}`);
+}
+
 let cached: ScalarBackend | null = null;
 
 // The native addon when this host has one installed, else the wasm-node bundle
-// the main package ships; the two cores pass the same conformance corpus.
+// the main package ships; the two cores pass the same conformance corpus. The
+// wasm build is the fallback for a host without a prebuilt addon for its
+// platform (a musl Linux, say) and for a bundle that resolves the package but
+// not an addon.
 export function loadBackend(): ScalarBackend {
   if (cached === null) {
-    try {
-      cached = napiBackend();
-    } catch {
-      cached = wasmBackend();
-    }
+    cached = firstAvailableBackend([napiBackend, wasmBackend]);
   }
   return cached;
 }

@@ -55,7 +55,7 @@ forgotten registration is caught.
 ## 3. Add the definition
 
 Append a `ScalarDef` to the built-in catalog in `crates/core/src/catalog.rs`
-with the next free id. Ids are append-only; the next free built-in id is 61,
+with the next free id. Ids are append-only; the next free built-in id is 68,
 and the holes below it are not reusable. Fill every field: canonical name and
 namespace, primitive, `sql_type`, `json_schema_type`, tag, the declarative
 rules, `examples` (at least one), a non-empty `description`, and

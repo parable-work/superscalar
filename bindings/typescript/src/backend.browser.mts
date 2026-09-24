@@ -40,6 +40,20 @@ export function wasmBackend(): ScalarBackend {
   return wasmBackendInstance;
 }
 
+// Same contract as the Node entries: the first loader that succeeds wins,
+// and a total failure names every attempt.
+export function firstAvailableBackend(loaders: ReadonlyArray<() => ScalarBackend>): ScalarBackend {
+  const failures: string[] = [];
+  for (const load of loaders) {
+    try {
+      return load();
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  throw new Error(`superscalar: no scalar backend could be loaded: ${failures.join("; ")}`);
+}
+
 export function loadBackend(): ScalarBackend {
   return wasmBackendInstance;
 }

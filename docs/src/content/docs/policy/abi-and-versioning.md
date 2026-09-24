@@ -26,7 +26,7 @@ Everything below follows from that.
 - Scalar ids. Every scalar has a `u32` id. Once a release carries it, the id
   means that scalar in every later release. Ids are never renumbered, reused
   or deleted; the holes in the built-in block (`0` to `4`, `7`, `30` to `38`,
-  `51`, `57`) are permanent.
+  `51`, `57`, `61`, `62`, `65`) are permanent.
 - Canonical names. `Contact.Email` is id 8 and always will be. There is no
   rename: a scalar under a different name is a new scalar with a new id.
 - The id partition. Built-ins own `0..=4095`. Extensions declare a base that

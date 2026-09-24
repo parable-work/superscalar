@@ -148,7 +148,7 @@ fn structural_and_object_scalars_declare_an_object_json_shape() {
 #[test]
 fn json_schema_type_domain_is_closed() {
     const KNOWN: &[&str] = &[
-        "string", "integer", "number", "boolean", "object", "array", "",
+        "string", "integer", "number", "boolean", "object", "array", "any", "",
     ];
     for id in Registry::builtin().ids() {
         let declared = scalar_def(id).json_schema_type;
@@ -328,7 +328,87 @@ fn comparability_across_distinct_scalars_is_exactly_the_temporal_instant_pair() 
     assert!(cross_pairs > 0, "the pair loop must not be vacuous");
 }
 
-/// The three invariants a comparability class table must satisfy, extracted so
+/// One row of a comparability class table, as the invariants read it.
+///
+/// A struct rather than a tuple because the SQL-type and alias invariants each
+/// added a dimension (`sql_type`, `alias_of`) and a five-wide positional tuple
+/// stops being readable at the call sites, which are all literal tables.
+#[derive(Clone, Copy)]
+struct ClassRow {
+    canonical: &'static str,
+    class: Option<&'static str>,
+    primitive: PrimitiveKind,
+    sql_type: &'static str,
+    /// The canonical name this row aliases, `None` for an ordinary row.
+    alias_of: Option<&'static str>,
+}
+
+/// Whether a query engine has a coercion between two declared SQL types, as a
+/// COARSE FAMILY MAP rather than an engine call.
+///
+/// A comparability class may legitimately span two SQL types -- the one class
+/// the catalog ships, `temporal_instant`, spans `DATE` and `TIMESTAMPTZ` -- so
+/// the invariant that reads this cannot be equality. What it wants is "the
+/// engine can execute a comparison between them", and SQL engines coerce a date
+/// against a timestamp (DataFusion, for one, coerces `Date32` against
+/// `Timestamp` to a timestamp). That is WHY `temporal_instant` passes.
+///
+/// The core cannot ask an engine, and should not. It is deliberately
+/// dependency-light -- `chrono`, `regex`, `serde`, no engine -- and it compiles
+/// to wasm, a C ABI, PyO3 and napi targets that must not carry a query planner.
+/// So this is an APPROXIMATION, and being the cheap structural half is the
+/// design rather than a shortfall: a consumer with an engine is the ORACLE for
+/// engine coercion and can cross-check a class against it.
+///
+/// FAIL-CLOSED, and the direction is the point. An unrecognized SQL type gets
+/// `None`, which compares only to itself, so it is REJECTED inside a mixed class
+/// rather than waved through. Adding a family is a deliberate widening that must
+/// cite a coercion, never a convenience for making a test pass.
+fn sql_type_family(sql_type: &str) -> Option<&'static str> {
+    // `VARCHAR(80)` and `varchar(4096)` are both legal declarations, so the
+    // length argument is dropped and the head is matched case-insensitively.
+    let head = sql_type.split('(').next().unwrap_or(sql_type);
+    match head.trim().to_ascii_uppercase().as_str() {
+        // Engines coerce a date against a timestamp; see above.
+        "DATE" | "TIMESTAMP" | "TIMESTAMPTZ" => Some("instant"),
+        // The numeric tower coerces to its widest member.
+        "SMALLINT" | "INTEGER" | "BIGINT" | "REAL" | "DOUBLE PRECISION" | "NUMERIC" | "DECIMAL" => {
+            Some("numeric")
+        }
+        // The free-text SQL types. Do NOT read this family as "everything
+        // that renders as Arrow `Utf8`": `UUID`, `INET`, `ltree` and `""` render
+        // as `Utf8` too and are deliberately left out. The family is narrower
+        // than the Arrow rendering on purpose, because Arrow equality is not the
+        // question a comparability class asks. `Identity.UUID` against a TEXT id
+        // is executable and still meaningless.
+        "TEXT" | "CITEXT" | "VARCHAR" | "CHAR" => Some("text"),
+        // Everything else is self-comparable only: `""` (a schema-omitted
+        // scalar), `JSONB`, `UUID`, `INET`, `POINT`, `ltree`, `INTERVAL`,
+        // `TIME`.
+        //
+        // The known consequence: an id-style class spanning `Identity.UUID`
+        // (`UUID`) and a TEXT-stored id would be REJECTED here. That is the
+        // fail-closed direction working as intended, not an oversight. Rejection
+        // is loud, names both scalars and their SQL types, and is undone by one
+        // deliberate line; the other direction admits a class nobody checked.
+        // Widen this only alongside a real class that needs it, so the widening
+        // and the class land with the same reasoning.
+        _ => None,
+    }
+}
+
+/// Whether a comparability class may span these two declared SQL types.
+fn sql_types_are_comparable(left: &str, right: &str) -> bool {
+    if left == right {
+        return true;
+    }
+    match (sql_type_family(left), sql_type_family(right)) {
+        (Some(left), Some(right)) => left == right,
+        _ => false,
+    }
+}
+
+/// The invariants a comparability class table must satisfy, extracted so
 /// they can be tested against tables the catalog cannot produce yet.
 ///
 /// The extraction is the point, not a style choice. When every catalog value was
@@ -343,14 +423,36 @@ fn comparability_across_distinct_scalars_is_exactly_the_temporal_instant_pair() 
 ///
 /// Returns the first violation as a message, so the table test can assert
 /// WHICH rule fired rather than merely that something did.
-fn check_class_invariants(
-    rows: &[(Option<&'static str>, PrimitiveKind, &'static str)],
-) -> Result<(), String> {
+fn check_class_invariants(rows: &[ClassRow]) -> Result<(), String> {
     let mut members: std::collections::BTreeMap<&str, Vec<&str>> = Default::default();
     let mut primitives: std::collections::BTreeMap<&str, (PrimitiveKind, &str)> =
         Default::default();
+    let mut sql_types: std::collections::BTreeMap<&str, (&str, &str)> = Default::default();
 
-    for &(class, primitive, canonical) in rows {
+    for &ClassRow {
+        canonical,
+        class,
+        primitive,
+        sql_type,
+        alias_of,
+    } in rows
+    {
+        // An alias must not declare a class of its own. `alias_of` means one
+        // implementation under two ids, so the class belongs to the TARGET and
+        // the alias inherits it, which is what `comparable_with` reads. Declaring
+        // one here silently does nothing, and the ordinary oversight -- class the
+        // target, miss the alias row, or the reverse -- stops the relation being
+        // an equivalence relation one hop out. Folded in from the standalone
+        // catalog walk it used to have: that walk asserted `None == None` over
+        // the one unclassed alias pair and could not fail.
+        if let (Some(target), Some(class)) = (alias_of, class) {
+            return Err(format!(
+                "{canonical} is an alias of {target} and declares comparability \
+                 class {class:?} of its own; the class belongs to the target and \
+                 the alias inherits it, so this silently does nothing"
+            ));
+        }
+
         let Some(class) = class else {
             continue;
         };
@@ -394,6 +496,28 @@ fn check_class_invariants(
             ));
         }
 
+        // Storage homogeneity. `PrimitiveKind` alone does not deliver the
+        // guarantee the arm above claims. It is the primitive backing of a
+        // scalar's canonical STRING form, not the physical column type:
+        // `Temporal.Date` and `Temporal.DateTime` are BOTH
+        // `PrimitiveKind::String` and store as `DATE` and `TIMESTAMPTZ`, so a
+        // class over `Temporal.Date` and `Text.Markdown` passes the primitive arm
+        // while describing `DATE = TEXT`. The one class the catalog ships is
+        // exactly the case the primitive arm cannot see.
+        //
+        // Not equality, or it would reject `temporal_instant`. See
+        // `sql_types_are_comparable` for the rule and for why the engine-level
+        // question belongs to a consumer that has an engine.
+        let (first_sql_type, first_sql_canonical) =
+            *sql_types.entry(class).or_insert((sql_type, canonical));
+        if !sql_types_are_comparable(first_sql_type, sql_type) {
+            return Err(format!(
+                "comparability class {class:?} spans two SQL types with no \
+                 coercion between them: {first_sql_canonical} is \
+                 {first_sql_type:?}, {canonical} is {sql_type:?}"
+            ));
+        }
+
         members.entry(class).or_default().push(canonical);
     }
 
@@ -421,22 +545,25 @@ fn check_class_invariants(
     Ok(())
 }
 
-/// The shipped catalog satisfies all three. It was vacuous by construction until
+/// The shipped catalog satisfies all five. It was vacuous by construction until
 /// the first class assigned `temporal_instant`; with one two-member class the
-/// name-shape and primitive-homogeneity arms now execute, and the singleton arm
-/// still does not fire, which is why the rule it delegates to stays tested
-/// separately below against tables the catalog cannot produce.
+/// name-shape, primitive- and storage-homogeneity arms now execute, and the
+/// singleton and alias arms still do not fire, which is why the rule they
+/// delegate to stays tested separately below against tables the catalog cannot
+/// produce.
 #[test]
 fn the_catalog_satisfies_the_comparability_class_invariants() {
-    let rows: Vec<(Option<&'static str>, PrimitiveKind, &'static str)> = Registry::builtin()
+    let rows: Vec<ClassRow> = Registry::builtin()
         .ids()
         .map(|id| {
             let def = scalar_def(id);
-            (
-                def.comparability_class,
-                def.primitive,
-                scalar_def(id).canonical,
-            )
+            ClassRow {
+                canonical: def.canonical,
+                class: def.comparability_class,
+                primitive: def.primitive,
+                sql_type: def.sql_type,
+                alias_of: def.alias_of.map(|target| scalar_def(target).canonical),
+            }
         })
         .collect();
     assert_eq!(rows.len(), Registry::builtin().len());
@@ -446,49 +573,76 @@ fn the_catalog_satisfies_the_comparability_class_invariants() {
 }
 
 /// The rule itself, against tables the catalog cannot produce until
-/// classes are assigned. This is what makes the three invariants real
+/// classes are assigned. This is what makes the five invariants real
 /// today rather than prose that happens to compile: corrupt any of them and
 /// this test fails, even though the catalog walk above would not notice.
 #[test]
 fn class_invariants_reject_the_tables_the_catalog_cannot_produce_yet() {
-    let ok: &[(Option<&'static str>, PrimitiveKind, &'static str)] = &[
-        (
+    // A row builder, so each table below states only the fields it is about.
+    let row = |class, primitive, sql_type, canonical| ClassRow {
+        canonical,
+        class,
+        primitive,
+        sql_type,
+        alias_of: None,
+    };
+
+    let ok: &[ClassRow] = &[
+        row(
             Some("temporal_instant"),
             PrimitiveKind::String,
+            "TIMESTAMPTZ",
             "Temporal.DateTime",
         ),
-        (
+        row(
             Some("temporal_instant"),
             PrimitiveKind::String,
+            "DATE",
             "Temporal.Date",
         ),
-        (None, PrimitiveKind::Int, "Generic.Int64"),
+        row(None, PrimitiveKind::Int, "BIGINT", "Generic.Int64"),
     ];
     assert!(
         check_class_invariants(ok).is_ok(),
         "a valid two-member class alongside an unclassed scalar"
     );
 
-    let singleton: &[(Option<&'static str>, PrimitiveKind, &'static str)] = &[(
+    let singleton: &[ClassRow] = &[row(
         Some("temporal_instant"),
         PrimitiveKind::String,
+        "TIMESTAMPTZ",
         "Temporal.DateTime",
     )];
     assert!(check_class_invariants(singleton)
         .unwrap_err()
         .contains("has one member"));
 
-    let cross_primitive: &[(Option<&'static str>, PrimitiveKind, &'static str)] = &[
-        (Some("mixed"), PrimitiveKind::String, "Temporal.DateTime"),
-        (Some("mixed"), PrimitiveKind::Int, "Temporal.Seconds"),
+    let cross_primitive: &[ClassRow] = &[
+        row(
+            Some("mixed"),
+            PrimitiveKind::String,
+            "TIMESTAMPTZ",
+            "Temporal.DateTime",
+        ),
+        row(
+            Some("mixed"),
+            PrimitiveKind::Int,
+            "BIGINT",
+            "Temporal.Seconds",
+        ),
     ];
     assert!(check_class_invariants(cross_primitive)
         .unwrap_err()
         .contains("spans two primitives"));
 
-    let empty_name: &[(Option<&'static str>, PrimitiveKind, &'static str)] = &[
-        (Some(""), PrimitiveKind::String, "Temporal.DateTime"),
-        (Some(""), PrimitiveKind::String, "Temporal.Date"),
+    let empty_name: &[ClassRow] = &[
+        row(
+            Some(""),
+            PrimitiveKind::String,
+            "TIMESTAMPTZ",
+            "Temporal.DateTime",
+        ),
+        row(Some(""), PrimitiveKind::String, "DATE", "Temporal.Date"),
     ];
     assert!(check_class_invariants(empty_name)
         .unwrap_err()
@@ -500,9 +654,9 @@ fn class_invariants_reject_the_tables_the_catalog_cannot_produce_yet() {
         "temporal.instant",
         "temporal\u{e9}",
     ] {
-        let rows: &[(Option<&'static str>, PrimitiveKind, &'static str)] = &[
-            (Some(bad), PrimitiveKind::String, "A.One"),
-            (Some(bad), PrimitiveKind::String, "A.Two"),
+        let rows: &[ClassRow] = &[
+            row(Some(bad), PrimitiveKind::String, "TEXT", "A.One"),
+            row(Some(bad), PrimitiveKind::String, "TEXT", "A.Two"),
         ];
         assert!(
             check_class_invariants(rows)
@@ -511,37 +665,93 @@ fn class_invariants_reject_the_tables_the_catalog_cannot_produce_yet() {
             "{bad:?} must be rejected"
         );
     }
-}
 
-/// An alias must not carry a comparability class of its own. `alias_of` means
-/// one implementation under two ids, so the class belongs to the target and the
-/// alias inherits it -- which is what `comparable_with` reads.
-///
-/// Without this, the first class assignment makes an ordinary oversight -- class the target,
-/// miss the alias row, or the reverse -- and the relation stops being an
-/// equivalence relation. The alias pair itself still answers `true`, because
-/// the identity short-circuit fires first, so the inconsistency is invisible at
-/// the row where it was introduced and only surfaces one hop out, against some
-/// third scalar. Still structurally undischargeable: the one alias pair
-/// (`Identity.UserID` -> `Identity.UUID`) carries no class, so the loop body
-/// runs but asserts `None == None`. It fires the moment an alias target is
-/// classed.
-#[test]
-fn an_alias_never_declares_its_own_comparability_class() {
-    for id in Registry::builtin().ids() {
-        let def = scalar_def(id);
-        let Some(target) = def.alias_of else {
-            continue;
-        };
-        assert_eq!(
-            def.comparability_class,
-            None,
-            "{} is an alias of {}; the class belongs to the target and the alias \
-             inherits it, so declaring one here silently does nothing",
-            scalar_def(id).canonical,
-            scalar_def(target).canonical
+    // The case the primitive arm cannot see: both sides are
+    // `PrimitiveKind::String`, so that arm passes, and the class describes
+    // `DATE = TEXT`.
+    let cross_storage: &[ClassRow] = &[
+        row(
+            Some("mixed_storage"),
+            PrimitiveKind::String,
+            "DATE",
+            "Temporal.Date",
+        ),
+        row(
+            Some("mixed_storage"),
+            PrimitiveKind::String,
+            "TEXT",
+            "Text.Markdown",
+        ),
+    ];
+    assert!(
+        check_class_invariants(cross_storage)
+            .unwrap_err()
+            .contains("spans two SQL types with no coercion"),
+        "a class over DATE and TEXT passes the primitive arm and must fail here"
+    );
+
+    // The same shape for a type with no declared family at all: fail-closed
+    // means an unrecognized SQL type is rejected inside a mixed class.
+    let unfamilied: &[ClassRow] = &[
+        row(
+            Some("mixed_storage"),
+            PrimitiveKind::String,
+            "ltree",
+            "Acme.LtreePath",
+        ),
+        row(
+            Some("mixed_storage"),
+            PrimitiveKind::String,
+            "TEXT",
+            "Text.Markdown",
+        ),
+    ];
+    assert!(check_class_invariants(unfamilied)
+        .unwrap_err()
+        .contains("spans two SQL types with no coercion"));
+
+    // And the widened rule must still ADMIT the cases it is meant to. Storage
+    // types that differ but coerce, and storage types that differ only in a
+    // VARCHAR width, are both legal spans.
+    for (left, right) in [
+        ("DATE", "TIMESTAMP"),
+        ("BIGINT", "DOUBLE PRECISION"),
+        ("TEXT", "CITEXT"),
+        ("VARCHAR(80)", "varchar(4096)"),
+    ] {
+        let rows: &[ClassRow] = &[
+            row(Some("spanning"), PrimitiveKind::String, left, "A.One"),
+            row(Some("spanning"), PrimitiveKind::String, right, "A.Two"),
+        ];
+        assert!(
+            check_class_invariants(rows).is_ok(),
+            "{left} and {right} coerce and must be admitted"
         );
     }
+
+    // An alias declaring its own class, which the catalog cannot produce: its
+    // one alias pair carries no class on either side.
+    let classed_alias: &[ClassRow] = &[
+        ClassRow {
+            canonical: "Identity.UserID",
+            class: Some("opaque_id"),
+            primitive: PrimitiveKind::String,
+            sql_type: "UUID",
+            alias_of: Some("Identity.UUID"),
+        },
+        row(
+            Some("opaque_id"),
+            PrimitiveKind::String,
+            "UUID",
+            "Identity.UUID",
+        ),
+    ];
+    assert!(
+        check_class_invariants(classed_alias)
+            .unwrap_err()
+            .contains("is an alias of Identity.UUID and declares comparability"),
+        "an alias must not declare a class of its own"
+    );
 }
 
 /// Transitivity, which the doc comment on `comparable_with` claims and which the

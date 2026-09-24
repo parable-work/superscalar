@@ -17,7 +17,7 @@ corpus against your build is how you know it behaves like the reference.
 
 ## The file
 
-`conformance/core-scalars.v2.json` holds the vectors for the 44 built-in
+`conformance/core-scalars.v2.json` holds the vectors for the 48 built-in
 scalars. Its top level:
 
 - `meta`: `version` (2), `source_language` (`rust-core`), a description, and

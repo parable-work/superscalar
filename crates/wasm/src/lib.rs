@@ -10,7 +10,7 @@
 //! checks that at compile time through `BUILTIN_ASSEMBLY`.
 
 use superscalar::{Registry, Scalar, ScalarId};
-use wasm_bindgen::JsError;
+use wasm_bindgen::{JsError, JsValue};
 
 /// True when this build of the crate carries the built-in assembly (the
 /// `builtin` feature). `export_wasm!` asserts it is false at every call site
@@ -26,11 +26,22 @@ pub fn resolve(registry: &Registry, scalar_id: u32) -> Result<&dyn Scalar, JsErr
         .ok_or_else(|| JsError::new("unknown scalar id"))
 }
 
-/// `parse` over `registry`; a core error becomes a JS error with its message.
-pub fn run_parse(registry: &Registry, scalar_id: u32, input: &str) -> Result<String, JsError> {
-    resolve(registry, scalar_id)?
-        .parse(registry, input)
-        .map_err(|err| JsError::new(&err.to_string()))
+/// The `name` of the JS error `scalar_parse` throws when the core rejects the
+/// input. An unknown scalar id or a failed host call throws a plain `Error`,
+/// so a caller can tell an invalid value from a runtime failure.
+pub const SCALAR_PARSE_ERROR_NAME: &str = "ScalarParseError";
+
+/// `parse` over `registry`. A rejected value becomes a JS `Error` named
+/// `ScalarParseError` carrying the core's message; an unknown id stays a plain
+/// `Error`. A consumer can then use the parser for advisory validation without
+/// turning a runtime failure into an invalid value.
+pub fn run_parse(registry: &Registry, scalar_id: u32, input: &str) -> Result<String, JsValue> {
+    let scalar = resolve(registry, scalar_id)?;
+    scalar.parse(registry, input).map_err(|err| {
+        let error = js_sys::Error::new(&err.to_string());
+        error.set_name(SCALAR_PARSE_ERROR_NAME);
+        error.into()
+    })
 }
 
 /// `normalize` over `registry`.
@@ -89,12 +100,13 @@ macro_rules! export_wasm {
         $crate::export_wasm!(@emit $registry);
     };
     (@emit $registry:path) => {
-        /// Validate shape and return the canonical normalized value. Throws on reject.
+        /// Validate shape and return the canonical normalized value. Throws on
+        /// reject, with an error named `ScalarParseError`.
         #[::wasm_bindgen::prelude::wasm_bindgen]
         pub fn scalar_parse(
             scalar_id: u32,
             input: &str,
-        ) -> Result<String, ::wasm_bindgen::JsError> {
+        ) -> Result<String, ::wasm_bindgen::JsValue> {
             $crate::run_parse($registry(), scalar_id, input)
         }
 

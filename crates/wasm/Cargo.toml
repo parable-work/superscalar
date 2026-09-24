@@ -25,6 +25,8 @@ builtin = []
 superscalar = { path = "../core", version = "0.1.0" }
 serde_json = "1.0.149"
 wasm-bindgen = "0.2"
+# js_sys::Error: scalar_parse throws a named error for a rejected value.
+js-sys = "0.3"
 # core depends on uuid with v4, whose rng needs a wasm randomness backend. This
 # feature unifies onto core's uuid for the wasm32 build only (resolver 2 keeps
 # it off the host ffi/core graph).

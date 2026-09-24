@@ -38,6 +38,20 @@ export function wrapWasm(wasm: WasmExports): ScalarBackend {
   };
 }
 
+// See backend.ts: the package name is the fallback for a bundled copy of this
+// module, whose relative path no longer points at the package.
+function loadBundle(relativeEntry: string, packageEntry: string): unknown {
+  try {
+    return require(relativeEntry);
+  } catch (relativeError) {
+    try {
+      return require(packageEntry);
+    } catch {
+      throw relativeError;
+    }
+  }
+}
+
 // dist/esm/backend.js -> ../../native holds the locally built addon in a
 // checkout; a published install resolves @superscalar/<triple> instead.
 export function napiBackend(): ScalarBackend {
@@ -46,8 +60,25 @@ export function napiBackend(): ScalarBackend {
 }
 
 export function wasmBackend(): ScalarBackend {
-  const wasm = require("../../wasm-node/superscalar_wasm.js") as WasmExports;
+  const wasm = loadBundle(
+    "../../wasm-node/superscalar_wasm.js",
+    "superscalar/wasm-node/superscalar_wasm.js",
+  ) as WasmExports;
   return wrapWasm(wasm);
+}
+
+// See backend.ts: the first loader that succeeds wins, and a total failure
+// names every attempt.
+export function firstAvailableBackend(loaders: ReadonlyArray<() => ScalarBackend>): ScalarBackend {
+  const failures: string[] = [];
+  for (const load of loaders) {
+    try {
+      return load();
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  throw new Error(`superscalar: no scalar backend could be loaded: ${failures.join("; ")}`);
 }
 
 let cached: ScalarBackend | null = null;
@@ -56,11 +87,7 @@ let cached: ScalarBackend | null = null;
 // the main package ships; the two cores pass the same conformance corpus.
 export function loadBackend(): ScalarBackend {
   if (cached === null) {
-    try {
-      cached = napiBackend();
-    } catch {
-      cached = wasmBackend();
-    }
+    cached = firstAvailableBackend([napiBackend, wasmBackend]);
   }
   return cached;
 }

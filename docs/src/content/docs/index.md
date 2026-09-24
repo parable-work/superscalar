@@ -29,7 +29,7 @@ primitive it is stored as, its SQL and JSON Schema types, and the type it maps
 to in each binding language. That record is the scalar's definition in the
 registry; see [the registry](/superscalar/concepts/registry/).
 
-There are 44 built-in scalars. They fall into three kinds by how their rule is
+There are 48 built-in scalars. They fall into three kinds by how their rule is
 implemented: directive scalars are fully described by a pattern and length
 bounds, deep scalars carry hand-written logic (colour math, phone numbers,
 durations, base62 UUIDs), and structural scalars are object-shaped. The

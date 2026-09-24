@@ -63,6 +63,8 @@ pub struct ExtensionInfo {
 
 /// Why `Registry::try_assemble` refused an extension set. The variants are in
 /// the order the checks run; assembly stops at the first failure.
+/// `Definitions::try_assemble` runs the def-level subset (`DuplicateId`
+/// through `AliasChain`) and reports the same variant for the same input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssemblyError {
     IdBaseNotAligned {

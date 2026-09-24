@@ -28,7 +28,7 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
 
     let report = docs::write(registry, &config, &vectors, &out).expect("write docs");
 
-    assert_eq!(report.pages, 44, "one page per registered scalar");
+    assert_eq!(report.pages, 48, "one page per registered scalar");
     assert_eq!(report.pages, registry.len());
     let mut files: Vec<String> = fs::read_dir(&out)
         .expect("read out dir")
@@ -41,7 +41,7 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
         })
         .collect();
     files.sort();
-    assert_eq!(files.len(), 45, "pages plus index.md");
+    assert_eq!(files.len(), 49, "pages plus index.md");
     assert!(files.contains(&"index.md".to_string()));
     assert!(files.contains(&"contact-email.md".to_string()));
     assert!(files.contains(&"crypto-rsa-private-key.md".to_string()));
@@ -119,7 +119,7 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
             "index links {slug}"
         );
     }
-    assert_eq!(index.matches("](/superscalar/reference/").count(), 44);
+    assert_eq!(index.matches("](/superscalar/reference/").count(), 48);
 
     // The corpus documents every built-in scalar today, so the check is clean.
     assert_eq!(docs::check(registry, &vectors), Vec::<String>::new());
@@ -195,7 +195,7 @@ impl Extension for Acme {
 fn check_fails_a_scalar_with_no_vectors_or_no_description() {
     let config = common::config();
     let registry = Registry::assemble(&[&Acme]);
-    assert_eq!(registry.len(), 46);
+    assert_eq!(registry.len(), 50);
     let vectors = docs::load_vectors(&config).expect("vectors");
 
     let problems = docs::check(&registry, &vectors);
@@ -241,7 +241,7 @@ fn check_fails_a_scalar_with_no_vectors_or_no_description() {
     // Pages are still written for the assembled registry, with the owner named.
     let out = temp_dir("acme-pages");
     let report = docs::write(&registry, &config, &merged, &out).expect("write");
-    assert_eq!(report.pages, 46);
+    assert_eq!(report.pages, 50);
     let widget = fs::read_to_string(out.join("acme-widget.md")).expect("page");
     assert!(widget.contains("| Owner | acme |"));
     assert!(widget.contains("| Id | 4096 |"));

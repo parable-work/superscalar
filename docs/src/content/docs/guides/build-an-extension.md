@@ -7,7 +7,7 @@ sidebar:
 
 An extension is a Rust crate that adds scalars to the registry without
 forking the core. You declare definitions and implementations, assemble a
-registry that holds the 44 built-ins plus yours, and apply four one-line
+registry that holds the 48 built-ins plus yours, and apply four one-line
 macros to produce native bindings that carry the whole assembled catalog.
 The code generator then emits Go, Python and TypeScript wrappers for your
 scalars from a configuration file you own.
@@ -109,6 +109,22 @@ own, a `CustomLogic` definition with no implementation, a `PatternOnly`
 definition with one, or a pattern that does not compile. A non-panicking
 `try_assemble` exists for tests. `Acme.OrderNumber` has no implementation and
 gets the generic directive validator built from its pattern.
+
+A consumer that only reads definitions (a def by id or name, alias
+resolution, comparability) should not link the implementations at all. Give
+it `Definitions`, assembled from the same static slice and never through the
+`Extension` trait, whose `impls()` would pull every implementation in:
+
+```rust
+pub fn definitions() -> &'static Definitions {
+    static DEFINITIONS: LazyLock<Definitions> =
+        LazyLock::new(|| Definitions::assemble(&[("acme", &DEFS)]));
+    &DEFINITIONS
+}
+```
+
+It answers every definition lookup exactly as the registry does; the example
+pins that in `ext/tests/definitions.rs`.
 
 Open points, each with the answer the example follows until decided:
 
@@ -220,7 +236,7 @@ scalars as well as yours, so your Go package has `ParseContactEmail` next to
 corpus. `Acme.ScalarRef` accepts `"Contact.Email"` and `"Acme.OrderNumber"`
 and rejects `"Nope.Nope"`. The runners in `go/`, `typescript/` and `python/`
 take a list of vector files and run both the built-in file and yours, so a
-downstream assembly proves that the 44 built-ins still behave and that your
+downstream assembly proves that the 48 built-ins still behave and that your
 scalars behave. See [conformance](/superscalar/guides/conformance/).
 
 The example's CI job runs, in order: `cargo test -p acme-scalars`, the xtask

@@ -18,6 +18,9 @@ type ScalarMetadata struct {
 	Symbol         string
 	Primitive      string
 	Description    string
+	TypeScriptType string
+	PythonType     string
+	RustType       string
 	GoType         string
 	SQLType        string
 	JSONSchemaType string
@@ -96,6 +99,9 @@ var validScalarsMap = func() map[{{ go.scalar_list_type }}]struct{} {
 		Symbol:         "{{ e.camel }}",
 		Primitive:      {{ e.primitive_literal }},
 		Description:    {{ e.description_literal }},
+		TypeScriptType: {{ e.ts_type_literal }},
+		PythonType:     {{ e.python_type_literal }},
+		RustType:       {{ e.rust_type_literal }},
 		GoType:         {{ e.go_type_literal }},
 		SQLType:        {{ e.sql_type_literal }},
 		JSONSchemaType: {{ e.json_schema_type_literal }},
@@ -119,6 +125,42 @@ var ScalarMetadataByCanonical = func() map[string]*ScalarMetadata {
 	m := make(map[string]*ScalarMetadata, len(SCALAR_METADATA))
 	for i := range SCALAR_METADATA {
 		m[SCALAR_METADATA[i].CanonicalName] = &SCALAR_METADATA[i]
+	}
+	return m
+}()
+
+// PrimitiveKindNames is one PrimitiveKind of the Rust core and both of the
+// spellings it is written in.
+//
+// The two differ, and the difference is not cosmetic. A primitive named as a
+// `typeRef` inside a schema IR -- a derived output schema, for example -- reads
+// `Boolean` and `JSON`; the same primitive in the schema DSL reads `Bool` and
+// `Type`. Emitting the pair keeps a Go reader from restating the mapping and
+// becoming a mirror of the core that drifts.
+type PrimitiveKindNames struct {
+	// Name is the Rust member name, carried so a failure can say which
+	// primitive it was about.
+	Name string
+	// TypeRefName is the schema-IR `typeRef` spelling.
+	TypeRefName string
+	// DSLName is the schema DSL spelling, which is also what a schema field's
+	// primitive carries on the wire.
+	DSLName string
+}
+
+// PRIMITIVE_KINDS is every primitive the Rust core knows, in declaration order.
+var PRIMITIVE_KINDS = []PrimitiveKindNames{
+{% for primitive in primitive_kinds %}	{Name: "{{ primitive.name }}", TypeRefName: "{{ primitive.type_ref_name }}", DSLName: "{{ primitive.dsl_name }}"},
+{% endfor %}}
+
+// PrimitiveDSLNameByTypeRefName turns a schema-IR type-ref name into the DSL
+// primitive name. Absent for a `scalars/{canonical}` reference, which names a
+// scalar rather than a bare primitive and is resolved through
+// ScalarMetadataByCanonical instead.
+var PrimitiveDSLNameByTypeRefName = func() map[string]string {
+	m := make(map[string]string, len(PRIMITIVE_KINDS))
+	for _, primitive := range PRIMITIVE_KINDS {
+		m[primitive.TypeRefName] = primitive.DSLName
 	}
 	return m
 }()

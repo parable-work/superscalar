@@ -7,7 +7,7 @@ use crate::registry::{Registry, Scalar};
 // Non-JSON fails as Parse; valid JSON that is not a string-to-string object
 // fails as Custom. The parity corpus pins both error kinds.
 fn normalize_string_map(input: &str) -> Result<String, ScalarError> {
-    let value: serde_json::Value = serde_json::from_str(input)
+    let value = super::json_scalar::serde::parse_value(input)
         .map_err(|e| ScalarError::new(ErrorKind::Parse, format!("expected JSON: {e}")))?;
     let object = value.as_object().ok_or_else(|| {
         ScalarError::new(

@@ -18,8 +18,17 @@ reserved words. It has no hand-written code. The core builds a generic
 validator from those fields at assembly time, so the definition is the whole
 rule.
 
-27 of the 44 built-ins are directive scalars, including `Auth.JWT`,
-`Identity.Slug`, `Network.IpAddress`, `Temporal.Time` and `Text.Markdown`.
+`parse` on a directive scalar is strict: it validates, then returns the
+canonical form (an integer rewritten as plain decimal, anything else as
+given). `normalize` does not validate. On a `case_insensitive` scalar it
+lowercases an input that fails validation when the lowercased form passes,
+so `Identity.Slug` normalizes `ACME` to `acme` while `parse("ACME")` still
+fails. An input that is already valid is returned unchanged, which is why
+`Temporal.Quarter` keeps `Q1`.
+
+30 of the 48 built-ins are directive scalars, including `Auth.JWT`,
+`Identity.Slug`, `Network.IpAddress`, `Ordering.Rank`, `Temporal.Time`,
+`Text.Markdown` and `Version.SemVer`.
 
 Adding one is a registry entry plus conformance vectors; there is no module
 to write.
@@ -34,11 +43,11 @@ base62 forms and canonicalises to base62, `Temporal.RecurrenceRule` parses
 recurrence rules. The rule lives in one Rust module under
 `crates/core/src/scalars/`, implemented once and called by every binding.
 
-16 of the 44 built-ins are deep scalars: `Contact.Email`,
+17 of the 48 built-ins are deep scalars: `Contact.Email`,
 `Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Generic.JSON`,
-`Generic.StringMap`, `Identity.UUID`, `Identity.UserID` (an alias of
-`Identity.UUID`), `Network.Url`, `Network.DnsLabel`, `Temporal.Date`,
-`Temporal.DateTime`, `Temporal.Duration`, `Temporal.Month`,
+`Generic.StringMap`, `Git.PathPattern`, `Identity.UUID`, `Identity.UserID`
+(an alias of `Identity.UUID`), `Network.Url`, `Network.DnsLabel`,
+`Temporal.Date`, `Temporal.DateTime`, `Temporal.Duration`, `Temporal.Month`,
 `Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
 
 A deep scalar may still declare a `pattern` in its definition. `Contact.Email`

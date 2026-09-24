@@ -10,7 +10,9 @@ use superscalar::{
 };
 
 const BLOCK: u32 = ScalarId::EXTENSION_BLOCK;
-const NEXT_BUILTIN: u32 = 61;
+// The first id past the highest built-in (67). 61, 62 and 65 are holes held
+// by a downstream extension, so they are not free either.
+const NEXT_BUILTIN: u32 = 68;
 
 fn assemble(exts: &[&TestExtension]) -> Result<Registry, AssemblyError> {
     let dyn_exts: Vec<&dyn superscalar::Extension> = exts
@@ -385,7 +387,7 @@ fn allow_legacy_ids_admits_holes_and_still_rejects_collisions() {
     ];
     let legacy = TestExtension::new("acme", 0, &LEGACY);
     let registry = assemble_legacy(&[&legacy]).expect("legacy shape assembles with the flag");
-    assert_eq!(registry.len(), 46);
+    assert_eq!(registry.len(), 50);
     assert_eq!(
         registry.extensions()[1],
         superscalar::ExtensionInfo {
@@ -548,7 +550,7 @@ fn earlier_check_wins_when_two_violations_hold() {
 /// The frozen id table. This is the test that fails when someone renumbers.
 #[test]
 fn builtin_registry_is_frozen() {
-    const TABLE: [(u32, &str); 44] = [
+    const TABLE: [(u32, &str); 48] = [
         (5, "Auth.JWT"),
         (6, "Auth.Password"),
         (8, "Contact.Email"),
@@ -593,6 +595,10 @@ fn builtin_registry_is_frozen() {
         (58, "Crypto.SHA256"),
         (59, "Network.DnsLabel"),
         (60, "Temporal.RecurrenceRule"),
+        (63, "Ordering.Rank"),
+        (64, "Version.SemVer"),
+        (66, "Git.PathPattern"),
+        (67, "AgentSkill.Name"),
     ];
     let registry = Registry::builtin();
     let got: Vec<(u32, &str)> = registry
@@ -755,7 +761,7 @@ fn dump_has_the_documented_shape() {
         serde_json::json!([{ "name": "builtin", "id_base": 0, "legacy_ids": false }])
     );
     let scalars = dump["scalars"].as_array().expect("array");
-    assert_eq!(scalars.len(), 44);
+    assert_eq!(scalars.len(), 48);
     let email = scalars
         .iter()
         .find(|scalar| scalar["canonical"] == "Contact.Email")

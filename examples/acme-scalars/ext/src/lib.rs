@@ -10,12 +10,13 @@
 //! into the assembled registry, not the built-in one.
 //!
 //! `registry()` is the one thing the four binding crates in this workspace
-//! consume; each hands it to its export macro.
+//! consume; each hands it to its export macro. `definitions()` is the same
+//! catalog without implementations, for a consumer that only reads defs.
 
 use std::sync::LazyLock;
 use superscalar::{
-    ErrorKind, Extension, PrimitiveKind, Registry, Scalar, ScalarDef, ScalarError, ScalarHooks,
-    ScalarId, ScalarTag,
+    Definitions, ErrorKind, Extension, PrimitiveKind, Registry, Scalar, ScalarDef, ScalarError,
+    ScalarHooks, ScalarId, ScalarTag,
 };
 
 /// First id of the Acme block. An extension's ids live in
@@ -119,7 +120,7 @@ pub struct AcmeExtension;
 
 impl Extension for AcmeExtension {
     fn name(&self) -> &'static str {
-        "acme"
+        NAME
     }
 
     fn id_base(&self) -> u32 {
@@ -174,4 +175,21 @@ static REGISTRY: LazyLock<Registry> = LazyLock::new(|| Registry::assemble(&[&Acm
 /// programming error in the extension set and never a runtime condition.
 pub fn registry() -> &'static Registry {
     &REGISTRY
+}
+
+/// The owner name the extension reports, shared by the registry and the
+/// definitions-only assembly below.
+pub const NAME: &str = "acme";
+
+static DEFINITIONS: LazyLock<Definitions> =
+    LazyLock::new(|| Definitions::assemble(&[(NAME, &DEFS)]));
+
+/// The Acme definitions without their implementations: every built-in def plus
+/// the Acme block, for a consumer that only looks defs up (by id or canonical
+/// name), resolves aliases or asks about comparability. It never calls
+/// `AcmeExtension::impls`, so a build that uses only this links no scalar
+/// implementation, which is what keeps a size-capped WASM bundle small.
+/// Answers every definition question exactly as `registry()` does.
+pub fn definitions() -> &'static Definitions {
+    &DEFINITIONS
 }

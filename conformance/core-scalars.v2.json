@@ -54,7 +54,11 @@
     "Text.Sql": { "comparability_class": null, "is_sortable": true },
     "Crypto.SHA256": { "comparability_class": null, "is_sortable": true },
     "Network.DnsLabel": { "comparability_class": null, "is_sortable": true },
-    "Temporal.RecurrenceRule": { "comparability_class": null, "is_sortable": true }
+    "Temporal.RecurrenceRule": { "comparability_class": null, "is_sortable": true },
+    "Ordering.Rank": { "comparability_class": null, "is_sortable": true },
+    "Version.SemVer": { "comparability_class": null, "is_sortable": true },
+    "Git.PathPattern": { "comparability_class": null, "is_sortable": true },
+    "AgentSkill.Name": { "comparability_class": null, "is_sortable": true }
   },
   "scalars": {
     "Contact.Email": {
@@ -503,6 +507,16 @@
           "input": "{\"outer\": {\"y\": 1, \"x\": 2}, \"list\": [ 1 , 2 ]}",
           "normalized": "{\"outer\":{\"y\":1,\"x\":2},\"list\":[1,2]}",
           "note": "nested object key order preserved, inner array whitespace compacted"
+        },
+        {
+          "input": "{\"nested\":[{\"$serde_json::private::Number\":\"1\"},{\"$serde_json::private::RawValue\":\"true\"}]}",
+          "normalized": "{\"nested\":[{\"$serde_json::private::Number\":\"1\"},{\"$serde_json::private::RawValue\":\"true\"}]}",
+          "note": "JSON object names stay literal even when they match Serde's private numeric or raw-value markers"
+        },
+        {
+          "input": "{\"amount\":12345678901234567890.12345678901234567890123456789}",
+          "normalized": "{\"amount\":12345678901234567890.12345678901234567890123456789}",
+          "note": "normalization retains JSON numeric precision without a floating-point conversion"
         }
       ],
       "rejected": [
@@ -1570,6 +1584,71 @@
           "input": "FREQ=DAILY;UNTIL=2026-12-31",
           "validator": "parse"
         }
+      ]
+    },
+    "Ordering.Rank": {
+      "accepted": [
+        { "input": "1", "normalized": "1" },
+        { "input": "1000", "normalized": "1000" },
+        { "input": "9007199254740991", "normalized": "9007199254740991" },
+        { "input": " 42 ", "normalized": "42" }
+      ],
+      "rejected": [
+        { "input": "0", "validator": "range" },
+        { "input": "-1", "validator": "range" },
+        { "input": "9007199254740992", "validator": "range" },
+        { "input": "1.5", "validator": "parse" },
+        { "input": "first", "validator": "parse" }
+      ]
+    },
+    "Version.SemVer": {
+      "accepted": [
+        { "input": "1.0.0", "normalized": "1.0.0" },
+        { "input": "2.4.1-rc.1+build.9", "normalized": "2.4.1-rc.1+build.9" },
+        { "input": "0.0.0", "normalized": "0.0.0" }
+      ],
+      "rejected": [
+        { "input": "v1.0.0", "validator": "pattern" },
+        { "input": "1.0", "validator": "length" },
+        { "input": "01.0.0", "validator": "pattern" },
+        { "input": "1.0.0-01", "validator": "pattern" },
+        { "input": " 1.0.0 ", "validator": "pattern" }
+      ]
+    },
+    "Git.PathPattern": {
+      "accepted": [
+        { "input": "/skills/**", "normalized": "/skills/**" },
+        { "input": "!/skills/shared/**", "normalized": "!/skills/shared/**" },
+        { "input": "/assets/", "normalized": "/assets/" },
+        { "input": "/src/**/[Tt]est?.ts", "normalized": "/src/**/[Tt]est?.ts" }
+      ],
+      "rejected": [
+        { "input": "skills/**", "validator": "pattern" },
+        { "input": "!skills/shared/**", "validator": "pattern" },
+        { "input": "/", "validator": "length" },
+        { "input": "/src\nsecret", "validator": "pattern" },
+        { "input": "/src//main.ts", "validator": "pattern" },
+        { "input": "/../secret", "validator": "pattern" },
+        { "input": "/foo**bar", "validator": "pattern" },
+        { "input": "/src/[abc", "validator": "pattern" },
+        { "input": "/src/trailing\\", "validator": "pattern" },
+        { "input": "", "validator": "length" }
+      ]
+    },
+    "AgentSkill.Name": {
+      "accepted": [
+        { "input": "data-analysis", "normalized": "data-analysis" },
+        { "input": "careful-refactors", "normalized": "careful-refactors" },
+        { "input": "skill2", "normalized": "skill2" }
+      ],
+      "rejected": [
+        { "input": "Data-Analysis", "validator": "pattern", "note": "case_insensitive: parse stays strict, so this is rejected here; normalize folds it to data-analysis (pinned in crates/core/src/directive.rs)." },
+        { "input": "data_analysis", "validator": "pattern" },
+        { "input": "data--analysis", "validator": "pattern" },
+        { "input": "-data", "validator": "pattern" },
+        { "input": "data-", "validator": "pattern" },
+        { "input": "", "validator": "length" },
+        { "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "validator": "length" }
       ]
     }
   }

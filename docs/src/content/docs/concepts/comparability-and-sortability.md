@@ -45,14 +45,19 @@ scheme before then.
 The set of class names is deliberately open: free-form text, no enum, no
 constant list. One class is a thin basis for freezing a four-language
 vocabulary, and tightening it after values exist is a codegen break plus a
-corpus rewrite. Two tests bound what an open set can silently get wrong: no
-class may have exactly one member (a singleton is indistinguishable from
-`None` and is almost always a typo), and no class may span two
-`PrimitiveKind`s. A third bound lives outside Rust, because those two cannot
-catch a class attached to the wrong scalar: `meta.comparability_classes` in
-the conformance corpus is hand-maintained beside the generated `metadata`
-section and pins each class name to its exact member list, and every binding
-derives the same map from the corpus rows and asserts it.
+corpus rewrite. Five invariants bound what an open set can silently get
+wrong: a class name matches `[a-z0-9_]+`; no class has exactly one member (a
+singleton is indistinguishable from `None` and is almost always a typo); no
+class spans two `PrimitiveKind`s; no class spans two SQL types with no
+coercion between them (`temporal_instant` spans `DATE` and `TIMESTAMPTZ`,
+which coerce; `DATE` and `TEXT` do not); and an alias declares no class of
+its own, because the class belongs to the alias target. Each is table-tested
+against tables the catalog cannot produce. A further bound lives outside Rust,
+because none of those can catch a class attached to the wrong scalar:
+`meta.comparability_classes` in the conformance corpus is hand-maintained
+beside the generated `metadata` section and pins each class name to its exact
+member list, and every binding derives the same map from the corpus rows and
+asserts it.
 
 ## Comparability predicate
 
@@ -117,8 +122,9 @@ It is not a claim that the order means something. `Design.Color`,
 order over each is equally meaningless. It is a claim that a total order
 exists. `Embedding.Vector`, `Generic.JSON` and `Generic.StringMap` show the
 gap the rule closes: their primitive is `String` but their JSON shape is an
-array or an object, so a primitive-only rule would call them sortable. Among
-the 44 built-ins, four are non-sortable: `Geo.Location` (the structural
+array, an object or any JSON value (`Generic.JSON` declares `any`), so a
+primitive-only rule would call them sortable. Among
+the 48 built-ins, four are non-sortable: `Geo.Location` (the structural
 scalar) and those three.
 
 The rule is an allowlist and fails closed on purpose. A shape nobody has

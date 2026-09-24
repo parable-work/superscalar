@@ -28,7 +28,7 @@ fn bare_check_is_the_codegen_drift_gate() {
         "generated files drift: {}",
         stderr(&output)
     );
-    assert!(stdout(&output).contains("codegen: 44 scalars"));
+    assert!(stdout(&output).contains("codegen: 48 scalars"));
 
     let explicit = cli(&["codegen", "--check"]);
     assert!(explicit.status.success(), "{}", stderr(&explicit));
@@ -52,7 +52,7 @@ fn registry_dump_is_stable_across_runs() {
 fn docs_check_passes_and_docs_out_writes_pages() {
     let check = cli(&["docs", "--check"]);
     assert!(check.status.success(), "{}", stderr(&check));
-    assert!(stdout(&check).contains("docs check: 44 scalars documented"));
+    assert!(stdout(&check).contains("docs check: 48 scalars documented"));
 
     let out: PathBuf =
         std::env::temp_dir().join(format!("scalar-lib-cli-docs-{}", std::process::id()));
@@ -63,8 +63,8 @@ fn docs_check_passes_and_docs_out_writes_pages() {
         "--check",
     ]);
     assert!(written.status.success(), "{}", stderr(&written));
-    assert!(stdout(&written).contains("docs: 44 pages plus index"));
-    assert_eq!(fs::read_dir(&out).expect("out dir").count(), 45);
+    assert!(stdout(&written).contains("docs: 48 pages plus index"));
+    assert_eq!(fs::read_dir(&out).expect("out dir").count(), 49);
     fs::remove_dir_all(&out).expect("remove temp dir");
 }
 
