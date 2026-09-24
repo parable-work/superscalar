@@ -25,7 +25,9 @@ default = ["builtin"]
 builtin = []
 
 [dependencies]
-superscalar = { path = "../core", version = "0.1.0" }
+# The bindings promise the conformance corpus, whose exact-number vectors
+# need `lossless-json`; named here so it holds without the core default.
+superscalar = { path = "../core", version = "0.1.0", features = ["lossless-json"] }
 napi = { version = "3", default-features = false, features = ["napi8"] }
 napi-derive = "3"
 serde_json = "1.0.149"

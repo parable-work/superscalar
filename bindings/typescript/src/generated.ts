@@ -2400,7 +2400,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     symbol: "VersionSemVer",
     primitive: "String",
     tsType: "string",
-    format: "",
+    format: "semver",
     maxLength: 255,
     minLength: 5,
     pattern: "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$",

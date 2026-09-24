@@ -20,17 +20,24 @@ export interface ScalarBackend {
 // relative path along, so the package-relative path is tried first and the
 // package name second: the name resolves through node_modules from wherever
 // the bundle runs, which any consumer that installs or links superscalar can
-// satisfy. The error of the relative attempt is the one reported.
+// satisfy. When both fail, the error names both: the relative miss is expected
+// for a bundled copy, and only the package error says why the fallback failed.
 function loadBundle(relativeEntry: string, packageEntry: string): unknown {
   try {
     return require(relativeEntry);
   } catch (relativeError) {
     try {
       return require(packageEntry);
-    } catch {
-      throw relativeError;
+    } catch (packageError) {
+      throw new Error(
+        `${errorMessage(relativeError)}; package fallback ${packageEntry}: ${errorMessage(packageError)}`,
+      );
     }
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 // dist/backend.js -> ../native holds the locally built addon in a checkout;
@@ -74,7 +81,7 @@ export function firstAvailableBackend(loaders: ReadonlyArray<() => ScalarBackend
     try {
       return load();
     } catch (error) {
-      failures.push(error instanceof Error ? error.message : String(error));
+      failures.push(errorMessage(error));
     }
   }
   throw new Error(`superscalar: no scalar backend could be loaded: ${failures.join("; ")}`);

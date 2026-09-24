@@ -1,3 +1,10 @@
+//! # Features
+//!
+//! - `lossless-json` (default): `Generic.JSON` and `Generic.StringMap` keep
+//!   every number exactly as written. It enables serde_json's
+//!   `arbitrary_precision`, which Cargo unifies across the build; see the
+//!   Rust install guide for the serde patterns that breaks and how to opt out.
+
 #![forbid(unsafe_code)]
 
 mod builtin;

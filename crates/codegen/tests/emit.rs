@@ -495,6 +495,38 @@ fn semantic_metadata_fields_reach_every_generated_table() {
 /// carrying the test: deleting it left this green. Only the Python assertion
 /// survived, because it is scoped to the `Contact.Email` key.
 #[test]
+fn a_def_format_reaches_the_rust_and_typescript_metadata() {
+    with_context(|ctx| {
+        let rust = rendered(ctx, "rust_metadata");
+        let ts = rendered(ctx, "typescript");
+        // Derived from the registry: a template that hardcodes the empty format
+        // fails as soon as any def declares one.
+        let formats: Vec<&str> = Registry::builtin()
+            .defs()
+            .filter(|def| !def.metadata_omit)
+            .filter_map(|def| def.format)
+            .collect();
+        assert!(!formats.is_empty(), "a built-in declares a format");
+        for format in &formats {
+            assert!(
+                rust.contains(&format!("        format: Some({format:?}),")),
+                "rust metadata carries {format}"
+            );
+            assert!(
+                ts.contains(&format!("    format: {format:?},")),
+                "typescript metadata carries {format}"
+            );
+        }
+        assert_eq!(rust.matches("        format: Some(").count(), formats.len());
+        // TS rows are indented 4 spaces; the interface declaration is at 2.
+        assert_eq!(
+            ts.matches("    format: \"\",").count(),
+            ts.matches("    format: ").count() - formats.len()
+        );
+    });
+}
+
+#[test]
 fn a_named_comparability_class_reaches_the_go_ts_and_python_templates() {
     // The recurrence detector, rendered BEFORE the doctoring: re-emit without
     // doctoring and require the sentinel to be absent. If someone ever picks a

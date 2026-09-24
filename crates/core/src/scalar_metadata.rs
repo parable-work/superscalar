@@ -564,7 +564,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         primitive: "String",
         sql_type: "VARCHAR(255)",
         json_schema_type: Some("string"),
-        format: None,
+        format: Some("semver"),
         max_length: Some(255),
         min_length: Some(5),
         pattern: Some("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"),

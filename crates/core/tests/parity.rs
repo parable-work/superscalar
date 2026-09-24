@@ -13,6 +13,18 @@ const VECTORS: &str = include_str!(concat!(
     "/../../conformance/core-scalars.v2.json"
 ));
 
+/// Accepted vectors whose canonical form keeps a number's exact digits. Only a
+/// build with the `lossless-json` feature reproduces them; without it they are
+/// skipped here, and `lossless_only_vectors_exist` keeps the list honest.
+const LOSSLESS_ONLY: &[(&str, &str)] = &[(
+    "Generic.JSON",
+    r#"{"amount":12345678901234567890.12345678901234567890123456789}"#,
+)];
+
+fn skipped_without_lossless_json(canonical: &str, input: &str) -> bool {
+    !cfg!(feature = "lossless-json") && LOSSLESS_ONLY.contains(&(canonical, input))
+}
+
 #[derive(Deserialize)]
 struct Vectors {
     meta: Meta,
@@ -93,7 +105,7 @@ fn core_reproduces_every_v2_vector() {
         let scalar = registry.scalar(id).expect("assembled id has a scalar");
 
         for case in &cases.accepted {
-            if case.unresolved {
+            if case.unresolved || skipped_without_lossless_json(canonical, &case.input) {
                 continue;
             }
             checked += 1;
@@ -146,6 +158,20 @@ fn core_reproduces_every_v2_vector() {
         failures.join("\n")
     );
     assert!(checked > 0, "no vectors checked");
+}
+
+#[test]
+fn lossless_only_vectors_exist() {
+    let vectors: Vectors = serde_json::from_str(VECTORS).expect("v2 vectors parse");
+    for (canonical, input) in LOSSLESS_ONLY {
+        assert!(
+            vectors.scalars[*canonical]
+                .accepted
+                .iter()
+                .any(|case| case.input == *input),
+            "{canonical} has no accepted vector {input:?}"
+        );
+    }
 }
 
 /// Canonical output must be a fixed point of `parse`: re-parsing an accepted

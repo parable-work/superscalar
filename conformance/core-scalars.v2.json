@@ -1620,7 +1620,10 @@
         { "input": "/skills/**", "normalized": "/skills/**" },
         { "input": "!/skills/shared/**", "normalized": "!/skills/shared/**" },
         { "input": "/assets/", "normalized": "/assets/" },
-        { "input": "/src/**/[Tt]est?.ts", "normalized": "/src/**/[Tt]est?.ts" }
+        { "input": "/src/**/[Tt]est?.ts", "normalized": "/src/**/[Tt]est?.ts" },
+        { "input": "/a\\\\[b]", "normalized": "/a\\\\[b]", "note": "An escaped backslash, then the class [b]: escape state is the parity of the backslash run." },
+        { "input": "/a\\ ", "normalized": "/a\\ ", "note": "An escaped trailing space is kept by Git." },
+        { "input": "/a\\\\\\ ", "normalized": "/a\\\\\\ ", "note": "An escaped backslash, then an escaped trailing space." }
       ],
       "rejected": [
         { "input": "skills/**", "validator": "pattern" },
@@ -1632,6 +1635,7 @@
         { "input": "/foo**bar", "validator": "pattern" },
         { "input": "/src/[abc", "validator": "pattern" },
         { "input": "/src/trailing\\", "validator": "pattern" },
+        { "input": "/a\\\\ ", "validator": "pattern", "note": "The two backslashes escape each other, so the trailing space is bare and Git would strip it." },
         { "input": "", "validator": "length" }
       ]
     },

@@ -16,16 +16,26 @@ repository = "https://github.com/parable-work/superscalar"
 name = "superscalar"
 path = "src/lib.rs"
 
+[features]
+default = ["lossless-json"]
+# Generic.JSON and Generic.StringMap keep every number exactly as written.
+# It turns on serde_json's `arbitrary_precision`, and Cargo unifies features,
+# so every crate in the build that shares this serde_json sees it too; serde
+# `flatten` and untagged or tagged enums holding floats are known to fail to
+# deserialize under it. Without the feature a number beyond f64 precision is
+# canonicalized through f64.
+lossless-json = ["serde_json/arbitrary_precision"]
+
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
 once_cell = "1"
 phonenumber = "0.3"
 regex = "1.12"
 serde = { version = "1.0.228", features = ["derive"] }
-# arbitrary_precision keeps a Generic.JSON number exactly as written;
 # raw_value lets scalars::json_scalar::serde tell a real JSON object from
-# serde_json's private number and raw-value markers.
-serde_json = { version = "1.0.149", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
+# serde_json's private number and raw-value markers. `arbitrary_precision` is
+# the `lossless-json` feature above.
+serde_json = { version = "1.0.149", features = ["preserve_order", "raw_value"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 
 [dev-dependencies]

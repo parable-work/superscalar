@@ -107,4 +107,40 @@ try {
   fs.rmSync(bundle, { recursive: true, force: true });
 }
 
-console.log("ok - backend fallback: napi first, wasm when no addon loads (cjs + esm + bundled)");
+// A bundled copy with neither path available: no addon, no wasm-node/ beside
+// it and no package to resolve. The module selects its backend when it loads,
+// so the load fails, and the error must carry both wasm attempts, because the
+// relative miss alone hides why the package fallback failed.
+const stranded = fs.mkdtempSync(path.join(os.tmpdir(), "superscalar-stranded-"));
+try {
+  fs.mkdirSync(path.join(stranded, "dist", "esm"), { recursive: true });
+  for (const file of ["backend.js", "native-addon.js"]) {
+    fs.copyFileSync(path.join(pkg, "dist", file), path.join(stranded, "dist", file));
+    fs.copyFileSync(path.join(pkg, "dist", "esm", file), path.join(stranded, "dist", "esm", file));
+  }
+  fs.copyFileSync(path.join(pkg, "dist", "esm", "package.json"), path.join(stranded, "dist", "esm", "package.json"));
+  const env = { ...process.env, NODE_PATH: "" };
+  const report = (message) => {
+    assert.match(message, /superscalar_wasm\.js/, "the relative miss is reported");
+    assert.match(
+      message,
+      /package fallback superscalar\/wasm-node\/superscalar_wasm\.js: /,
+      "the package fallback's own error is reported",
+    );
+  };
+  report(execFileSync(process.execPath, [
+    "-e",
+    "try { require(process.argv[1]); } catch (e) { console.log(e.message); }",
+    path.join(stranded, "dist", "backend.js"),
+  ], { env, encoding: "utf8" }));
+  report(execFileSync(process.execPath, [
+    "--input-type=module",
+    "-e",
+    "try { await import(process.argv[1]); } catch (e) { console.log(e.message); }",
+    `file://${path.join(stranded, "dist", "esm", "backend.js")}`,
+  ], { env, encoding: "utf8" }));
+} finally {
+  fs.rmSync(stranded, { recursive: true, force: true });
+}
+
+console.log("ok - backend fallback: napi first, wasm when no addon loads (cjs + esm + bundled); a double miss names both paths");

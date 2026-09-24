@@ -229,6 +229,8 @@ pub(crate) struct MetadataEntry {
     pub(crate) primitive_literal: String,
     pub(crate) sql_type_literal: String,
     pub(crate) json_schema_type_literal: String,
+    /// Rust `Option` form of `ScalarDef::format`.
+    pub(crate) format_literal: String,
     pub(crate) max_length_literal: String,
     pub(crate) min_length_literal: String,
     pub(crate) pattern_literal: String,
@@ -254,6 +256,7 @@ pub(crate) fn metadata_entries(registry: &Registry) -> Vec<MetadataEntry> {
             json_schema_type_literal: optional_str_literal(
                 Some(def.json_schema_type).filter(|s| !s.is_empty()),
             ),
+            format_literal: optional_str_literal(def.format),
             max_length_literal: crate::optional_usize_literal(def.max_length),
             min_length_literal: crate::optional_usize_literal(def.min_length),
             pattern_literal: optional_str_literal(def.pattern),

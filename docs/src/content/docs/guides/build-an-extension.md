@@ -198,6 +198,7 @@ out = "typescript/src/generated.ts"
 package = "acme-scalars"
 backend_module = "./backend"
 validation_module = "./validation"
+json_value_module = "./json-value"
 
 [python]
 enabled = true
@@ -208,6 +209,17 @@ native_module = "._native"
 [rust_metadata]
 enabled = false
 ```
+
+The generated TypeScript file imports three hand-written modules that your
+TypeScript package provides beside it: the backend that loads your native
+addon or wasm build (`backend_module`), the validation result types
+(`validation_module`), and the `JSONValue` type with its `isJSONValue` guard
+(`json_value_module`, default `./json-value`), which the wrappers of
+`Generic.JSON` use. Every assembled registry carries that built-in, so the
+import is always emitted. `bindings/typescript/src/` in this repository has
+one of each to start from. Point `json_value_module` at your own module, not
+at the `superscalar` package root: that entry loads superscalar's own
+backend, and your package would then load two native addons.
 
 The CLI can only see the built-in registry, because extensions are compiled
 in. An extension therefore runs codegen from its own small binary, the

@@ -104,8 +104,14 @@ jobs:
       - name: clippy (python + napi bindings, host)
         run: cargo clippy -p superscalar-python -p superscalar-napi --all-targets -- -D warnings
 
+      - name: clippy (core without lossless-json)
+        run: cargo clippy -p superscalar --no-default-features --all-targets -- -D warnings
+
       - name: test (workspace)
         run: cargo test
+
+      - name: test (core without lossless-json)
+        run: cargo test -p superscalar --no-default-features
 
       - name: codegen drift (python + ts)
         run: cargo run -p superscalar-codegen -- --check
