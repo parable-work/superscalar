@@ -89,10 +89,15 @@ macro_rules! primitive_kinds {
 }
 
 primitive_kinds!(
+    /// Text.
     (String, "String", "String"),
+    /// A signed 64-bit integer.
     (Int, "Int", "Int"),
+    /// A 64-bit float.
     (Float, "Float", "Float"),
+    /// A boolean. Reserved: no built-in scalar is backed by it.
     (Bool, "Boolean", "Bool"),
+    /// An object-shaped value, such as `Geo.Location`.
     (Object, "JSON", "Type"),
 );
 

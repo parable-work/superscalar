@@ -7,6 +7,8 @@ use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
+/// `Git.PathPattern`: validates the canonical rooted syntax; `normalize` is
+/// the identity, since a canonical pattern has one spelling.
 pub struct GitPathPatternScalar;
 
 fn pattern_error(input: &str, reason: &str) -> ScalarError {

@@ -24,6 +24,9 @@ where
 
 /// Standard Rust containers supported by the generated field adapter.
 pub trait JsonField: Sized {
+    /// Deserialize the container, reading every `serde_json::Value` in it as a
+    /// Generic.JSON value: object keys stay literal and, with `lossless-json`,
+    /// numbers keep their digits.
     fn deserialize_json<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error>;
 }
 

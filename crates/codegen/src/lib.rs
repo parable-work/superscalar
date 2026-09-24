@@ -52,10 +52,10 @@ pub struct Entry {
     pub ts_type: String,
     pub ts_type_literal: String,
     pub ts_alias: String,
-    /// `type_mappings["python"]` and `type_mappings["rust"]` as quoted source
-    /// literals, carried into the Go metadata table beside the TypeScript and
-    /// Go types.
+    /// `type_mappings["python"]` as a quoted source literal, carried into the
+    /// Go metadata table beside the TypeScript and Go types.
     pub python_type_literal: String,
+    /// `type_mappings["rust"]` as a quoted source literal, carried the same way.
     pub rust_type_literal: String,
     pub go_type: String,
     pub go_type_literal: String,
