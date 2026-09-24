@@ -140,4 +140,15 @@ bump they require (minor when loosening, major when tightening).
   `ScalarDef::format` (`semver` for `Version.SemVer`) instead of an empty
   value. No accept-set change.
 
+### Fixed
+
+- The build-an-extension guide describes `examples/acme-scalars/` as it
+  ships: the extension crate, the four binding crates, the smoke and
+  third-scalar scripts, ids 4096 and 4097. It no longer claims the example
+  has a `superscalar.toml`, an xtask or generated Go, Python and TypeScript
+  packages; codegen is presented as the next step for a real extension. The
+  sample `superscalar.toml` now parses (`[registry] source = "builtin"`,
+  `[go] module` set, no `[rust_metadata]` stub) and the sample xtask is
+  complete. Documentation only.
+
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

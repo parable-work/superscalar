@@ -104,8 +104,7 @@ in its own crate. The design is agreed and is being implemented; the shape is:
 - `Definitions` is the same catalog without implementations; see below.
 
 The [build an extension](/superscalar/guides/build-an-extension/) guide
-walks through the example extension that exercises all of this. Points the
-design has not closed are marked there.
+walks through the example extension that exercises all of this.
 
 ## Definitions without implementations
 
