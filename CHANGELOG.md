@@ -94,6 +94,10 @@ bump they require (minor when loosening, major when tightening).
 
 ### Changed
 
+- `superscalar-python` builds with pyo3 0.29 (was 0.25). An extension's
+  PyO3 module crate must depend on pyo3 0.29 too, since Cargo refuses two
+  pyo3 minors in one graph; the acme example moves with it.
+
 - Directive engine: `normalize` on a `case_insensitive` scalar now lowercases
   an input that fails the scalar's own `validate` when the lowercased form
   passes, so normalize never emits a value its validator refuses. An
