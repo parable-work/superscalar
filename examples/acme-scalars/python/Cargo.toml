@@ -18,10 +18,10 @@ superscalar_python.workspace = true
 # The macro expansion names the framework as ::pyo3, so the module crate depends
 # on it directly. extension-module is on here because this crate is only ever
 # built as a module (a maturin project would add it from pyproject.toml).
-pyo3 = { version = "0.25", features = ["abi3-py39", "extension-module"] }
+pyo3 = { version = "0.29", features = ["abi3-py39", "extension-module"] }
 
 [build-dependencies]
-pyo3-build-config = "0.25"
+pyo3-build-config = "0.29"
 
 [lints]
 workspace = true
