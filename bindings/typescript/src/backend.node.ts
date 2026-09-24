@@ -39,17 +39,24 @@ export function wrapWasm(wasm: WasmExports): ScalarBackend {
 }
 
 // See backend.ts: the package name is the fallback for a bundled copy of this
-// module, whose relative path no longer points at the package.
+// module, whose relative path no longer points at the package, and a double
+// failure names both attempts.
 function loadBundle(relativeEntry: string, packageEntry: string): unknown {
   try {
     return require(relativeEntry);
   } catch (relativeError) {
     try {
       return require(packageEntry);
-    } catch {
-      throw relativeError;
+    } catch (packageError) {
+      throw new Error(
+        `${errorMessage(relativeError)}; package fallback ${packageEntry}: ${errorMessage(packageError)}`,
+      );
     }
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 // dist/esm/backend.js -> ../../native holds the locally built addon in a
@@ -75,7 +82,7 @@ export function firstAvailableBackend(loaders: ReadonlyArray<() => ScalarBackend
     try {
       return load();
     } catch (error) {
-      failures.push(error instanceof Error ? error.message : String(error));
+      failures.push(errorMessage(error));
     }
   }
   throw new Error(`superscalar: no scalar backend could be loaded: ${failures.join("; ")}`);
