@@ -184,7 +184,10 @@ built-in packages (a `u32` id and a UTF-8 string in, a `ScalarResult` out),
 so the same nine entry points exist and the built-in header applies.
 `napi`, `pyo3` and `wasm-bindgen` stay direct dependencies of your binding
 crates because the macros expand to items carrying those frameworks'
-attributes. Each macro may be invoked once per cdylib. A PyO3 module can add
+attributes. They must be the same minor versions the superscalar binding
+crates use (pyo3 0.29, napi 3, wasm-bindgen 0.2): PyO3 links the Python
+library, and Cargo refuses a graph with two pyo3 minors in it. Each macro
+may be invoked once per cdylib. A PyO3 module can add
 extra functions with `extra = [f, g]`; the other three frameworks export
 per-function, so you add extra functions by writing them beside the macro
 call.
