@@ -52,7 +52,9 @@ bump they require (minor when loosening, major when tightening).
 - Scalars: `Ordering.Rank` (id 63, a positive JavaScript-safe integer),
   `Version.SemVer` (64, canonical Semantic Versioning 2.0.0),
   `Git.PathPattern` (66, a repository-rooted gitignore-style pattern, a deep
-  scalar) and `AgentSkill.Name` (67, an Agent Skills directory and
+  scalar whose escape state is the parity of each backslash run, so `\\[b]`
+  opens a class and `\\ ` leaves a bare trailing space) and
+  `AgentSkill.Name` (67, an Agent Skills directory and
   frontmatter name). Ids 61, 62 and 65 are held by a downstream extension and
   join the permanent holes; the next free built-in id is 68. New accept sets
   with vectors, a minor bump.
