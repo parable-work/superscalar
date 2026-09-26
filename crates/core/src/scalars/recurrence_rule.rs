@@ -20,9 +20,9 @@ use chrono::{NaiveDate, NaiveDateTime};
 // calendar and the IANA zone database, and it is not a scalar operation: the C
 // ABI here is ten generic functions keyed on ScalarId, and a
 // (rule, anchor, zone, n) -> [instant] call fits none of them. Exactly one
-// engine expands, in Go, server-side. That is what stops a browser preview and a
-// scheduler from disagreeing about a DST boundary -- not two implementations
-// agreeing, but only one existing.
+// engine expands, server-side, outside this crate. That is what stops a browser
+// preview and a scheduler from disagreeing about a DST boundary -- not two
+// implementations agreeing, but only one existing.
 
 const MAX_LENGTH: usize = 512;
 
