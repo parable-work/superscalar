@@ -75,7 +75,7 @@ impl ScalarId {
     /// it: the anchor instant and the zone live in their own columns on the
     /// owning row, so a rule that also carried them could disagree with them.
     /// Validity only -- expanding a rule into occurrences needs a calendar and
-    /// the zone database, and happens once, server-side, in Go.
+    /// the zone database, and happens once, server-side, outside this crate.
     pub const TEMPORAL_RECURRENCE_RULE: ScalarId = ScalarId(60);
     /// Positive JavaScript-safe ordering value. Append-only discriminant.
     pub const ORDERING_RANK: ScalarId = ScalarId(63);
