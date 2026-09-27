@@ -576,7 +576,8 @@ jobs:
     #   @superscalar/linux-x64-gnu
     #   @superscalar/linux-arm64-gnu
     # with organization or user: parable-work, repository: superscalar,
-    #   workflow filename: release.yml, environment name: npm).
+    #   workflow filename: release.yml, environment name: npm, allowed
+    #   actions: npm publish as well as npm stage publish).
     # The @superscalar scope is an organization on npmjs.com that must exist
     # and be owned by the publisher before RELEASE_PUBLISH_ENABLED is set.
     # npm generates provenance on its own for trusted publishing. Pre-releases

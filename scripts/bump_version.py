@@ -136,10 +136,12 @@ def sites():
         )
     )
     for crate in DEPENDENT_CRATES:
+        # Group 3 is the closing brace, or the comma before further keys
+        # (features = [...]).
         out.append(
             (
                 ROOT / "crates" / crate / "Cargo.toml",
-                [(r'(\nsuperscalar = \{ path = "\.\./core", version = )' + Q + r"( \})", 1)],
+                [(r'(\nsuperscalar = \{ path = "\.\./core", version = )' + Q + r"(,| \})", 1)],
                 "semver",
             )
         )
