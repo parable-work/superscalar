@@ -160,7 +160,12 @@ One version for everything: the six crates, the npm package and its platform
 packages, the PyPI distribution, the Go module and the `examples/acme-scalars`
 workspace all carry the same SemVer version, and `scripts/bump_version.py`
 is the only thing that writes it. `bump_version.py check` fails when any site
-disagrees; the release workflow runs it before building anything.
+disagrees or no longer matches the pattern the script edits it with. CI runs
+it on every pull request and every push to `main` (the `versions` job, part of
+`ci-pass`), and the release workflow runs it again before building anything.
+If you change a line that carries the version (a `superscalar = { path =
+"../core", version = ... }` dependency, for example), run
+`python3 scripts/bump_version.py check` before pushing.
 
 Two workflows (`release-pr` and the `go-pin` job of `release.yml`) open pull
 requests with the workflow token, which the repository setting "Allow GitHub
