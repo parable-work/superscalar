@@ -2,7 +2,7 @@
 //! assigned, `None` on every other built-in row) and the derived sortability
 //! predicate, plus the invariants both depend on.
 
-use superscalar::{scalar_def, PrimitiveKind, Registry, ScalarId, ScalarTag};
+use superscalar::{names, scalar_def, PrimitiveKind, Registry, ScalarTag};
 
 /// The first class assignment replaced the all-`None` tripwire that used to
 /// live here: the catalog is no longer class-free, so the assertion is now the
@@ -16,12 +16,8 @@ fn the_v1_comparability_class_is_exactly_temporal_instant() {
         ("Temporal.DateTime", "temporal_instant"),
     ];
     let mut got: Vec<(&str, &str)> = Registry::builtin()
-        .ids()
-        .filter_map(|id| {
-            scalar_def(id)
-                .comparability_class
-                .map(|c| (scalar_def(id).canonical, c))
-        })
+        .names()
+        .filter_map(|name| scalar_def(name).comparability_class.map(|c| (name, c)))
         .collect();
     got.sort_unstable();
     assert_eq!(got, EXPECTED, "the v1 comparability class assignment");
@@ -36,7 +32,7 @@ fn the_v1_comparability_class_is_exactly_temporal_instant() {
 #[test]
 fn temporal_date_and_datetime_are_comparable() {
     assert!(
-        Registry::builtin().comparable_with(ScalarId::TEMPORAL_DATE, ScalarId::TEMPORAL_DATE_TIME),
+        Registry::builtin().comparable_with(names::TEMPORAL_DATE, names::TEMPORAL_DATE_TIME),
         "Temporal.Date ~ Temporal.DateTime"
     );
 }
@@ -61,9 +57,8 @@ fn non_sortable_set_is_exactly_the_four_table_scalars() {
         "Geo.Location",
     ];
     let mut got: Vec<&str> = Registry::builtin()
-        .ids()
-        .filter(|id| !scalar_def(*id).is_sortable())
-        .map(|id| scalar_def(id).canonical)
+        .names()
+        .filter(|name| !scalar_def(name).is_sortable())
         .collect();
     got.sort_unstable();
     assert_eq!(got, EXPECTED);
@@ -77,9 +72,7 @@ fn non_sortable_set_is_exactly_the_four_table_scalars() {
 #[test]
 fn string_primitive_json_scalars_are_not_sortable() {
     for canonical in ["Embedding.Vector", "Generic.JSON", "Generic.StringMap"] {
-        let def = Registry::builtin()
-            .by_canonical(canonical)
-            .expect("catalogued");
+        let def = Registry::builtin().def(canonical).expect("catalogued");
         assert_eq!(
             def.primitive,
             PrimitiveKind::String,
@@ -102,7 +95,7 @@ fn string_primitive_json_scalars_are_not_sortable() {
 fn structural_and_object_scalars_declare_an_object_json_shape() {
     let mut structural = 0;
     let mut objects = 0;
-    for id in Registry::builtin().ids() {
+    for id in Registry::builtin().names() {
         let def = scalar_def(id);
         if def.tag == ScalarTag::Structural {
             structural += 1;
@@ -150,7 +143,7 @@ fn json_schema_type_domain_is_closed() {
     const KNOWN: &[&str] = &[
         "string", "integer", "number", "boolean", "object", "array", "any", "",
     ];
-    for id in Registry::builtin().ids() {
+    for id in Registry::builtin().names() {
         let declared = scalar_def(id).json_schema_type;
         assert!(
             KNOWN.contains(&declared),
@@ -169,7 +162,7 @@ fn json_schema_type_domain_is_closed() {
 /// with no declared JSON shape in four languages (C1a).
 #[test]
 fn every_metadata_bearing_scalar_declares_a_json_schema_type() {
-    for id in Registry::builtin().ids() {
+    for id in Registry::builtin().names() {
         if scalar_def(id).metadata_omit {
             continue;
         }
@@ -207,7 +200,7 @@ fn registry_predicate_emitted_field_and_row_derivation_agree() {
     use superscalar::scalar_metadata_by_canonical_name;
 
     let mut checked = 0usize;
-    for id in Registry::builtin().ids() {
+    for id in Registry::builtin().names() {
         let Some(md) = scalar_metadata_by_canonical_name(scalar_def(id).canonical) else {
             // No metadata row (a metadata_omit def); nothing to agree with.
             continue;
@@ -265,17 +258,17 @@ fn registry_predicate_emitted_field_and_row_derivation_agree() {
 /// collapse reports thousands of pairs here, not two.
 #[test]
 fn comparability_across_distinct_scalars_is_exactly_the_temporal_instant_pair() {
-    let email = scalar_def(ScalarId::CONTACT_EMAIL);
-    let phone = scalar_def(ScalarId::CONTACT_PHONE_NUMBER);
+    let email = scalar_def(names::CONTACT_EMAIL);
+    let phone = scalar_def(names::CONTACT_PHONE_NUMBER);
 
     // Self-comparable, which is what `None` means.
-    assert!(Registry::builtin().comparable_with(email.id, email.id));
-    assert!(Registry::builtin().comparable_with(phone.id, phone.id));
+    assert!(Registry::builtin().comparable_with(email.canonical, email.canonical));
+    assert!(Registry::builtin().comparable_with(phone.canonical, phone.canonical));
 
     // The spec's named counter-example. Naive field equality says `true` here,
     // because both sides are `None`. That is the bug this test exists for.
-    assert!(!Registry::builtin().comparable_with(email.id, phone.id));
-    assert!(!Registry::builtin().comparable_with(phone.id, email.id));
+    assert!(!Registry::builtin().comparable_with(email.canonical, phone.canonical));
+    assert!(!Registry::builtin().comparable_with(phone.canonical, email.canonical));
     assert_eq!(
         email.comparability_class, phone.comparability_class,
         "both are None today, which is exactly why raw field equality is the \
@@ -285,25 +278,25 @@ fn comparability_across_distinct_scalars_is_exactly_the_temporal_instant_pair() 
     // An alias shares one implementation under two ids, so it is the same
     // scalar for comparison purposes. `Identity.UserID -> Identity.UUID` is the
     // only alias pair in the catalog.
-    let user_id = scalar_def(ScalarId::IDENTITY_USER_ID);
-    let uuid = scalar_def(ScalarId::IDENTITY_UUID);
-    assert_eq!(user_id.alias_of, Some(ScalarId::IDENTITY_UUID));
-    assert!(Registry::builtin().comparable_with(user_id.id, uuid.id));
-    assert!(Registry::builtin().comparable_with(uuid.id, user_id.id));
+    let user_id = scalar_def(names::IDENTITY_USER_ID);
+    let uuid = scalar_def(names::IDENTITY_UUID);
+    assert_eq!(user_id.alias_of, Some(names::IDENTITY_UUID));
+    assert!(Registry::builtin().comparable_with(user_id.canonical, uuid.canonical));
+    assert!(Registry::builtin().comparable_with(uuid.canonical, user_id.canonical));
 
     // Exhaustive: the only comparable DISTINCT pairs are the ones the v1 class
     // table declares. Both directions are listed, so this doubles as the
     // symmetry check on the new pair.
-    let distinct_pairs: Vec<(ScalarId, ScalarId)> = Registry::builtin()
-        .ids()
-        .flat_map(|a| Registry::builtin().ids().map(move |b| (a, b)))
-        .filter(|(a, b)| Registry::builtin().resolved(*a) != Registry::builtin().resolved(*b))
+    let distinct_pairs: Vec<(&str, &str)> = Registry::builtin()
+        .names()
+        .flat_map(|a| Registry::builtin().names().map(move |b| (a, b)))
+        .filter(|(a, b)| Registry::builtin().resolved(a) != Registry::builtin().resolved(b))
         .collect();
     let cross_pairs = distinct_pairs.len();
     let mut comparable: Vec<(&str, &str)> = distinct_pairs
         .iter()
-        .filter(|(a, b)| Registry::builtin().comparable_with(*a, *b))
-        .map(|(a, b)| (scalar_def(*a).canonical, scalar_def(*b).canonical))
+        .filter(|(a, b)| Registry::builtin().comparable_with(a, b))
+        .copied()
         .collect();
     comparable.sort_unstable();
     assert_eq!(
@@ -320,9 +313,9 @@ fn comparability_across_distinct_scalars_is_exactly_the_temporal_instant_pair() 
     // of the single alias pair). Adding a scalar updates this on its own.
     let n = Registry::builtin().len();
     let same_scalar = Registry::builtin()
-        .ids()
-        .flat_map(|a| Registry::builtin().ids().map(move |b| (a, b)))
-        .filter(|(a, b)| Registry::builtin().resolved(*a) == Registry::builtin().resolved(*b))
+        .names()
+        .flat_map(|a| Registry::builtin().names().map(move |b| (a, b)))
+        .filter(|(a, b)| Registry::builtin().resolved(a) == Registry::builtin().resolved(b))
         .count();
     assert_eq!(cross_pairs, n * n - same_scalar);
     assert!(cross_pairs > 0, "the pair loop must not be vacuous");
@@ -554,7 +547,7 @@ fn check_class_invariants(rows: &[ClassRow]) -> Result<(), String> {
 #[test]
 fn the_catalog_satisfies_the_comparability_class_invariants() {
     let rows: Vec<ClassRow> = Registry::builtin()
-        .ids()
+        .names()
         .map(|id| {
             let def = scalar_def(id);
             ClassRow {
@@ -765,13 +758,13 @@ fn class_invariants_reject_the_tables_the_catalog_cannot_produce_yet() {
 /// counter-example above is what it exists to prevent.
 #[test]
 fn comparability_is_an_equivalence_relation_over_the_catalog() {
-    for a in Registry::builtin().ids() {
+    for a in Registry::builtin().names() {
         assert!(
             Registry::builtin().comparable_with(a, a),
             "{} reflexive",
             scalar_def(a).canonical
         );
-        for b in Registry::builtin().ids() {
+        for b in Registry::builtin().names() {
             assert_eq!(
                 Registry::builtin().comparable_with(a, b),
                 Registry::builtin().comparable_with(b, a),
@@ -782,7 +775,7 @@ fn comparability_is_an_equivalence_relation_over_the_catalog() {
             if !Registry::builtin().comparable_with(a, b) {
                 continue;
             }
-            for c in Registry::builtin().ids() {
+            for c in Registry::builtin().names() {
                 if !Registry::builtin().comparable_with(b, c) {
                     continue;
                 }

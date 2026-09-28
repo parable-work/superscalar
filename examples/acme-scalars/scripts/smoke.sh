@@ -27,16 +27,15 @@ cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
 
-echo "==> registry dump (the canonical-name-to-id table the runners use)"
+echo "==> registry dump (the scalar names the runners use)"
 cargo run --quiet -p acme-scalars --example dump >"$OUT/registry.json"
 python3 - "$OUT/registry.json" <<'PY'
 import json, sys
 dump = json.load(open(sys.argv[1], encoding="utf-8"))
-names = [e["name"] for e in dump["extensions"]]
-assert names == ["builtin", "acme"], names
+assert dump["extensions"] == ["builtin", "acme"], dump["extensions"]
 acme = [s for s in dump["scalars"] if s["extension"] == "acme"]
-assert acme and all(4096 <= s["id"] < 8192 for s in acme), acme
-print(f"dump: {len(dump['scalars'])} scalars, {len(acme)} in the acme block")
+assert acme and all(s["canonical"].startswith("Acme.") for s in acme), acme
+print(f"dump: {len(dump['scalars'])} scalars, {len(acme)} from acme")
 PY
 
 echo "==> C: static archive + generic header + tiny consumer"

@@ -74,20 +74,23 @@ extern "C" {
 // Validate shape and return the canonical normalized value.
 //
 // # Safety
-// `input` must be null or a valid NUL-terminated C string valid for the call.
-ScalarResult scalar_parse(uint32_t scalar_id, const char *input);
+// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+// each be null or a valid NUL-terminated C string valid for the call.
+ScalarResult scalar_parse(const char *scalar, const char *input);
 
 // Transform toward canonical form without enforcing shape.
 //
 // # Safety
-// `input` must be null or a valid NUL-terminated C string valid for the call.
-ScalarResult scalar_normalize(uint32_t scalar_id, const char *input);
+// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+// each be null or a valid NUL-terminated C string valid for the call.
+ScalarResult scalar_normalize(const char *scalar, const char *input);
 
 // Enforce shape; on success `value` is empty (read `ok`).
 //
 // # Safety
-// `input` must be null or a valid NUL-terminated C string valid for the call.
-ScalarResult scalar_validate(uint32_t scalar_id, const char *input);
+// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+// each be null or a valid NUL-terminated C string valid for the call.
+ScalarResult scalar_validate(const char *scalar, const char *input);
 
 // Lenient ("flag, don't block") coercion: JSON value in, JSON value out.
 //
@@ -99,8 +102,9 @@ ScalarResult scalar_validate(uint32_t scalar_id, const char *input);
 // `error`/`error_category` exactly as the strict hooks map theirs.
 //
 // # Safety
-// `json_in` must be null or a valid NUL-terminated C string valid for the call.
-ScalarResult scalar_coerce_lenient(uint32_t scalar_id, const char *json_in);
+// `scalar` (a canonical name) and `json_in` must each be null or a valid
+// NUL-terminated C string valid for the call.
+ScalarResult scalar_coerce_lenient(const char *scalar, const char *json_in);
 
 // Release a `ScalarResult`'s owned allocations.
 //
@@ -111,20 +115,23 @@ void scalar_result_free(ScalarResult result);
 // Batch `scalar_parse`. See `run_batch`.
 //
 // # Safety
+// `scalar` must be null or a valid NUL-terminated canonical name, and
 // `inputs` must point to `len` valid NUL-terminated C strings.
-ScalarResultArray scalar_parse_batch(uint32_t scalar_id, const char *const *inputs, size_t len);
+ScalarResultArray scalar_parse_batch(const char *scalar, const char *const *inputs, size_t len);
 
 // Batch `scalar_normalize`. See `run_batch`.
 //
 // # Safety
+// `scalar` must be null or a valid NUL-terminated canonical name, and
 // `inputs` must point to `len` valid NUL-terminated C strings.
-ScalarResultArray scalar_normalize_batch(uint32_t scalar_id, const char *const *inputs, size_t len);
+ScalarResultArray scalar_normalize_batch(const char *scalar, const char *const *inputs, size_t len);
 
 // Batch `scalar_validate`. See `run_batch`.
 //
 // # Safety
+// `scalar` must be null or a valid NUL-terminated canonical name, and
 // `inputs` must point to `len` valid NUL-terminated C strings.
-ScalarResultArray scalar_validate_batch(uint32_t scalar_id, const char *const *inputs, size_t len);
+ScalarResultArray scalar_validate_batch(const char *scalar, const char *const *inputs, size_t len);
 
 // Release a `ScalarResultArray` and every result it owns.
 //

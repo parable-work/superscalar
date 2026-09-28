@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use once_cell::sync::Lazy;
@@ -33,10 +32,6 @@ fn normalize_temporal_quarter_year(input: &str) -> Option<String> {
 pub struct TemporalQuarterYear;
 
 impl Scalar for TemporalQuarterYear {
-    fn id(&self) -> ScalarId {
-        ScalarId::TEMPORAL_QUARTER_YEAR
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_temporal_quarter_year(input).ok_or_else(|| {
             ScalarError::new(

@@ -1,15 +1,13 @@
 /* A tiny C consumer of superscalar.h. Proves the cbindgen header is valid
- * C and that the static library's ABI links and round-trips from C. The codegen
- * crate generates named ScalarId constants; this smoke test hardcodes one frozen
- * discriminant (see core/src/catalog.rs). */
+ * C and that the static library's ABI links and round-trips from C. Every entry
+ * point names its scalar by canonical name. */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "superscalar.h"
 
-/* Contact.Email -- frozen ScalarId discriminant. */
-#define SCALAR_CONTACT_EMAIL 8u
+#define SCALAR_CONTACT_EMAIL "Contact.Email"
 
 int main(void) {
   ScalarResult ok = scalar_parse(SCALAR_CONTACT_EMAIL, "Foo@Bar.com");

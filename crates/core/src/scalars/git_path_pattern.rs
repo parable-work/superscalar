@@ -3,7 +3,6 @@
 //! This scalar validates portable syntax only. Matching remains a consumer
 //! concern because it requires a repository tree and its case-sensitive paths.
 
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
@@ -88,10 +87,6 @@ fn validate_segment(input: &str, segment: &str) -> Result<(), ScalarError> {
 }
 
 impl Scalar for GitPathPatternScalar {
-    fn id(&self) -> ScalarId {
-        ScalarId::GIT_PATH_PATTERN
-    }
-
     fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
         self.validate(registry, input)?;
         Ok(input.to_string())

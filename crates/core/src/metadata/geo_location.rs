@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use serde::{Deserialize, Serialize};
@@ -46,10 +45,6 @@ fn reserialize(loc: &Location) -> Result<String, ScalarError> {
 pub struct GeoLocation;
 
 impl Scalar for GeoLocation {
-    fn id(&self) -> ScalarId {
-        ScalarId::GEO_LOCATION
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         reserialize(&decode(input)?)
     }

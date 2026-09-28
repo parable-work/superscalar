@@ -8,9 +8,9 @@ crate outside this directory.
 ## What it proves
 
 - An extension is a crate that implements `Extension` (`ext/src/lib.rs`): a
-  name, an id block, a static array of `ScalarDef`s, and hand-written impls
-  for the scalars that need code. `Registry::assemble(&[&AcmeExtension])`
-  merges it with the built-ins and checks for collisions.
+  name, a static array of `ScalarDef`s, and hand-written impls for the
+  scalars that need code. `Registry::assemble(&[&AcmeExtension])` merges it
+  with the built-ins and refuses a canonical name declared twice.
 - A scalar with only a pattern and lengths (`Acme.OrderNumber`) needs no Rust
   code; the core's directive engine serves it from the def.
 - A scalar whose rule depends on the catalog (`Acme.ScalarRef`, which accepts
@@ -55,7 +55,7 @@ examples/acme-scalars/scripts/smoke.sh
 Needs the pinned Rust toolchain with the `wasm32-unknown-unknown` target,
 `wasm-pack`, a C compiler, `node` and `python3`. The script installs nothing.
 It runs `cargo test` (assembly, both corpora in Rust), dumps the registry to
-get the canonical-name-to-id table, then for each binding builds the artifact
+get the assembled scalar names, then for each binding builds the artifact
 and runs `run_vectors.*` over `conformance/core-scalars.v2.json` and
 `conformance/acme-scalars.v2.json`. Every non-built-in scalar in the dump must
 have vectors, so a scalar added without them fails the run.
@@ -73,23 +73,22 @@ extra C entry points writes its own header that includes it.
 
 Three files, all in this directory:
 
-1. `ext/src/lib.rs`: a `ScalarId` constant at the next free id in the block
-   (ids are append-only, never renumbered), a `ScalarDef` in `DEFS`, and an
-   impl registered in `impls()` if the tag is not `PatternOnly`.
+1. `ext/src/lib.rs`: a name constant, a `ScalarDef` in `DEFS`, and an impl
+   registered in `impls()` under that name if the tag is not `PatternOnly`.
+   Names are append-only: a published name is never renamed or reused.
 2. `conformance/acme-scalars.v2.json`: accepted and rejected vectors, and a
    `metadata` row (`comparability_class`, `is_sortable`), for the new name.
 3. `README.md`, if the scalar is worth describing.
 
 `scripts/check_third_scalar.sh` does exactly this with `scripts/third_scalar.patch`
-(`Acme.Sku` at 4098), reruns the smoke, and fails if the run left a change
+(`Acme.Sku`), reruns the smoke, and fails if the run left a change
 anywhere outside `examples/acme-scalars/`. That is the acceptance test for the
 extension model: nothing under the core or binding crates moves when a
 downstream scalar is added.
 
-## Ids
+## Names
 
-An extension declares an `id_base` that is a multiple of 4096 and at least
-4096; its ids live in `[id_base, id_base + 4096)`. The built-ins own
-`0..=4095`. Acme uses 4096 (`Acme.OrderNumber`) and 4097 (`Acme.ScalarRef`).
-Two extensions in one assembly need different blocks; assembly panics on an
-overlap or a duplicate canonical name.
+A scalar's canonical name is its only identity: the C ABI, every binding and
+every conformance vector name the scalar by it. Acme's names live in the
+`Acme` namespace. Assembly panics when two contributions, built-in or
+extension, declare the same canonical name; distinct names never collide.

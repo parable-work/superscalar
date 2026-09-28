@@ -39,33 +39,70 @@ func readResult(res C.ScalarResult) (string, error) {
 	return "", errors.New(msg)
 }
 
-func callScalarParse(id uint32, value string) (string, error) {
-	cs := C.CString(value)
-	defer C.free(unsafe.Pointer(cs))
-	return readResult(C.scalar_parse(C.uint32_t(id), cs))
+// cScalarNames holds one C copy of every canonical name in the registry, made
+// once at init and never freed, so a call does not allocate for the name. The
+// map is read-only after init and safe for concurrent use.
+var cScalarNames = func() map[string]*C.char {
+	names := make(map[string]*C.char, len(VALID_SCALARS))
+	for _, name := range VALID_SCALARS {
+		names[string(name)] = C.CString(string(name))
+	}
+	return names
+}()
+
+// cScalarName returns the C form of a canonical name. A name outside the
+// registry gets a fresh copy the caller frees (owned is true); the core then
+// reports it as an unknown scalar.
+func cScalarName(canonical string) (name *C.char, owned bool) {
+	if name, ok := cScalarNames[canonical]; ok {
+		return name, false
+	}
+	return C.CString(canonical), true
 }
 
-func callScalarNormalize(id uint32, value string) (string, error) {
+func callScalarParse(canonical string, value string) (string, error) {
+	cn, owned := cScalarName(canonical)
+	if owned {
+		defer C.free(unsafe.Pointer(cn))
+	}
 	cs := C.CString(value)
 	defer C.free(unsafe.Pointer(cs))
-	return readResult(C.scalar_normalize(C.uint32_t(id), cs))
+	return readResult(C.scalar_parse(cn, cs))
 }
 
-func callScalarValidate(id uint32, value string) error {
+func callScalarNormalize(canonical string, value string) (string, error) {
+	cn, owned := cScalarName(canonical)
+	if owned {
+		defer C.free(unsafe.Pointer(cn))
+	}
 	cs := C.CString(value)
 	defer C.free(unsafe.Pointer(cs))
-	_, err := readResult(C.scalar_validate(C.uint32_t(id), cs))
+	return readResult(C.scalar_normalize(cn, cs))
+}
+
+func callScalarValidate(canonical string, value string) error {
+	cn, owned := cScalarName(canonical)
+	if owned {
+		defer C.free(unsafe.Pointer(cn))
+	}
+	cs := C.CString(value)
+	defer C.free(unsafe.Pointer(cs))
+	_, err := readResult(C.scalar_validate(cn, cs))
 	return err
 }
 
 // callScalarCoerceLenient runs the "flag, don't block" coercion: jsonStr is a
 // JSON document, the returned string is the serialized LenientCoerceResult JSON
 // ({"value":<json|null>,"error":<{kind,message}|null>}) on success. The C ABI
-// surfaces both an unknown id / invalid json and a captured coercion failure as
-// a non-nil error (mirroring the strict callScalar* helpers); the result string
-// carries the canonical value when it is nil.
-func callScalarCoerceLenient(id uint32, jsonStr string) (string, error) {
+// surfaces both an unknown scalar / invalid json and a captured coercion failure
+// as a non-nil error (mirroring the strict callScalar* helpers); the result
+// string carries the canonical value when it is nil.
+func callScalarCoerceLenient(canonical string, jsonStr string) (string, error) {
+	cn, owned := cScalarName(canonical)
+	if owned {
+		defer C.free(unsafe.Pointer(cn))
+	}
 	cs := C.CString(jsonStr)
 	defer C.free(unsafe.Pointer(cs))
-	return readResult(C.scalar_coerce_lenient(C.uint32_t(id), cs))
+	return readResult(C.scalar_coerce_lenient(cn, cs))
 }

@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
@@ -14,10 +13,6 @@ fn normalize_json(input: &str) -> Result<String, ScalarError> {
 pub struct Json;
 
 impl Scalar for Json {
-    fn id(&self) -> ScalarId {
-        ScalarId::GENERIC_JSON
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_json(input)
     }

@@ -37,14 +37,18 @@ addon and the WASM build in CI to catch native-versus-WASM divergence. The
 WASM build is also the fallback in Node on a platform without a prebuilt
 addon, and the basis for the planned cgo-free Go backend.
 
-## Why are ids numeric and frozen?
+## Why are scalars identified by name, not a number?
 
-The C ABI dispatches on a `u32` id, generated bindings embed the id per
-function, and stored data may carry it. Renumbering would change the meaning
-of existing binaries and data. So ids are append-only forever, holes are
-permanent, and extensions get their own 4096-wide blocks so they can never
-collide with a future built-in. See
-[ABI and versioning](/superscalar/policy/abi-and-versioning/).
+The canonical name (`Contact.Email`) is already frozen: a scalar is never
+renamed. Stored data, schemas and the conformance corpus all record the name.
+A numeric id would be a second frozen identity with nothing that needs it,
+and two contributions could collide on a number while meaning different
+scalars. With names, assembly fails only when a built-in and an extension
+declare the same name, which is a real conflict. The C ABI takes the name on
+each call; the lookup costs tens of nanoseconds against a call that validates
+the input. Keep an extension's scalars in a namespace the built-ins do not
+use, such as a project prefix, so a future built-in cannot claim the same
+name. See [ABI and versioning](/superscalar/policy/abi-and-versioning/).
 
 ## Why is the reference documentation generated?
 
@@ -58,7 +62,7 @@ and rejected inputs is therefore not possible. See the
 ## Can I add scalars without forking?
 
 Yes. An extension is a Rust crate that declares definitions and
-implementations in its own id block, assembles a registry with the built-ins,
+implementations under its own names, assembles a registry with the built-ins,
 and applies four one-line macros to get native bindings carrying the whole
 catalog. The code generator then emits Go, Python and TypeScript wrappers
 for your scalars from a configuration you own. See

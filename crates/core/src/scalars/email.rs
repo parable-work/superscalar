@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use once_cell::sync::Lazy;
@@ -19,10 +18,6 @@ impl Email {
 }
 
 impl Scalar for Email {
-    fn id(&self) -> ScalarId {
-        ScalarId::CONTACT_EMAIL
-    }
-
     fn normalize(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         Ok(Self::canonical(input))
     }

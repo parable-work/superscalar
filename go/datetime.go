@@ -14,7 +14,7 @@ func NormalizeDateTime(input string) (TemporalDateTime, bool) {
 	if strings.TrimSpace(input) == "" {
 		return TemporalDateTime{}, false
 	}
-	canonical, err := callScalarNormalize(scalarIDTemporalDateTime, input)
+	canonical, err := callScalarNormalize(scalarNameTemporalDateTime, input)
 	if err != nil {
 		return TemporalDateTime{}, false
 	}

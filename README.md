@@ -6,8 +6,9 @@ SuperScalar is a library of named scalar types such as `Contact.Email`,
 `Identity.UUID`, `Temporal.DateTime` and `Design.Color`. Each scalar is
 implemented once, in Rust, and every binding calls that implementation, so an
 email address parses the same way in a Go service, a Python job, a Node process
-and a browser. Scalars carry a stable numeric id and a canonical name, and a
-corpus of conformance vectors runs against every binding in CI. Downstream
+and a browser. A scalar's canonical name is its identity: every binding and
+the C ABI name the scalar by it. A corpus of conformance vectors runs against
+every binding in CI. Downstream
 projects can add their own scalars in one Rust crate and receive generated
 Go, Python and TypeScript bindings for them without forking the core.
 
@@ -26,16 +27,16 @@ shape and returns only success or an error.
 Rust:
 
 ```rust
-use superscalar::{Registry, ScalarId};
+use superscalar::{names, Registry};
 
 fn main() -> Result<(), superscalar::ScalarError> {
     let registry = Registry::builtin();
 
-    let email = registry.scalar(ScalarId::CONTACT_EMAIL).expect("built-in scalar");
+    let email = registry.scalar(names::CONTACT_EMAIL).expect("built-in scalar");
     let canonical = email.parse(registry, " Ada.Lovelace@Example.com ")?;
     println!("{canonical}");
 
-    let uuid = registry.scalar(ScalarId::IDENTITY_UUID).expect("built-in scalar");
+    let uuid = registry.scalar("Identity.UUID").expect("built-in scalar");
     uuid.validate(registry, "0f8fad5b-d9cb-469f-a165-70867728950e")?;
     Ok(())
 }
@@ -120,7 +121,7 @@ vectors against your own build, and the ABI and versioning policy.
 ## Versioning
 
 SemVer on the repository tag `vX.Y.Z`; every crate and package shares the
-version. Scalar ids and canonical names are append-only. Loosening a scalar's
+version. Canonical scalar names are append-only. Loosening a scalar's
 accept set is a minor bump; tightening it is a major bump.
 
 ## History

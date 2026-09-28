@@ -1,6 +1,6 @@
 [package]
 name = "superscalar-codegen"
-description = "superscalar's own codegen: emits per-language ScalarId constants, canonical maps, and per-scalar parse/normalize/validate wrappers from the core registry. No generated unsafe."
+description = "superscalar's own codegen: emits per-language scalar name lists, metadata tables, and per-scalar parse/normalize/validate wrappers from the core registry. No generated unsafe."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

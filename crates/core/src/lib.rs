@@ -20,11 +20,11 @@ pub mod scalar_metadata;
 pub mod scalars;
 pub mod temporal_format;
 
-pub use catalog::ScalarId;
+pub use catalog::names;
 pub use coerce::{coerce_bool, coerce_float, coerce_int, coerce_lenient, LenientCoerceResult};
 pub use definitions::{DefSource, Definitions};
 pub use error::{ErrorKind, ScalarError};
-pub use extension::{AssembleOptions, AssemblyError, Extension, ExtensionInfo, LegacyAlias};
+pub use extension::{AssemblyError, Extension, LegacyAlias};
 pub use registry::{
     scalar_def, scalar_for, symbol_from_canonical, PrimitiveKind, Registry, Scalar, ScalarDef,
     ScalarHooks, ScalarTag,

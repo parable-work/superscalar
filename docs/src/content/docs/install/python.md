@@ -53,6 +53,7 @@ so `Contact.Email` becomes `contact_email` and `Identity.UUID` becomes
 `identity_uuid`. A rejected input raises `ValueError` with the core's error
 message.
 
-The module also exposes `SCALAR_ID_BY_CANONICAL`, a mapping from canonical
-name to numeric id, which the conformance runner uses to route vectors; see
-[conformance](/superscalar/guides/conformance/).
+The module also exposes `VALID_SCALARS`, every canonical name in the
+registry, sorted. The native functions take that name
+(`_native.parse("Contact.Email", value)`), which is how the conformance runner
+routes vectors; see [conformance](/superscalar/guides/conformance/).

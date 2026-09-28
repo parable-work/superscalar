@@ -731,7 +731,7 @@ jobs:
               "" \
               "- [x] Every commit is signed off" \
               "- [x] Conformance vectors unchanged" \
-              "- [x] Scalar ids unchanged" \
+              "- [x] Canonical scalar names unchanged" \
               "- [x] No generated files touched" \
               "- [x] No behaviour or API change")"
 

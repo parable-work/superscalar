@@ -14,7 +14,7 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule as PyModuleType};
-use superscalar::{Registry, Scalar, ScalarId};
+use superscalar::{Registry, Scalar};
 
 /// True when this build of the crate carries the built-in assembly (the
 /// `builtin` feature). `export_pymodule!` asserts it is false at every call
@@ -22,50 +22,53 @@ use superscalar::{Registry, Scalar, ScalarId};
 /// `PyInit_*` symbols.
 pub const BUILTIN_ASSEMBLY: bool = cfg!(feature = "builtin");
 
-/// The scalar serving `scalar_id` in `registry`, or the `ValueError` the
-/// functions raise for an id no extension declared.
-pub fn resolve(registry: &Registry, scalar_id: u32) -> PyResult<&dyn Scalar> {
+/// The scalar named `scalar` (a canonical name such as `"Contact.Email"`) in
+/// `registry`, or the `ValueError` the functions raise for a name no extension
+/// declared.
+pub fn resolve<'r>(registry: &'r Registry, scalar: &str) -> PyResult<&'r dyn Scalar> {
     registry
-        .scalar(ScalarId(scalar_id))
-        .ok_or_else(|| PyValueError::new_err("unknown scalar id"))
+        .scalar(scalar)
+        .ok_or_else(|| unknown_scalar(scalar))
+}
+
+fn unknown_scalar(scalar: &str) -> PyErr {
+    PyValueError::new_err(format!("unknown scalar {scalar:?}"))
 }
 
 /// `parse` over `registry`; a core error becomes a `ValueError` with its
 /// message.
-pub fn run_parse(registry: &Registry, scalar_id: u32, value: &str) -> PyResult<String> {
-    resolve(registry, scalar_id)?
+pub fn run_parse(registry: &Registry, scalar: &str, value: &str) -> PyResult<String> {
+    resolve(registry, scalar)?
         .parse(registry, value)
         .map_err(|err| PyValueError::new_err(err.to_string()))
 }
 
 /// `normalize` over `registry`.
-pub fn run_normalize(registry: &Registry, scalar_id: u32, value: &str) -> PyResult<String> {
-    resolve(registry, scalar_id)?
+pub fn run_normalize(registry: &Registry, scalar: &str, value: &str) -> PyResult<String> {
+    resolve(registry, scalar)?
         .normalize(registry, value)
         .map_err(|err| PyValueError::new_err(err.to_string()))
 }
 
 /// `validate` over `registry`.
-pub fn run_validate(registry: &Registry, scalar_id: u32, value: &str) -> PyResult<()> {
-    resolve(registry, scalar_id)?
+pub fn run_validate(registry: &Registry, scalar: &str, value: &str) -> PyResult<()> {
+    resolve(registry, scalar)?
         .validate(registry, value)
         .map_err(|err| PyValueError::new_err(err.to_string()))
 }
 
 /// Lenient coercion over `registry`: a JSON document string in, a
 /// `{"value": <decoded JSON | None>, "error": {"kind", "message"} | None}` dict
-/// out. A coercion failure does not raise: it rides in `error`. An unknown id
-/// or unparseable `json_value` raises `ValueError`. The coerced `value` is
+/// out. A coercion failure does not raise: it rides in `error`. An unknown
+/// name or unparseable `json_value` raises `ValueError`. The coerced `value` is
 /// round-tripped back to native Python via `json.loads`.
 pub fn run_coerce_lenient<'py>(
     py: Python<'py>,
     registry: &Registry,
-    scalar_id: u32,
+    scalar: &str,
     json_value: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let def = registry
-        .def(ScalarId(scalar_id))
-        .ok_or_else(|| PyValueError::new_err("unknown scalar id"))?;
+    let def = registry.def(scalar).ok_or_else(|| unknown_scalar(scalar))?;
     let value: serde_json::Value =
         serde_json::from_str(json_value).map_err(|err| PyValueError::new_err(err.to_string()))?;
     let result = registry.coerce_lenient(&value, def.canonical);
@@ -138,20 +141,20 @@ macro_rules! export_pymodule {
     (@emit $module:ident, $registry:path, extra = [$($extra:path),*]) => {
         /// Validate shape and return the canonical normalized value.
         #[::pyo3::pyfunction]
-        fn parse(scalar_id: u32, value: &str) -> ::pyo3::PyResult<String> {
-            $crate::run_parse($registry(), scalar_id, value)
+        fn parse(scalar: &str, value: &str) -> ::pyo3::PyResult<String> {
+            $crate::run_parse($registry(), scalar, value)
         }
 
         /// Transform toward canonical form without enforcing shape.
         #[::pyo3::pyfunction]
-        fn normalize(scalar_id: u32, value: &str) -> ::pyo3::PyResult<String> {
-            $crate::run_normalize($registry(), scalar_id, value)
+        fn normalize(scalar: &str, value: &str) -> ::pyo3::PyResult<String> {
+            $crate::run_normalize($registry(), scalar, value)
         }
 
         /// Enforce shape; returns None on success, raises ValueError on reject.
         #[::pyo3::pyfunction]
-        fn validate(scalar_id: u32, value: &str) -> ::pyo3::PyResult<()> {
-            $crate::run_validate($registry(), scalar_id, value)
+        fn validate(scalar: &str, value: &str) -> ::pyo3::PyResult<()> {
+            $crate::run_validate($registry(), scalar, value)
         }
 
         /// Lenient ("flag, don't block") coercion: a JSON document string in, a
@@ -160,15 +163,15 @@ macro_rules! export_pymodule {
         ///
         /// Unlike `parse`/`normalize`/`validate`, a coercion failure does NOT raise: it
         /// rides in `error` so a caller can quarantine a row or null+flag a cell. An
-        /// unknown id or unparseable `json_value` still raises `ValueError`. The coerced
+        /// unknown name or unparseable `json_value` still raises `ValueError`. The coerced
         /// `value` is round-tripped back to native Python via `json.loads`.
         #[::pyo3::pyfunction]
         fn coerce_lenient<'py>(
             py: ::pyo3::Python<'py>,
-            scalar_id: u32,
+            scalar: &str,
             json_value: &str,
         ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::types::PyDict>> {
-            $crate::run_coerce_lenient(py, $registry(), scalar_id, json_value)
+            $crate::run_coerce_lenient(py, $registry(), scalar, json_value)
         }
 
         // `add_function` is a trait method; the fully qualified form works at a

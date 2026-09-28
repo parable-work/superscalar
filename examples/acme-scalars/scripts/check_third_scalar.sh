@@ -4,7 +4,7 @@
 #
 #   examples/acme-scalars/scripts/check_third_scalar.sh
 #
-# Applies scripts/third_scalar.patch (Acme.Sku at id 4098, with its vectors),
+# Applies scripts/third_scalar.patch (Acme.Sku, with its vectors),
 # reruns scripts/smoke.sh, confirms every binding exercised the new scalar,
 # and compares `git status` before and after: every path that changed must be
 # under this directory. The patch is reverted on exit, pass or fail. Refuses to

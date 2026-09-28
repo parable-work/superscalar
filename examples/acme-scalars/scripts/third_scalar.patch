@@ -1,33 +1,32 @@
 A third scalar for the acme example, applied by scripts/check_third_scalar.sh
-and reverted afterwards. Acme.Sku takes the next id in the block (4098) and
-brings its own vectors. Regenerate with a fresh diff if ext/src/lib.rs or the
-conformance file changes shape. Empty context lines are empty, not a single
-space; git apply reads them as context.
+and reverted afterwards. Acme.Sku adds its name and def and brings its own
+vectors. Regenerate with a fresh diff if ext/src/lib.rs or the conformance
+file changes shape. Empty context lines are empty, not a single space; git
+apply reads them as context.
 
 --- a/ext/src/lib.rs
 +++ b/ext/src/lib.rs
-@@ -26,10 +26,12 @@
- pub const ORDER_NUMBER: ScalarId = ScalarId(ID_BASE);
- /// `Acme.ScalarRef`, frozen at 4097.
- pub const SCALAR_REF: ScalarId = ScalarId(ID_BASE + 1);
-+/// `Acme.Sku`, frozen at 4098.
-+pub const SKU: ScalarId = ScalarId(ID_BASE + 2);
+@@ -24,10 +24,12 @@
+ pub const ORDER_NUMBER: &str = "Acme.OrderNumber";
+ /// `Acme.ScalarRef`.
+ pub const SCALAR_REF: &str = "Acme.ScalarRef";
++/// `Acme.Sku`.
++pub const SKU: &str = "Acme.Sku";
 
- /// The Acme catalog. Ids are append-only: a new scalar takes the next free id
- /// in the block and nothing is ever renumbered.
+ /// The Acme catalog. A new scalar adds its name above and its def here; order
+ /// carries no meaning.
 -pub static DEFS: [ScalarDef; 2] = [
 +pub static DEFS: [ScalarDef; 3] = [
      ScalarDef {
-         id: ORDER_NUMBER,
          namespace: "Acme",
-@@ -112,6 +114,45 @@
+         canonical: ORDER_NUMBER,
+@@ -108,6 +110,44 @@
          },
          metadata_omit: false,
      },
 +    ScalarDef {
-+        id: SKU,
 +        namespace: "Acme",
-+        canonical: "Acme.Sku",
++        canonical: SKU,
 +        primitive: PrimitiveKind::String,
 +        sql_type: "TEXT",
 +        metadata_primitive: "String",
@@ -65,7 +64,7 @@ space; git apply reads them as context.
 +    },
  ];
 
- /// The extension: name, block, defs, and the one hand-written impl.
+ /// The extension: name, defs, and the one hand-written impl.
 --- a/conformance/acme-scalars.v2.json
 +++ b/conformance/acme-scalars.v2.json
 @@ -9,7 +9,8 @@

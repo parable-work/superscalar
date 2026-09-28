@@ -18,8 +18,8 @@ the hand-maintained `scalars` section, `meta` and `metadata_excluded` are out of
 reach by construction. If this script ever needs to touch those, the scoping
 broke and that is a bug, not a feature request.
 
-Row order follows `SCALAR_METADATA` (ScalarId::ALL order minus the excluded
-scalar) so a regeneration diff lines up row-for-row with the Rust table. No
+Row order follows `SCALAR_METADATA` (canonical name order minus the excluded
+scalars) so a regeneration diff lines up row-for-row with the Rust table. No
 reader depends on order.
 """
 

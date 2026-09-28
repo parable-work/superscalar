@@ -15,7 +15,7 @@ parse, so it rejects in constant-ish time.
 
 import time
 
-from superscalar import SCALAR_ID_BY_CANONICAL, _native
+from superscalar import _native
 
 import pytest
 
@@ -27,9 +27,8 @@ MALICIOUS = [
 
 @pytest.mark.parametrize("inp", MALICIOUS)
 def test_network_url_redos_rejects_fast(inp):
-    sid = SCALAR_ID_BY_CANONICAL["Network.Url"]
     start = time.perf_counter()
     with pytest.raises(ValueError):
-        _native.parse(sid, inp)
+        _native.parse("Network.Url", inp)
     elapsed_ms = (time.perf_counter() - start) * 1000
     assert elapsed_ms < 100, f"Network.Url validation took {elapsed_ms:.1f}ms (want < 100ms)"

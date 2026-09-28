@@ -11,7 +11,7 @@ func normalizeTemporalQuarterYear(input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		return "", fmt.Errorf("quarter-year must not be empty")
 	}
-	return callScalarNormalize(scalarIDTemporalQuarterYear, input)
+	return callScalarNormalize(scalarNameTemporalQuarterYear, input)
 }
 
 // The generator-emitted ParseTemporalQuarterYear is a plain string conversion; use this when normalization is required.

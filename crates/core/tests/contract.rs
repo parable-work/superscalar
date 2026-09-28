@@ -8,11 +8,11 @@
 //! The P2 slug round-trip gate moved with its scalar to the extension that
 //! owns it.
 
-use superscalar::{scalar_for, Registry, ScalarId};
+use superscalar::{names, scalar_for, Registry};
 
 #[test]
 fn color_resolves_full_css_named_palette() {
-    let color = scalar_for(ScalarId::DESIGN_COLOR);
+    let color = scalar_for(names::DESIGN_COLOR);
     let cases = [
         ("aqua", "#00FFFFFF"),
         ("navy", "#000080FF"),
@@ -38,7 +38,7 @@ fn color_resolves_full_css_named_palette() {
 
 #[test]
 fn duration_accepts_micro_sign_spellings() {
-    let duration = scalar_for(ScalarId::TEMPORAL_DURATION);
+    let duration = scalar_for(names::TEMPORAL_DURATION);
     // Micro sign U+00B5 and Greek small letter mu U+03BC are both valid units
     // (Go's time.ParseDuration accepts them); canonical output uses ASCII "us".
     for input in ["500us", "500\u{00b5}s", "500\u{03bc}s"] {
@@ -63,7 +63,7 @@ fn duration_does_not_panic_on_truncated_micro_bytes() {
     // A raw 0xC2 byte (the lead byte of U+00B5) cannot appear inside a &str, but
     // exercise inputs that previously risked mid-codepoint slicing to confirm
     // the char-based scanner is panic-free by contract.
-    let duration = scalar_for(ScalarId::TEMPORAL_DURATION);
+    let duration = scalar_for(names::TEMPORAL_DURATION);
     for input in ["\u{00b5}s", "5\u{00b5}", "\u{03bc}", "5\u{03bc}s10ns"] {
         // Either Ok or Err is acceptable; the only failure is a panic.
         let _ = duration.parse(Registry::builtin(), input);

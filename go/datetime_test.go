@@ -47,7 +47,7 @@ func TestDateTime_MarshalJSON_MatchesCoreCanonical(t *testing.T) {
 	}
 	for _, in := range cases {
 		t.Run(in, func(t *testing.T) {
-			canonical, err := callScalarNormalize(scalarIDTemporalDateTime, in)
+			canonical, err := callScalarNormalize(scalarNameTemporalDateTime, in)
 			require.NoError(t, err)
 
 			dt, ok := NormalizeDateTime(in)

@@ -52,16 +52,16 @@ language bindings always enable the feature.
 ## Quickstart
 
 ```rust
-use superscalar::{Registry, ScalarId};
+use superscalar::{names, Registry};
 
 fn main() -> Result<(), superscalar::ScalarError> {
     let registry = Registry::builtin();
 
-    let email = registry.scalar(ScalarId::CONTACT_EMAIL).expect("built-in scalar");
+    let email = registry.scalar(names::CONTACT_EMAIL).expect("built-in scalar");
     let canonical = email.parse(registry, " User@Example.COM ")?;
     assert_eq!(canonical, "user@example.com");
 
-    let uuid = registry.scalar(ScalarId::IDENTITY_UUID).expect("built-in scalar");
+    let uuid = registry.scalar("Identity.UUID").expect("built-in scalar");
     uuid.validate(registry, "0f8fad5b-d9cb-469f-a165-70867728950e")?;
 
     // normalize moves toward canonical form without enforcing shape.
@@ -72,12 +72,13 @@ fn main() -> Result<(), superscalar::ScalarError> {
 ```
 
 `Registry::builtin()` returns the process-wide registry of built-in scalars.
-`registry.scalar(id)` returns `Option<&dyn Scalar>`, the trait with `parse`,
-`normalize` and `validate`; each hook takes the registry as its first argument
-so a scalar can consult other scalars. `ScalarId` is a `u32` newtype with one
-associated constant per built-in scalar (`ScalarId::CONTACT_EMAIL`). The
-`scalar_for(id)` free function is a convenience over the built-in registry that
-panics on an unknown id. `ScalarError` has two public fields, `kind: ErrorKind`
+`registry.scalar(name)` takes a canonical name and returns
+`Option<&dyn Scalar>`, the trait with `parse`, `normalize` and `validate`;
+each hook takes the registry as its first argument so a scalar can consult
+other scalars. The `names` module holds one constant per built-in scalar
+(`names::CONTACT_EMAIL` is `"Contact.Email"`), so a misspelled built-in fails
+to compile; any `&str` works too. The `scalar_for(name)` free function is a
+convenience over the built-in registry that panics on an unknown name. `ScalarError` has two public fields, `kind: ErrorKind`
 and `message: String`, and implements `Display`.
 
 Downstream projects assemble their own registry from the built-ins plus their

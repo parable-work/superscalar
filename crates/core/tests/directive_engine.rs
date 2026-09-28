@@ -5,16 +5,16 @@
 mod common;
 
 use superscalar::directive::DirectiveScalar;
-use superscalar::{scalar_def, ErrorKind, Registry, Scalar, ScalarId};
+use superscalar::{names, scalar_def, ErrorKind, Registry, Scalar};
 
 /// Finance.Money: Int, minimum 0, maximum 2^53-1.
 fn money() -> DirectiveScalar {
-    DirectiveScalar::from_def(scalar_def(ScalarId::FINANCE_MONEY))
+    DirectiveScalar::from_def(scalar_def(names::FINANCE_MONEY))
 }
 
 /// Generic.Probability: Float, minimum 0.0, maximum 1.0.
 fn probability() -> DirectiveScalar {
-    DirectiveScalar::from_def(scalar_def(ScalarId::GENERIC_PROBABILITY))
+    DirectiveScalar::from_def(scalar_def(names::GENERIC_PROBABILITY))
 }
 
 #[test]
@@ -75,7 +75,6 @@ fn non_finite_float_is_rejected() {
 /// def.
 fn connector_slug() -> DirectiveScalar {
     let mut def = common::def(
-        ScalarId(ScalarId::EXTENSION_BLOCK),
         "Acme",
         "Acme.ConnectorSlug",
         superscalar::ScalarTag::PatternOnly,

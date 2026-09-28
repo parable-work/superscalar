@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use crate::scalars::datetime::{NAIVE_DATETIME_FORMATS, OFFSET_DATETIME_FORMATS};
@@ -69,10 +68,6 @@ fn normalize_temporal_date(input: &str) -> Option<String> {
 pub struct TemporalDate;
 
 impl Scalar for TemporalDate {
-    fn id(&self) -> ScalarId {
-        ScalarId::TEMPORAL_DATE
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_temporal_date(input).ok_or_else(|| {
             ScalarError::new(ErrorKind::Parse, format!("failed to parse Date: {input}"))

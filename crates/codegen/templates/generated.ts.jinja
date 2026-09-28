@@ -48,9 +48,13 @@ export function flatScalarName(canonicalName: string): string {
   return canonicalName.replace(/\./g, "_");
 }
 
-export const scalarIdByCanonical: Record<string, number> = {
-{% for e in entries %}  {{ e.canonical_literal }}: {{ e.id }},
-{% endfor %}};
+/**
+ * Every canonical scalar name in the registry, sorted. The name is a scalar's
+ * identity: every call into the core passes it.
+ */
+export const VALID_SCALARS: readonly string[] = [
+{% for e in entries %}  {{ e.canonical_literal }},
+{% endfor %}];
 
 interface LenientScalarError {
   kind?: string;
@@ -73,11 +77,11 @@ function validationErrorFromLenient(error: LenientScalarError): ValidationError 
   return { validator: error.kind || "scalar", message: error.message };
 }
 
-function coerceLenient(id: number, value: unknown): LenientCoerceResult {
+function coerceLenient(scalar: string, value: unknown): LenientCoerceResult {
   try {
     const encoded = JSON.stringify(value);
     const jsonIn = encoded === undefined ? "null" : encoded;
-    const decoded = JSON.parse(backend.coerceLenient(id, jsonIn)) as Partial<LenientCoerceResult>;
+    const decoded = JSON.parse(backend.coerceLenient(scalar, jsonIn)) as Partial<LenientCoerceResult>;
     return {
       value: decoded.value === undefined ? null : decoded.value,
       error: decoded.error === undefined ? null : decoded.error,
@@ -87,8 +91,8 @@ function coerceLenient(id: number, value: unknown): LenientCoerceResult {
   }
 }
 
-function coerceValue(id: number, value: unknown): unknown | null {
-  const result = coerceLenient(id, value);
+function coerceValue(scalar: string, value: unknown): unknown | null {
+  const result = coerceLenient(scalar, value);
   if (result.error) {
     return null;
   }
@@ -103,11 +107,11 @@ function parseJsonObject(value: string): unknown | null {
   }
 }
 
-function validateWithBackend(id: number, value: unknown | null | undefined): ScalarValidationResult {
+function validateWithBackend(scalar: string, value: unknown | null | undefined): ScalarValidationResult {
   if (value === null || value === undefined || value === "") {
     return [true, null];
   }
-  const result = coerceLenient(id, value);
+  const result = coerceLenient(scalar, value);
   if (!result.error) {
     return [true, null];
   }
@@ -115,7 +119,7 @@ function validateWithBackend(id: number, value: unknown | null | undefined): Sca
 }
 
 function canonicalizeJSONValue(
-  id: number,
+  scalar: string,
   value: unknown,
   operation: "parse" | "normalize",
 ): JSONValue | undefined {
@@ -128,15 +132,15 @@ function canonicalizeJSONValue(
       return undefined;
     }
     const canonical = operation === "parse"
-      ? backend.parse(id, encoded)
-      : backend.normalize(id, encoded);
+      ? backend.parse(scalar, encoded)
+      : backend.normalize(scalar, encoded);
     return JSON.parse(canonical) as JSONValue;
   } catch {
     return undefined;
   }
 }
 
-function validateJSONValueWithBackend(id: number, value: unknown): ScalarValidationResult {
+function validateJSONValueWithBackend(scalar: string, value: unknown): ScalarValidationResult {
   // Scalar validators treat undefined as an absent optional field. Required
   // generated field validators reject it before reaching this function.
   if (value === undefined) {
@@ -150,7 +154,7 @@ function validateJSONValueWithBackend(id: number, value: unknown): ScalarValidat
     if (encoded === undefined) {
       return [false, [{ validator: "type", message: "must be a valid JSON value" }]];
     }
-    backend.validate(id, encoded);
+    backend.validate(scalar, encoded);
     return [true, null];
   } catch (error) {
     return [false, [validationErrorFromLenient(scalarErrorFromUnknown(error))]];
@@ -195,15 +199,15 @@ function convert{{ e.camel }}Value(value: unknown | null): {{ e.camel }} | {% if
 {% if e.allows_json_null %}// The lenient API accepts an already-decoded host JSON value. Use the
 // strict API when the input is serialized JSON text.
 {% endif %}export function parse{{ e.camel }}(value: unknown): {{ e.camel }} | {% if e.allows_json_null %}undefined{% else %}null{% endif %} {
-{% if e.allows_json_null %}  return canonicalizeJSONValue({{ e.id }}, value, "parse") as {{ e.camel }} | undefined;
-{% else %}  return convert{{ e.camel }}Value(coerceValue({{ e.id }}, value));
+{% if e.allows_json_null %}  return canonicalizeJSONValue({{ e.canonical_literal }}, value, "parse") as {{ e.camel }} | undefined;
+{% else %}  return convert{{ e.camel }}Value(coerceValue({{ e.canonical_literal }}, value));
 {% endif %}}
 export function normalize{{ e.camel }}(value: unknown): {{ e.camel }} | {% if e.allows_json_null %}undefined{% else %}null{% endif %} {
-{% if e.allows_json_null %}  return canonicalizeJSONValue({{ e.id }}, value, "normalize") as {{ e.camel }} | undefined;
-{% else %}  return convert{{ e.camel }}Value(coerceValue({{ e.id }}, value));
+{% if e.allows_json_null %}  return canonicalizeJSONValue({{ e.canonical_literal }}, value, "normalize") as {{ e.camel }} | undefined;
+{% else %}  return convert{{ e.camel }}Value(coerceValue({{ e.canonical_literal }}, value));
 {% endif %}}
 export function parse{{ e.camel }}Strict(value: string): {{ e.camel }} {
-  const parsed = convert{{ e.camel }}Value(backend.parse({{ e.id }}, value));
+  const parsed = convert{{ e.camel }}Value(backend.parse({{ e.canonical_literal }}, value));
 {% if e.allows_json_null %}  if (parsed === undefined) {
     throw new Error("invalid {{ e.canonical }}");
   }
@@ -213,7 +217,7 @@ export function parse{{ e.camel }}Strict(value: string): {{ e.camel }} {
 {% endif %}  return parsed;
 }
 export function normalize{{ e.camel }}Strict(value: string): {{ e.camel }} {
-  const normalized = convert{{ e.camel }}Value(backend.normalize({{ e.id }}, value));
+  const normalized = convert{{ e.camel }}Value(backend.normalize({{ e.canonical_literal }}, value));
 {% if e.allows_json_null %}  if (normalized === undefined) {
     throw new Error("invalid {{ e.canonical }}");
   }
@@ -223,8 +227,8 @@ export function normalize{{ e.camel }}Strict(value: string): {{ e.camel }} {
 {% endif %}  return normalized;
 }
 export function validate{{ e.camel }}(value: unknown | null | undefined): ScalarValidationResult {
-{% if e.allows_json_null %}  return validateJSONValueWithBackend({{ e.id }}, value);
-{% else %}  return validateWithBackend({{ e.id }}, value);
+{% if e.allows_json_null %}  return validateJSONValueWithBackend({{ e.canonical_literal }}, value);
+{% else %}  return validateWithBackend({{ e.canonical_literal }}, value);
 {% endif %}}
 
 {% endfor %}

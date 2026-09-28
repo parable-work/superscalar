@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
@@ -158,10 +157,6 @@ fn normalize_duration(input: &str) -> Result<String, ScalarError> {
 pub struct Duration;
 
 impl Scalar for Duration {
-    fn id(&self) -> ScalarId {
-        ScalarId::TEMPORAL_DURATION
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_duration(input)
     }

@@ -10,7 +10,7 @@ import (
 
 // Value stays Go's time.Duration so the parsed, marshaled, and normalized forms all agree on that one representation.
 func ParseDuration(s string) (TemporalDuration, error) {
-	if err := callScalarValidate(scalarIDTemporalDuration, s); err != nil {
+	if err := callScalarValidate(scalarNameTemporalDuration, s); err != nil {
 		return TemporalDuration(0), fmt.Errorf("failed to parse Duration: %w", err)
 	}
 	d, err := time.ParseDuration(s)
@@ -23,7 +23,7 @@ func ParseDuration(s string) (TemporalDuration, error) {
 // The microsecond unit is spelled ASCII "us" (not Go's Unicode micro sign) because that is the cross-language canonical form the core emits.
 func NormalizeDuration(input string) string {
 	trimmed := strings.TrimSpace(input)
-	if err := callScalarValidate(scalarIDTemporalDuration, trimmed); err != nil {
+	if err := callScalarValidate(scalarNameTemporalDuration, trimmed); err != nil {
 		return trimmed
 	}
 	d, err := time.ParseDuration(trimmed)
@@ -34,7 +34,7 @@ func NormalizeDuration(input string) string {
 }
 
 func ValidateDuration(input string) []ValidationError {
-	if err := callScalarValidate(scalarIDTemporalDuration, input); err != nil {
+	if err := callScalarValidate(scalarNameTemporalDuration, input); err != nil {
 		return []ValidationError{{
 			Validator: "custom",
 			Message:   fmt.Sprintf("must be a valid duration: %v", err),

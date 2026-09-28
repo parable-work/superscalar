@@ -5,7 +5,7 @@
 use crate::config::{Config, TypeImport};
 use crate::{
     gofmt, optional_str_literal, render, Context, Emitter, Entry, Postprocessed, RenderError,
-    GO_AFTER_IDS, GO_AFTER_PATTERNS,
+    GO_AFTER_PATTERNS, GO_BEFORE_SCALAR_LIST,
 };
 use serde::Serialize;
 use std::path::PathBuf;
@@ -28,7 +28,7 @@ struct GoView<'a> {
     package: &'a str,
     scalar_list_type: &'a str,
     /// Extension-rendered text for the two anchors, empty when unset.
-    after_ids: &'a str,
+    before_scalar_list: &'a str,
     after_patterns: &'a str,
 }
 
@@ -200,7 +200,7 @@ impl Emitter for Go {
         view.go = Some(GoView {
             package: &go.package,
             scalar_list_type: &go.scalar_list_type,
-            after_ids: insert(GO_AFTER_IDS),
+            before_scalar_list: insert(GO_BEFORE_SCALAR_LIST),
             after_patterns: insert(GO_AFTER_PATTERNS),
         });
         render(

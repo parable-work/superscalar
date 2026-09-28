@@ -4,7 +4,7 @@
 //! built-ins declare no legacy aliases; an extension that needs flat
 //! pre-namespace names supplies them through `Extension::aliases`.
 
-use crate::catalog::ScalarId;
+use crate::catalog::names;
 use crate::metadata;
 use crate::registry::Scalar;
 use crate::scalars;
@@ -13,65 +13,65 @@ use crate::scalars;
 /// take it. Shared with `Definitions` assembly, which reports the same owner.
 pub(crate) const NAME: &str = crate::definitions::BUILTIN_OWNER;
 
-pub(crate) fn impls() -> Vec<(ScalarId, Box<dyn Scalar>)> {
+pub(crate) fn impls() -> Vec<(&'static str, Box<dyn Scalar>)> {
     vec![
         (
-            ScalarId::GEO_LOCATION,
+            names::GEO_LOCATION,
             Box::new(metadata::geo_location::GeoLocation),
         ),
-        (ScalarId::CONTACT_EMAIL, Box::new(scalars::email::Email)),
+        (names::CONTACT_EMAIL, Box::new(scalars::email::Email)),
         (
-            ScalarId::CONTACT_PHONE_NUMBER,
+            names::CONTACT_PHONE_NUMBER,
             Box::new(scalars::phone_number::PhoneNumberScalar),
         ),
-        (ScalarId::DESIGN_COLOR, Box::new(scalars::color::Color)),
+        (names::DESIGN_COLOR, Box::new(scalars::color::Color)),
         (
-            ScalarId::EMBEDDING_VECTOR,
+            names::EMBEDDING_VECTOR,
             Box::new(scalars::embedding_vector::EmbeddingVector),
         ),
-        (ScalarId::GENERIC_JSON, Box::new(scalars::json_scalar::Json)),
+        (names::GENERIC_JSON, Box::new(scalars::json_scalar::Json)),
         (
-            ScalarId::GENERIC_STRING_MAP,
+            names::GENERIC_STRING_MAP,
             Box::new(scalars::generic_string_map::GenericStringMap),
         ),
         (
-            ScalarId::GIT_PATH_PATTERN,
+            names::GIT_PATH_PATTERN,
             Box::new(scalars::git_path_pattern::GitPathPatternScalar),
         ),
         (
-            ScalarId::NETWORK_DNS_LABEL,
+            names::NETWORK_DNS_LABEL,
             Box::new(scalars::network_dns_label::NetworkDnsLabelScalar),
         ),
         (
-            ScalarId::NETWORK_URL,
+            names::NETWORK_URL,
             Box::new(scalars::network_url::NetworkUrlScalar),
         ),
         (
-            ScalarId::IDENTITY_UUID,
+            names::IDENTITY_UUID,
             Box::new(scalars::uuid_scalar::IdentityUuid),
         ),
         (
-            ScalarId::TEMPORAL_RECURRENCE_RULE,
+            names::TEMPORAL_RECURRENCE_RULE,
             Box::new(scalars::recurrence_rule::TemporalRecurrenceRule),
         ),
         (
-            ScalarId::TEMPORAL_DATE,
+            names::TEMPORAL_DATE,
             Box::new(scalars::temporal_date::TemporalDate),
         ),
         (
-            ScalarId::TEMPORAL_DATE_TIME,
+            names::TEMPORAL_DATE_TIME,
             Box::new(scalars::datetime::DateTimeScalar),
         ),
         (
-            ScalarId::TEMPORAL_DURATION,
+            names::TEMPORAL_DURATION,
             Box::new(scalars::duration::Duration),
         ),
         (
-            ScalarId::TEMPORAL_MONTH,
+            names::TEMPORAL_MONTH,
             Box::new(scalars::temporal_month::TemporalMonth),
         ),
         (
-            ScalarId::TEMPORAL_QUARTER_YEAR,
+            names::TEMPORAL_QUARTER_YEAR,
             Box::new(scalars::temporal_quarter_year::TemporalQuarterYear),
         ),
     ]

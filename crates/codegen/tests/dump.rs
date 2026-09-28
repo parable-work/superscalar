@@ -29,15 +29,18 @@ fn keys_are_in_a_fixed_order() {
             "legacy_aliases"
         ]
     );
-    assert_eq!(top["dump_version"], 1);
+    assert_eq!(top["dump_version"], 2);
 
     let scalars = top["scalars"].as_array().expect("scalars array");
     assert_eq!(scalars.len(), Registry::builtin().len());
-    let ids: Vec<u64> = scalars
+    let names: Vec<&str> = scalars
         .iter()
-        .map(|scalar| scalar["id"].as_u64().expect("id"))
+        .map(|scalar| scalar["canonical"].as_str().expect("canonical"))
         .collect();
-    assert!(ids.windows(2).all(|pair| pair[0] < pair[1]), "ids ascend");
+    assert!(
+        names.windows(2).all(|pair| pair[0] < pair[1]),
+        "names ascend"
+    );
 
     let first_keys: Vec<&str> = scalars[0]
         .as_object()
@@ -48,7 +51,6 @@ fn keys_are_in_a_fixed_order() {
     assert_eq!(
         first_keys,
         [
-            "id",
             "canonical",
             "namespace",
             "extension",
@@ -98,7 +100,7 @@ fn keys_are_in_a_fixed_order() {
         .iter()
         .find(|scalar| scalar["canonical"] == "Contact.Email")
         .expect("Contact.Email");
-    assert_eq!(email["id"], 8);
+    assert!(email.get("id").is_none(), "no scalar carries a numeric id");
     assert_eq!(email["extension"], "builtin");
     assert_eq!(
         email["type_mappings"][0],

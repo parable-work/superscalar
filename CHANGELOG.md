@@ -49,15 +49,13 @@ bump they require (minor when loosening, major when tightening).
   invariants also reject a class spanning two SQL types with no coercion
   between them and a class declared on an alias. No relation changes for any
   built-in.
-- Scalars: `Ordering.Rank` (id 63, a positive JavaScript-safe integer),
-  `Version.SemVer` (64, canonical Semantic Versioning 2.0.0),
-  `Git.PathPattern` (66, a repository-rooted gitignore-style pattern, a deep
+- Scalars: `Ordering.Rank` (a positive JavaScript-safe integer),
+  `Version.SemVer` (canonical Semantic Versioning 2.0.0),
+  `Git.PathPattern` (a repository-rooted gitignore-style pattern, a deep
   scalar whose escape state is the parity of each backslash run, so `\\[b]`
   opens a class and `\\ ` leaves a bare trailing space) and
-  `AgentSkill.Name` (67, an Agent Skills directory and
-  frontmatter name). Ids 61, 62 and 65 are held by a downstream extension and
-  join the permanent holes; the next free built-in id is 68. New accept sets
-  with vectors, a minor bump.
+  `AgentSkill.Name` (an Agent Skills directory and frontmatter name). New
+  accept sets with vectors, a minor bump.
 - Go: `ScalarMetadata` carries `TypeScriptType`, `PythonType` and `RustType`
   beside `GoType`; `GenericJSON` implements `driver.Valuer` and `sql.Scanner`
   and keeps SQL NULL distinct from an explicit JSON `null`.
@@ -66,7 +64,7 @@ bump they require (minor when loosening, major when tightening).
   module path from the optional `[typescript] json_value_module` key
   (default `./json-value`).
 - WASM: `scalar_parse` throws an error named `ScalarParseError` when the core
-  rejects the input; an unknown scalar id still throws a plain `Error`, so a
+  rejects the input; an unknown scalar name still throws a plain `Error`, so a
   caller can tell an invalid value from a runtime failure. `run_parse` and
   the `scalar_parse` export of `export_wasm!` return `Result<String, JsValue>`
   (was `JsError`); a downstream that applies the macro needs no change.
@@ -86,16 +84,40 @@ bump they require (minor when loosening, major when tightening).
   defs)])` and `try_assemble` build it from static `ScalarDef` slices, never
   through `Extension`, so a consumer that only reads definitions links no
   scalar implementation (a size-capped WASM bundle is the motivating case).
-  It answers `def`, `by_canonical`, `resolved`, `comparable_with`, `ids`,
-  `defs`, `len` and `is_empty` with the `Registry` semantics, and runs the
-  def-level assembly checks (duplicate id, duplicate canonical name,
-  namespace, dangling and chained alias) with the same `AssemblyError`.
+  It answers `def`, `resolved`, `comparable_with`, `names`, `defs`, `len`
+  and `is_empty` with the `Registry` semantics, and runs the def-level
+  assembly checks (duplicate canonical name, namespace, dangling and chained
+  alias) with the same `AssemblyError`.
   `Registry` assembles one first and delegates those lookups to it;
   `Registry::definitions()` returns it. `scalar_def` reads
   `Definitions::builtin()`. Additive; no `Registry` behaviour changes.
 
 ### Changed
 
+- A scalar's canonical name is its only identity; numeric scalar ids are
+  gone. Every C ABI entry point takes the name where it took a `uint32_t`
+  (`scalar_parse(const char *scalar, const char *input)` and the other eight),
+  and so do the WASM, napi and PyO3 exports. An unknown name fails with
+  `unknown scalar "<name>"`. In Rust, `ScalarId` gives way to `&str` names and
+  a `names` module of built-in constants (`names::CONTACT_EMAIL`); `Registry`
+  and `Definitions` look scalars up by name (`def`, `scalar`, `owner`,
+  `resolved`, `comparable_with`, `scalar_for`, `scalar_def`), iterate in name
+  order (`names()` replaces `ids()`), and `by_canonical` folds into `def`.
+  `ScalarDef::id` is removed and `alias_of` holds the target's name.
+  `Extension` loses `id_base` and keys `impls` by name. `Scalar::id`,
+  `AssembleOptions`, `allow_legacy_ids`, `ExtensionInfo` and the id assembly
+  errors (`DuplicateId`, `IdBaseNotAligned`, `IdBaseReserved`,
+  `IdOutOfBlock`, `ImplIdMismatch`) are removed; `ForeignImpl`,
+  `DanglingAlias` and `AliasChain` carry names, and `Registry::extensions()`
+  returns extension names. The registry dump is `dump_version` 2: no `id`,
+  `alias_of` by name, `extensions` as a list of names. The generated
+  bindings key on names: Go drops `ScalarIDByCanonical` (`VALID_SCALARS` and
+  `KnownScalar` remain), TypeScript replaces `scalarIdByCanonical` and Python
+  replaces `SCALAR_ID_BY_CANONICAL` with `VALID_SCALARS`, and Python drops
+  `_native_ids`. The Go codegen anchor `go.after_ids` is now
+  `go.before_scalar_list`. Generated files and the dump list scalars in name
+  order. Breaking for every consumer, and made before the first release so
+  the ids never become part of the ABI. No accept-set or vector change.
 - `superscalar-python` builds with pyo3 0.29 (was 0.25). An extension's
   PyO3 module crate must depend on pyo3 0.29 too, since Cargo refuses two
   pyo3 minors in one graph; the acme example moves with it.
@@ -148,7 +170,7 @@ bump they require (minor when loosening, major when tightening).
 
 - The build-an-extension guide describes `examples/acme-scalars/` as it
   ships: the extension crate, the four binding crates, the smoke and
-  third-scalar scripts, ids 4096 and 4097. It no longer claims the example
+  third-scalar scripts. It no longer claims the example
   has a `superscalar.toml`, an xtask or generated Go, Python and TypeScript
   packages; codegen is presented as the next step for a real extension. The
   sample `superscalar.toml` now parses (`[registry] source = "builtin"`,

@@ -35,7 +35,7 @@ criteria.
 ## 2. Write the module (deep and structural only)
 
 Create `crates/core/src/scalars/<name>.rs` and implement the `Scalar` trait:
-`id`, `parse`, `normalize`, `validate`. Keep the three consistent with the
+`parse`, `normalize`, `validate`. Keep the three consistent with the
 contract: `parse` returns the canonical form or an error, `normalize` moves
 toward canonical form without enforcing shape, `validate` is `parse` without
 the value. The email scalar is a small model to copy from: `normalize` trims
@@ -46,18 +46,21 @@ Errors use `ScalarError::new(ErrorKind::..., message)`. Pick the kind the
 input actually failed (`Empty`, `Pattern`, `Length`, `Parse`, and so on);
 the conformance vectors record it.
 
-Register the module in `crates/core/src/scalars/mod.rs`. Under the open
-registry, the implementation is listed in the built-in extension's `impls()`;
-until that lands, it is one arm in the dispatch table. The assembly guard
+Register the module in `crates/core/src/scalars/mod.rs` and list the
+implementation under the scalar's name in `impls()` in
+`crates/core/src/builtin.rs`. The assembly guard
 fails the build if a `CustomLogic` definition has no implementation, so a
 forgotten registration is caught.
 
 ## 3. Add the definition
 
-Append a `ScalarDef` to the built-in catalog in `crates/core/src/catalog.rs`
-with the next free id. Ids are append-only; the next free built-in id is 68,
-and the holes below it are not reusable. Fill every field: canonical name and
-namespace, primitive, `sql_type`, `json_schema_type`, tag, the declarative
+Add the canonical name to `builtin_names!` in `crates/core/src/catalog.rs`
+(the constant, such as `names::CONTACT_EMAIL`, is what Rust callers use), add
+it to the frozen name table in `crates/core/tests/assembly.rs`, and add a
+`ScalarDef` to `CATALOG` with `canonical` set to that constant. The name is
+the scalar's identity and is append-only: it is never renamed or reused, and
+it must not be a name a known extension already declares, or assembly with
+that extension fails. Fill every field: canonical name and namespace, primitive, `sql_type`, `json_schema_type`, tag, the declarative
 rules, `examples` (at least one), a non-empty `description`, and
 `type_mappings` for typescript, python, go, rust, sql and json_schema.
 
@@ -125,14 +128,15 @@ you open a pull request.
 
 ## 7. Changelog
 
-Add a line under the unreleased heading in `CHANGELOG.md` naming the scalar
-and its id. A new scalar is a minor version change.
+Add a line under the unreleased heading in `CHANGELOG.md` naming the scalar.
+A new scalar is a minor version change.
 
 ## Checklist
 
 - Module implements `parse`, `normalize`, `validate` consistently (deep and
   structural only).
-- Definition appended with the next free id; every field filled;
+- Name added to `builtin_names!` and the frozen name table; definition added
+  to `CATALOG`; every field filled;
   `description` non-empty.
 - Vectors cover accept, reject per validator, and the canonical form.
 - Metadata row added; `non_sortable_count` adjusted if needed.

@@ -13,7 +13,7 @@ func NormalizeColor(input string) string {
 	if trimmed == "" {
 		return trimmed
 	}
-	normalized, err := callScalarNormalize(scalarIDDesignColor, input)
+	normalized, err := callScalarNormalize(scalarNameDesignColor, input)
 	if err != nil {
 		return trimmed
 	}

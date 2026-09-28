@@ -3,15 +3,17 @@
 //! absolute URL. Validation (pattern + max length) stays the catalog's, borrowed
 //! via `DirectiveScalar` so the URL pattern lives in exactly one place.
 
-use crate::catalog::ScalarId;
 use crate::directive::DirectiveScalar;
 use crate::error::ScalarError;
 use crate::registry::{Registry, Scalar};
 use once_cell::sync::Lazy;
 
 // Borrow the catalog's pattern/length rules rather than restating them here.
-static ENGINE: Lazy<DirectiveScalar> =
-    Lazy::new(|| DirectiveScalar::from_def(crate::registry::scalar_def(ScalarId::NETWORK_URL)));
+static ENGINE: Lazy<DirectiveScalar> = Lazy::new(|| {
+    DirectiveScalar::from_def(crate::registry::scalar_def(
+        crate::catalog::names::NETWORK_URL,
+    ))
+});
 
 pub struct NetworkUrlScalar;
 
@@ -33,10 +35,6 @@ impl NetworkUrlScalar {
 }
 
 impl Scalar for NetworkUrlScalar {
-    fn id(&self) -> ScalarId {
-        ScalarId::NETWORK_URL
-    }
-
     fn normalize(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         Ok(Self::canonical(input))
     }

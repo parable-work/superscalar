@@ -4,11 +4,10 @@
 const assert = require("node:assert");
 const wasm = require("../pkg/superscalar_wasm.js");
 
-// Frozen ScalarId discriminants (see crates/core/src/catalog.rs).
-// The codegen crate generates named constants; the smoke test hardcodes a few.
-const CONTACT_EMAIL = 8;
-const IDENTITY_UUID = 23;
-const DESIGN_COLOR = 12;
+// Every export names its scalar by canonical name.
+const CONTACT_EMAIL = "Contact.Email";
+const IDENTITY_UUID = "Identity.UUID";
+const DESIGN_COLOR = "Design.Color";
 
 // Email canonical form is trim + lowercase (asserted exactly).
 assert.strictEqual(wasm.scalar_parse(CONTACT_EMAIL, "Foo@Bar.com"), "foo@bar.com");
@@ -19,7 +18,7 @@ assert.ok(wasm.scalar_parse(IDENTITY_UUID, "550e8400-e29b-41d4-a716-446655440000
 assert.ok(wasm.scalar_parse(DESIGN_COLOR, "#ff0000").length > 0);
 
 // A rejected value throws an error named ScalarParseError; an unknown scalar
-// id throws a plain error, so a caller can tell the two apart.
+// name throws a plain error, so a caller can tell the two apart.
 assert.throws(() => wasm.scalar_parse(CONTACT_EMAIL, "not-an-email"), {
   name: "ScalarParseError",
 });
@@ -27,10 +26,10 @@ assert.throws(() => wasm.scalar_parse(IDENTITY_UUID, "not-a-uuid"), {
   name: "ScalarParseError",
 });
 assert.throws(
-  () => wasm.scalar_parse(9999, "anything"),
+  () => wasm.scalar_parse("No.Such", "anything"),
   (error) => {
     assert.notStrictEqual(error.name, "ScalarParseError");
-    assert.match(error.message, /unknown scalar id/);
+    assert.match(error.message, /unknown scalar "No\.Such"/);
     return true;
   },
 );

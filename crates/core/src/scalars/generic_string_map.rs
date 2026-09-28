@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
@@ -32,10 +31,6 @@ fn normalize_string_map(input: &str) -> Result<String, ScalarError> {
 pub struct GenericStringMap;
 
 impl Scalar for GenericStringMap {
-    fn id(&self) -> ScalarId {
-        ScalarId::GENERIC_STRING_MAP
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_string_map(input)
     }

@@ -45,7 +45,7 @@ fn registry_dump_is_stable_across_runs() {
         stdout(&first),
         superscalar_codegen::dump_to_string(superscalar::Registry::builtin())
     );
-    assert!(stdout(&first).starts_with("{\n  \"dump_version\": 1,\n"));
+    assert!(stdout(&first).starts_with("{\n  \"dump_version\": 2,\n"));
 }
 
 #[test]

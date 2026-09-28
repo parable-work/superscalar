@@ -42,11 +42,10 @@ not shipped.
 
 ## What each runner checks
 
-Each runner iterates `scalars`, resolves the canonical name to a numeric id
-through the generated table of the binding under test (`ScalarIDByCanonical`
-in Go, `scalarIdByCanonical` in TypeScript, `SCALAR_ID_BY_CANONICAL` in
-Python, `Registry::by_canonical` in Rust), and calls the binding's parse. A
-key the table lacks fails the run, which is how a vector file from the wrong
+Each runner iterates `scalars` and calls the binding's parse with the
+canonical name, the scalar's only identity. A key the binding does not know
+fails the run (`KnownScalar` in Go, `VALID_SCALARS` in TypeScript and Python,
+`Registry::scalar` in Rust), which is how a vector file from the wrong
 assembly is caught.
 
 Beyond parse, the runners assert the metadata section: every scalar in

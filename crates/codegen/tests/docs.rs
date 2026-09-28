@@ -6,8 +6,7 @@ mod common;
 use std::fs;
 use std::path::PathBuf;
 use superscalar::{
-    Extension, LegacyAlias, PrimitiveKind, Registry, Scalar, ScalarDef, ScalarHooks, ScalarId,
-    ScalarTag,
+    Extension, LegacyAlias, PrimitiveKind, Registry, Scalar, ScalarDef, ScalarHooks, ScalarTag,
 };
 use superscalar_codegen::docs::{self, page_slug, Vectors};
 
@@ -48,10 +47,9 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
 
     let email = fs::read_to_string(out.join("contact-email.md")).expect("page");
     assert!(email.starts_with(
-        "---\ntitle: Contact.Email\ndescription: \"An email address\"\nsidebar:\n  order: 3\n---\n"
+        "---\ntitle: Contact.Email\ndescription: \"An email address\"\nsidebar:\n  order: 4\n---\n"
     ));
     assert!(email.contains("| Canonical name | `Contact.Email` |"));
-    assert!(email.contains("| Id | 8 |"));
     assert!(email.contains("| Namespace | Contact |"));
     assert!(email.contains("| Primitive | String |"));
     assert!(email.contains("| SQL type | `CITEXT` |"));
@@ -74,7 +72,7 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
     assert!(email.contains("`parseContactEmail`, `normalizeContactEmail`, `validateContactEmail`"));
     assert!(email
         .contains("`parse_contact_email`, `normalize_contact_email`, `validate_contact_email`"));
-    assert!(email.contains("`Registry::scalar(ScalarId(8))`"));
+    assert!(email.contains("`Registry::scalar(\"Contact.Email\")`"));
 
     // Object scalars have no Go functions, and the Go UUID override reaches
     // the per-language table.
@@ -127,9 +125,8 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
     fs::remove_dir_all(&out).expect("remove temp dir");
 }
 
-const fn acme_def(id: u32, canonical: &'static str, description: &'static str) -> ScalarDef {
+const fn acme_def(canonical: &'static str, description: &'static str) -> ScalarDef {
     ScalarDef {
-        id: ScalarId(id),
         namespace: "Acme",
         canonical,
         primitive: PrimitiveKind::String,
@@ -167,8 +164,8 @@ const fn acme_def(id: u32, canonical: &'static str, description: &'static str) -
 }
 
 static ACME_DEFS: [ScalarDef; 2] = [
-    acme_def(4096, "Acme.Widget", "A widget name"),
-    acme_def(4097, "Acme.Undescribed", ""),
+    acme_def("Acme.Widget", "A widget name"),
+    acme_def("Acme.Undescribed", ""),
 ];
 
 struct Acme;
@@ -177,13 +174,10 @@ impl Extension for Acme {
     fn name(&self) -> &'static str {
         "acme"
     }
-    fn id_base(&self) -> u32 {
-        4096
-    }
     fn defs(&self) -> &'static [ScalarDef] {
         &ACME_DEFS
     }
-    fn impls(&self) -> Vec<(ScalarId, Box<dyn Scalar>)> {
+    fn impls(&self) -> Vec<(&'static str, Box<dyn Scalar>)> {
         Vec::new()
     }
     fn aliases(&self) -> &'static [LegacyAlias] {
@@ -202,9 +196,9 @@ fn check_fails_a_scalar_with_no_vectors_or_no_description() {
     assert_eq!(
         problems,
         vec![
-            "Acme.Widget: no conformance vectors".to_string(),
             "Acme.Undescribed: no description".to_string(),
             "Acme.Undescribed: no conformance vectors".to_string(),
+            "Acme.Widget: no conformance vectors".to_string(),
         ]
     );
 
@@ -244,7 +238,8 @@ fn check_fails_a_scalar_with_no_vectors_or_no_description() {
     assert_eq!(report.pages, 50);
     let widget = fs::read_to_string(out.join("acme-widget.md")).expect("page");
     assert!(widget.contains("| Owner | acme |"));
-    assert!(widget.contains("| Id | 4096 |"));
+    assert!(widget.contains("| Canonical name | `Acme.Widget` |"));
+    assert!(widget.contains("`Registry::scalar(\"Acme.Widget\")`"));
     assert!(widget.contains("| `widget` | `widget` |"));
     let undescribed = fs::read_to_string(out.join("acme-undescribed.md")).expect("page");
     assert!(undescribed.contains("No accepted vectors in the conformance corpus."));

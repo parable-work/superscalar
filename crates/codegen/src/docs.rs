@@ -160,7 +160,7 @@ pub fn check(registry: &Registry, vectors: &Vectors) -> Vec<String> {
         }
     }
     for canonical in vectors.scalars.keys() {
-        if registry.by_canonical(canonical).is_none() {
+        if registry.def(canonical).is_none() {
             problems.push(format!(
                 "{canonical}: vectors name a scalar the registry does not hold"
             ));
@@ -261,7 +261,7 @@ pub fn render_page(
     let canonical = def.canonical;
     let symbol = symbol_from_canonical(canonical);
     let snake = to_snake(&symbol);
-    let owner = registry.owner(def.id).unwrap_or("builtin");
+    let owner = registry.owner(canonical).unwrap_or("builtin");
     let mut out = frontmatter(canonical, def.description, order);
 
     out.push('\n');
@@ -275,7 +275,6 @@ pub fn render_page(
 
     out.push_str("\n## Identity\n\n| Field | Value |\n| --- | --- |\n");
     out.push_str(&format!("| Canonical name | `{canonical}` |\n"));
-    out.push_str(&format!("| Id | {} |\n", def.id.as_u32()));
     out.push_str(&format!("| Namespace | {} |\n", def.namespace));
     out.push_str(&format!("| Owner | {owner} |\n"));
     out.push_str(&format!("| Primitive | {:?} |\n", def.primitive));
@@ -411,9 +410,8 @@ pub fn render_page(
         code_cell(&type_mapping(def, "python"))
     ));
     out.push_str(&format!(
-        "| Rust | {} | `Registry::scalar(ScalarId({}))` |\n",
+        "| Rust | {} | `Registry::scalar(\"{canonical}\")` |\n",
         code_cell(&type_mapping(def, "rust")),
-        def.id.as_u32()
     ));
     out
 }
@@ -433,7 +431,7 @@ pub fn render_index(registry: &Registry, config: &Config) -> String {
     out.push_str(&format!(
         "\nThe {} pages in this section are generated from the registry and the\n\
          conformance corpus; do not edit them. Each carries the scalar's canonical\n\
-         name and id, its primitive, SQL and JSON Schema types, its pattern and\n\
+         name, its primitive, SQL and JSON Schema types, its pattern and\n\
          bounds, examples, accepted and rejected inputs from the corpus, its type\n\
          in each language and the generated function names. If a page is wrong,\n\
          fix the registry entry or the vectors and regenerate.\n",
@@ -446,14 +444,13 @@ pub fn render_index(registry: &Registry, config: &Config) -> String {
     }
     for (namespace, defs) in by_namespace {
         out.push_str(&format!(
-            "\n## {namespace}\n\n| Scalar | Id | Primitive | Description |\n| --- | --- | --- | --- |\n"
+            "\n## {namespace}\n\n| Scalar | Primitive | Description |\n| --- | --- | --- |\n"
         ));
         for def in defs {
             out.push_str(&format!(
-                "| [{}]({link_prefix}/{}/) | {} | {:?} | {} |\n",
+                "| [{}]({link_prefix}/{}/) | {:?} | {} |\n",
                 def.canonical,
                 page_slug(def.canonical),
-                def.id.as_u32(),
                 def.primitive,
                 text_cell(def.description.trim())
             ));

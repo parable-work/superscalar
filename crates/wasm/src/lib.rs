@@ -9,7 +9,7 @@
 //! `default-features = false`, and ships the same four exports; the macro
 //! checks that at compile time through `BUILTIN_ASSEMBLY`.
 
-use superscalar::{Registry, Scalar, ScalarId};
+use superscalar::{Registry, Scalar};
 use wasm_bindgen::{JsError, JsValue};
 
 /// True when this build of the crate carries the built-in assembly (the
@@ -18,25 +18,30 @@ use wasm_bindgen::{JsError, JsValue};
 /// export twice and fail to link.
 pub const BUILTIN_ASSEMBLY: bool = cfg!(feature = "builtin");
 
-/// The scalar serving `scalar_id` in `registry`, or the JS error the exports
-/// throw for an id no extension declared.
-pub fn resolve(registry: &Registry, scalar_id: u32) -> Result<&dyn Scalar, JsError> {
+/// The scalar named `scalar` (a canonical name such as `"Contact.Email"`) in
+/// `registry`, or the JS error the exports throw for a name no extension
+/// declared.
+pub fn resolve<'r>(registry: &'r Registry, scalar: &str) -> Result<&'r dyn Scalar, JsError> {
     registry
-        .scalar(ScalarId(scalar_id))
-        .ok_or_else(|| JsError::new("unknown scalar id"))
+        .scalar(scalar)
+        .ok_or_else(|| unknown_scalar(scalar))
+}
+
+fn unknown_scalar(scalar: &str) -> JsError {
+    JsError::new(&format!("unknown scalar {scalar:?}"))
 }
 
 /// The `name` of the JS error `scalar_parse` throws when the core rejects the
-/// input. An unknown scalar id or a failed host call throws a plain `Error`,
+/// input. An unknown scalar name or a failed host call throws a plain `Error`,
 /// so a caller can tell an invalid value from a runtime failure.
 pub const SCALAR_PARSE_ERROR_NAME: &str = "ScalarParseError";
 
 /// `parse` over `registry`. A rejected value becomes a JS `Error` named
-/// `ScalarParseError` carrying the core's message; an unknown id stays a plain
+/// `ScalarParseError` carrying the core's message; an unknown name stays a plain
 /// `Error`. A consumer can then use the parser for advisory validation without
 /// turning a runtime failure into an invalid value.
-pub fn run_parse(registry: &Registry, scalar_id: u32, input: &str) -> Result<String, JsValue> {
-    let scalar = resolve(registry, scalar_id)?;
+pub fn run_parse(registry: &Registry, scalar: &str, input: &str) -> Result<String, JsValue> {
+    let scalar = resolve(registry, scalar)?;
     scalar.parse(registry, input).map_err(|err| {
         let error = js_sys::Error::new(&err.to_string());
         error.set_name(SCALAR_PARSE_ERROR_NAME);
@@ -45,30 +50,28 @@ pub fn run_parse(registry: &Registry, scalar_id: u32, input: &str) -> Result<Str
 }
 
 /// `normalize` over `registry`.
-pub fn run_normalize(registry: &Registry, scalar_id: u32, input: &str) -> Result<String, JsError> {
-    resolve(registry, scalar_id)?
+pub fn run_normalize(registry: &Registry, scalar: &str, input: &str) -> Result<String, JsError> {
+    resolve(registry, scalar)?
         .normalize(registry, input)
         .map_err(|err| JsError::new(&err.to_string()))
 }
 
 /// `validate` over `registry`.
-pub fn run_validate(registry: &Registry, scalar_id: u32, input: &str) -> Result<(), JsError> {
-    resolve(registry, scalar_id)?
+pub fn run_validate(registry: &Registry, scalar: &str, input: &str) -> Result<(), JsError> {
+    resolve(registry, scalar)?
         .validate(registry, input)
         .map_err(|err| JsError::new(&err.to_string()))
 }
 
 /// Lenient coercion over `registry`: JSON document in, the serialized
-/// `LenientCoerceResult` JSON out. Throws only on an unknown id or unparseable
+/// `LenientCoerceResult` JSON out. Throws only on an unknown name or unparseable
 /// `json_in`; a captured coercion failure is carried in the result's `error`.
 pub fn run_coerce_lenient(
     registry: &Registry,
-    scalar_id: u32,
+    scalar: &str,
     json_in: &str,
 ) -> Result<String, JsError> {
-    let def = registry
-        .def(ScalarId(scalar_id))
-        .ok_or_else(|| JsError::new("unknown scalar id"))?;
+    let def = registry.def(scalar).ok_or_else(|| unknown_scalar(scalar))?;
     let value: serde_json::Value =
         serde_json::from_str(json_in).map_err(|_| JsError::new("invalid json"))?;
     let result = registry.coerce_lenient(&value, def.canonical);
@@ -104,37 +107,37 @@ macro_rules! export_wasm {
         /// reject, with an error named `ScalarParseError`.
         #[::wasm_bindgen::prelude::wasm_bindgen]
         pub fn scalar_parse(
-            scalar_id: u32,
+            scalar: &str,
             input: &str,
         ) -> Result<String, ::wasm_bindgen::JsValue> {
-            $crate::run_parse($registry(), scalar_id, input)
+            $crate::run_parse($registry(), scalar, input)
         }
 
         /// Transform toward canonical form without enforcing shape.
         #[::wasm_bindgen::prelude::wasm_bindgen]
         pub fn scalar_normalize(
-            scalar_id: u32,
+            scalar: &str,
             input: &str,
         ) -> Result<String, ::wasm_bindgen::JsError> {
-            $crate::run_normalize($registry(), scalar_id, input)
+            $crate::run_normalize($registry(), scalar, input)
         }
 
         /// Enforce shape; returns nothing on success, throws on reject.
         #[::wasm_bindgen::prelude::wasm_bindgen]
-        pub fn scalar_validate(scalar_id: u32, input: &str) -> Result<(), ::wasm_bindgen::JsError> {
-            $crate::run_validate($registry(), scalar_id, input)
+        pub fn scalar_validate(scalar: &str, input: &str) -> Result<(), ::wasm_bindgen::JsError> {
+            $crate::run_validate($registry(), scalar, input)
         }
 
         /// Lenient ("flag, don't block") coercion: JSON document in, the serialized
         /// `LenientCoerceResult` JSON (`{"value":<json|null>,"error":<{kind,message}|null>}`)
-        /// out. Throws only on an unknown id or unparseable `json_in`; a captured
+        /// out. Throws only on an unknown name or unparseable `json_in`; a captured
         /// coercion failure is carried in the result's `error`, not thrown.
         #[::wasm_bindgen::prelude::wasm_bindgen]
         pub fn scalar_coerce_lenient(
-            scalar_id: u32,
+            scalar: &str,
             json_in: &str,
         ) -> Result<String, ::wasm_bindgen::JsError> {
-            $crate::run_coerce_lenient($registry(), scalar_id, json_in)
+            $crate::run_coerce_lenient($registry(), scalar, json_in)
         }
     };
 }

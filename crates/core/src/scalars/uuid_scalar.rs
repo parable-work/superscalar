@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use serde::de::{self, Visitor};
@@ -67,10 +66,6 @@ fn parse_canonical(input: &str) -> Result<uuid::Uuid, ScalarError> {
 pub struct IdentityUuid;
 
 impl Scalar for IdentityUuid {
-    fn id(&self) -> ScalarId {
-        ScalarId::IDENTITY_UUID
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         parse_canonical(input).map(encode_base62)
     }

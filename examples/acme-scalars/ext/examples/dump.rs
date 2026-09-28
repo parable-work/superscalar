@@ -1,6 +1,6 @@
 //! Print the assembled registry as JSON. scripts/smoke.sh reads the
-//! canonical-name-to-id table from it, the way generated bindings would from a
-//! codegen run.
+//! canonical names from it, the way generated bindings would from a codegen
+//! run.
 //!
 //!     cargo run -p acme-scalars --example dump > registry.json
 

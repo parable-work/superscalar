@@ -7,7 +7,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
 use std::slice;
-use superscalar::{scalar_for, Registry, ScalarId};
+use superscalar::{names, scalar_for, Registry};
 
 fn cstr(s: &str) -> CString {
     CString::new(s).expect("test input has no interior NUL")
@@ -15,12 +15,12 @@ fn cstr(s: &str) -> CString {
 
 #[test]
 fn parse_valid_email_matches_core_and_frees() {
-    let id = ScalarId::CONTACT_EMAIL.as_u32();
-    let expected = scalar_for(ScalarId::CONTACT_EMAIL)
+    let id = cstr(names::CONTACT_EMAIL);
+    let expected = scalar_for(names::CONTACT_EMAIL)
         .parse(Registry::builtin(), "Foo@Bar.com")
         .expect("valid email parses in core");
     let input = cstr("Foo@Bar.com");
-    let result = unsafe { scalar_parse(id, input.as_ptr()) };
+    let result = unsafe { scalar_parse(id.as_ptr(), input.as_ptr()) };
     assert!(result.ok);
     assert_eq!(result.value.kind, ValueKind::Str);
     assert!(result.error.is_null());
@@ -44,7 +44,7 @@ fn error_message(result: &ScalarResult) -> String {
 fn parse_invalid_email_reports_pattern_error() {
     let result = unsafe {
         scalar_parse(
-            ScalarId::CONTACT_EMAIL.as_u32(),
+            cstr(names::CONTACT_EMAIL).as_ptr(),
             cstr("not-an-email").as_ptr(),
         )
     };
@@ -56,17 +56,45 @@ fn parse_invalid_email_reports_pattern_error() {
 }
 
 #[test]
-fn unknown_scalar_id_is_clean_error() {
-    let result = unsafe { scalar_parse(9_999, cstr("anything").as_ptr()) };
+fn unknown_scalar_name_is_clean_error() {
+    // Names are exact and case-sensitive: a lowercased built-in is unknown.
+    for unknown in ["No.Such", "contact.email", ""] {
+        let result = unsafe { scalar_parse(cstr(unknown).as_ptr(), cstr("anything").as_ptr()) };
+        assert!(!result.ok);
+        assert_eq!(result.error_category, ErrorCategory::Parse);
+        assert_eq!(
+            error_message(&result),
+            format!("parse: unknown scalar {unknown:?}")
+        );
+        unsafe { scalar_result_free(result) };
+    }
+}
+
+#[test]
+fn null_scalar_name_is_clean_error() {
+    let result = unsafe { scalar_parse(ptr::null(), cstr("anything").as_ptr()) };
     assert!(!result.ok);
     assert_eq!(result.error_category, ErrorCategory::Parse);
-    assert_eq!(error_message(&result), "parse: unknown scalar id");
+    assert_eq!(error_message(&result), "parse: null scalar name pointer");
+    unsafe { scalar_result_free(result) };
+}
+
+#[test]
+fn non_utf8_scalar_name_is_clean_error() {
+    let bad = CString::new(vec![0xff_u8, 0xfe]).expect("no interior NUL");
+    let result = unsafe { scalar_validate(bad.as_ptr(), cstr("anything").as_ptr()) };
+    assert!(!result.ok);
+    assert_eq!(result.error_category, ErrorCategory::Parse);
+    assert_eq!(
+        error_message(&result),
+        "parse: scalar name was not valid UTF-8"
+    );
     unsafe { scalar_result_free(result) };
 }
 
 #[test]
 fn null_input_is_clean_error() {
-    let result = unsafe { scalar_parse(ScalarId::CONTACT_EMAIL.as_u32(), ptr::null()) };
+    let result = unsafe { scalar_parse(cstr(names::CONTACT_EMAIL).as_ptr(), ptr::null()) };
     assert!(!result.ok);
     assert_eq!(error_message(&result), "parse: null input pointer");
     unsafe { scalar_result_free(result) };
@@ -75,7 +103,7 @@ fn null_input_is_clean_error() {
 #[test]
 fn non_utf8_input_is_clean_error() {
     let bad = CString::new(vec![0xff_u8, 0xfe]).expect("no interior NUL");
-    let result = unsafe { scalar_parse(ScalarId::CONTACT_EMAIL.as_u32(), bad.as_ptr()) };
+    let result = unsafe { scalar_parse(cstr(names::CONTACT_EMAIL).as_ptr(), bad.as_ptr()) };
     assert!(!result.ok);
     assert_eq!(error_message(&result), "parse: input was not valid UTF-8");
     unsafe { scalar_result_free(result) };
@@ -84,11 +112,11 @@ fn non_utf8_input_is_clean_error() {
 #[test]
 fn normalize_matches_core() {
     for input in ["Foo@Bar.com", "  MixedCase@Example.COM  "] {
-        let expected = scalar_for(ScalarId::CONTACT_EMAIL)
+        let expected = scalar_for(names::CONTACT_EMAIL)
             .normalize(Registry::builtin(), input)
             .expect("normalizes");
         let result =
-            unsafe { scalar_normalize(ScalarId::CONTACT_EMAIL.as_u32(), cstr(input).as_ptr()) };
+            unsafe { scalar_normalize(cstr(names::CONTACT_EMAIL).as_ptr(), cstr(input).as_ptr()) };
         assert!(result.ok);
         let got = unsafe { CStr::from_ptr(result.value.str_ptr) }
             .to_str()
@@ -102,7 +130,7 @@ fn normalize_matches_core() {
 fn validate_reports_ok_without_a_value() {
     let ok = unsafe {
         scalar_validate(
-            ScalarId::CONTACT_EMAIL.as_u32(),
+            cstr(names::CONTACT_EMAIL).as_ptr(),
             cstr("foo@bar.com").as_ptr(),
         )
     };
@@ -110,7 +138,8 @@ fn validate_reports_ok_without_a_value() {
     assert!(ok.value.str_ptr.is_null());
     unsafe { scalar_result_free(ok) };
 
-    let bad = unsafe { scalar_validate(ScalarId::CONTACT_EMAIL.as_u32(), cstr("nope").as_ptr()) };
+    let bad =
+        unsafe { scalar_validate(cstr(names::CONTACT_EMAIL).as_ptr(), cstr("nope").as_ptr()) };
     assert!(!bad.ok);
     unsafe { scalar_result_free(bad) };
 }
@@ -130,18 +159,15 @@ fn guard_converts_panic_to_error() {
 #[test]
 fn dispatch_conforms_to_core_across_scalars() {
     let accepts = [
-        (ScalarId::CONTACT_EMAIL, "Alice@Example.com"),
-        (
-            ScalarId::IDENTITY_UUID,
-            "550e8400-e29b-41d4-a716-446655440000",
-        ),
-        (ScalarId::DESIGN_COLOR, "#ff0000"),
+        (names::CONTACT_EMAIL, "Alice@Example.com"),
+        (names::IDENTITY_UUID, "550e8400-e29b-41d4-a716-446655440000"),
+        (names::DESIGN_COLOR, "#ff0000"),
     ];
     for (id, input) in accepts {
         let expected = scalar_for(id)
             .parse(Registry::builtin(), input)
             .expect("core accepts sample");
-        let result = unsafe { scalar_parse(id.as_u32(), cstr(input).as_ptr()) };
+        let result = unsafe { scalar_parse(cstr(id).as_ptr(), cstr(input).as_ptr()) };
         assert!(result.ok, "{input} should parse for {id:?}");
         let got = unsafe { CStr::from_ptr(result.value.str_ptr) }
             .to_str()
@@ -151,15 +177,15 @@ fn dispatch_conforms_to_core_across_scalars() {
     }
 
     let rejects = [
-        (ScalarId::IDENTITY_UUID, "not-a-uuid"),
-        (ScalarId::CONTACT_EMAIL, ""),
+        (names::IDENTITY_UUID, "not-a-uuid"),
+        (names::CONTACT_EMAIL, ""),
     ];
     for (id, input) in rejects {
         assert!(
             scalar_for(id).parse(Registry::builtin(), input).is_err(),
             "core rejects {input} for {id:?}"
         );
-        let result = unsafe { scalar_parse(id.as_u32(), cstr(input).as_ptr()) };
+        let result = unsafe { scalar_parse(cstr(id).as_ptr(), cstr(input).as_ptr()) };
         assert!(!result.ok, "{input} should reject for {id:?}");
         unsafe { scalar_result_free(result) };
     }
@@ -203,7 +229,7 @@ fn every_value_kind_round_trips_and_frees() {
 // double-free; the no-leak assertion runs under miri/ASAN in CI.
 #[test]
 fn repeated_parse_and_free_is_stable() {
-    let id = ScalarId::CONTACT_EMAIL.as_u32();
+    let id = cstr(names::CONTACT_EMAIL);
     let iterations = if cfg!(miri) { 16 } else { 10_000 };
     for i in 0..iterations {
         let input = if i % 2 == 0 {
@@ -211,7 +237,7 @@ fn repeated_parse_and_free_is_stable() {
         } else {
             cstr("bad")
         };
-        let result = unsafe { scalar_parse(id, input.as_ptr()) };
+        let result = unsafe { scalar_parse(id.as_ptr(), input.as_ptr()) };
         unsafe { scalar_result_free(result) };
     }
 }
@@ -232,17 +258,17 @@ fn snapshot(result: &ScalarResult) -> (bool, ErrorCategory, Option<String>) {
 
 #[test]
 fn parse_batch_equals_n_singles() {
-    let id = ScalarId::CONTACT_EMAIL.as_u32();
+    let id = cstr(names::CONTACT_EMAIL);
     let inputs = ["Foo@Bar.com", "not-an-email", "X@Y.io", ""];
     let owned: Vec<CString> = inputs.iter().map(|s| cstr(s)).collect();
     let ptrs: Vec<*const c_char> = owned.iter().map(|c| c.as_ptr()).collect();
 
-    let array = unsafe { scalar_parse_batch(id, ptrs.as_ptr(), ptrs.len()) };
+    let array = unsafe { scalar_parse_batch(id.as_ptr(), ptrs.as_ptr(), ptrs.len()) };
     assert_eq!(array.len, inputs.len());
     let batch = unsafe { slice::from_raw_parts(array.ptr, array.len) };
 
     for (i, input) in inputs.iter().enumerate() {
-        let single = unsafe { scalar_parse(id, cstr(input).as_ptr()) };
+        let single = unsafe { scalar_parse(id.as_ptr(), cstr(input).as_ptr()) };
         assert_eq!(
             snapshot(&batch[i]),
             snapshot(&single),
@@ -255,7 +281,7 @@ fn parse_batch_equals_n_singles() {
 
 #[test]
 fn empty_batch_is_null_and_frees() {
-    let array = unsafe { scalar_parse_batch(ScalarId::CONTACT_EMAIL.as_u32(), ptr::null(), 0) };
+    let array = unsafe { scalar_parse_batch(cstr(names::CONTACT_EMAIL).as_ptr(), ptr::null(), 0) };
     assert!(array.ptr.is_null());
     assert_eq!(array.len, 0);
     unsafe { scalar_result_array_free(array) };
@@ -266,14 +292,14 @@ fn empty_batch_is_null_and_frees() {
 // idiom was UB under Stacked Borrows, caught by miri).
 #[test]
 fn batch_pointer_is_valid_for_reads_after_return() {
-    let id = ScalarId::CONTACT_EMAIL.as_u32();
+    let id = cstr(names::CONTACT_EMAIL);
     let owned: Vec<CString> = ["a@b.com", "bad", "c@d.io"]
         .iter()
         .map(|s| cstr(s))
         .collect();
     let ptrs: Vec<*const c_char> = owned.iter().map(|c| c.as_ptr()).collect();
 
-    let array = unsafe { scalar_parse_batch(id, ptrs.as_ptr(), ptrs.len()) };
+    let array = unsafe { scalar_parse_batch(id.as_ptr(), ptrs.as_ptr(), ptrs.len()) };
     assert_eq!(array.len, 3);
     assert!(!array.ptr.is_null());
 
@@ -293,9 +319,9 @@ fn batch_pointer_is_valid_for_reads_after_return() {
 fn coerce_lenient_trims_a_money_string_and_frees() {
     // Finance.Money is an Int scalar: a padded numeric string coerces to the
     // bare integer, encoded as a JSON document ("12345").
-    let id = ScalarId::FINANCE_MONEY.as_u32();
+    let id = cstr(names::FINANCE_MONEY);
     let input = cstr("\" 12345 \"");
-    let result = unsafe { scalar_coerce_lenient(id, input.as_ptr()) };
+    let result = unsafe { scalar_coerce_lenient(id.as_ptr(), input.as_ptr()) };
     assert!(result.ok, "money string should coerce");
     assert_eq!(result.value.kind, ValueKind::Str);
     let got = unsafe { CStr::from_ptr(result.value.str_ptr) }
@@ -307,9 +333,9 @@ fn coerce_lenient_trims_a_money_string_and_frees() {
 
 #[test]
 fn coerce_lenient_reports_a_bad_date_as_error() {
-    let id = ScalarId::TEMPORAL_DATE.as_u32();
+    let id = cstr(names::TEMPORAL_DATE);
     let input = cstr("\"not-a-date\"");
-    let result = unsafe { scalar_coerce_lenient(id, input.as_ptr()) };
+    let result = unsafe { scalar_coerce_lenient(id.as_ptr(), input.as_ptr()) };
     assert!(!result.ok, "an unparseable date should fail");
     assert!(result.value.str_ptr.is_null());
     assert!(!result.error.is_null());
@@ -318,9 +344,9 @@ fn coerce_lenient_reports_a_bad_date_as_error() {
 
 #[test]
 fn coerce_lenient_null_passthrough_is_a_null_value() {
-    let id = ScalarId::FINANCE_MONEY.as_u32();
+    let id = cstr(names::FINANCE_MONEY);
     let input = cstr("null");
-    let result = unsafe { scalar_coerce_lenient(id, input.as_ptr()) };
+    let result = unsafe { scalar_coerce_lenient(id.as_ptr(), input.as_ptr()) };
     assert!(result.ok, "a JSON null passes through cleanly");
     let got = unsafe { CStr::from_ptr(result.value.str_ptr) }
         .to_str()
@@ -331,8 +357,8 @@ fn coerce_lenient_null_passthrough_is_a_null_value() {
 
 #[test]
 fn coerce_lenient_invalid_json_is_clean_error() {
-    let id = ScalarId::FINANCE_MONEY.as_u32();
-    let result = unsafe { scalar_coerce_lenient(id, cstr("{not json").as_ptr()) };
+    let id = cstr(names::FINANCE_MONEY);
+    let result = unsafe { scalar_coerce_lenient(id.as_ptr(), cstr("{not json").as_ptr()) };
     assert!(!result.ok);
     assert_eq!(result.error_category, ErrorCategory::Parse);
     assert_eq!(error_message(&result), "parse: invalid json");
@@ -340,9 +366,30 @@ fn coerce_lenient_invalid_json_is_clean_error() {
 }
 
 #[test]
-fn coerce_lenient_unknown_id_is_clean_error() {
-    let result = unsafe { scalar_coerce_lenient(9_999, cstr("123").as_ptr()) };
+fn coerce_lenient_unknown_name_is_clean_error() {
+    let result = unsafe { scalar_coerce_lenient(cstr("No.Such").as_ptr(), cstr("123").as_ptr()) };
     assert!(!result.ok);
-    assert_eq!(error_message(&result), "parse: unknown scalar id");
+    assert_eq!(error_message(&result), "parse: unknown scalar \"No.Such\"");
     unsafe { scalar_result_free(result) };
+}
+
+/// A batch over an unknown name fails every element with the single-call
+/// error, and each element owns its message (freed once, by the array free).
+#[test]
+fn batch_over_unknown_name_fails_every_element() {
+    let owned: Vec<CString> = ["a@b.com", "bad"].iter().map(|s| cstr(s)).collect();
+    let ptrs: Vec<*const c_char> = owned.iter().map(|c| c.as_ptr()).collect();
+    let name = cstr("No.Such");
+    let array = unsafe { scalar_validate_batch(name.as_ptr(), ptrs.as_ptr(), ptrs.len()) };
+    assert_eq!(array.len, 2);
+    let batch = unsafe { slice::from_raw_parts(array.ptr, array.len) };
+    for result in batch {
+        assert!(!result.ok);
+        assert_eq!(error_message(result), "parse: unknown scalar \"No.Such\"");
+    }
+    assert_ne!(
+        batch[0].error, batch[1].error,
+        "each element owns its message"
+    );
+    unsafe { scalar_result_array_free(array) };
 }

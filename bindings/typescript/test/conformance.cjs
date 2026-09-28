@@ -8,8 +8,8 @@
 // path is live (reachable, not dead code). The browser/edge consumer resolves
 // `./backend` to dist/esm/backend.browser.mjs via the package `exports` map;
 // that ESM browser bundle is compiled by ts_smoke.sh to verify it builds.
-// Routing is by canonical -> id from the generated map (covers every built-in scalar);
-// a spot check proves the generated branded wrappers route through the core.
+// Routing is by canonical name, the only scalar identity (covers every built-in
+// scalar); a spot check proves the generated branded wrappers route through the core.
 //
 // This is a standalone CLI test runner: its console output IS the conformance
 // report (pass/fail lines + the final ok/FAIL summary), so `no-console` is
@@ -19,7 +19,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const {
-  scalarIdByCanonical,
+  VALID_SCALARS,
   parseContactEmail,
   SCALAR_METADATA_BY_CANONICAL,
   parseGenericJSON,
@@ -46,7 +46,6 @@ function run(name, be) {
   let skipped = 0;
   let failures = 0;
   for (const [canonical, data] of Object.entries(corpus.scalars)) {
-    const id = scalarIdByCanonical[canonical];
     for (const c of data.accepted || []) {
       // `unresolved` vectors are the corpus's single source of truth for cases
       // the core has not reconciled yet; the Rust parity runner (crates/core/tests/
@@ -57,7 +56,7 @@ function run(name, be) {
         continue;
       }
       try {
-        const got = be.parse(id, c.input);
+        const got = be.parse(canonical, c.input);
         if (c.normalized !== undefined && got !== c.normalized) {
           failures++;
           console.error(`${name} ${canonical} parse(${JSON.stringify(c.input)}) = ${JSON.stringify(got)}, want ${JSON.stringify(c.normalized)}`);
@@ -78,7 +77,7 @@ function run(name, be) {
         continue;
       }
       try {
-        be.parse(id, c.input);
+        be.parse(canonical, c.input);
         failures++;
         console.error(`${name} ${canonical} parse(${JSON.stringify(c.input)}) unexpectedly accepted`);
       } catch (e) {
@@ -91,6 +90,25 @@ function run(name, be) {
 }
 
 let failures = 0;
+// The corpus names exactly the registry, so the loop above reached every scalar.
+const corpusNames = Object.keys(corpus.scalars).sort();
+if (JSON.stringify(corpusNames) !== JSON.stringify([...VALID_SCALARS])) {
+  failures++;
+  console.error(`corpus scalars ${JSON.stringify(corpusNames)} differ from VALID_SCALARS ${JSON.stringify(VALID_SCALARS)}`);
+}
+// An unknown or differently cased name throws through both backends.
+for (const [name, be] of [["napi", napiBackend()], ["wasm", wasmBackend()]]) {
+  try {
+    be.parse("contact.email", "a@b.com");
+    failures++;
+    console.error(`${name}: parse under an unknown name unexpectedly succeeded`);
+  } catch (e) {
+    if (!String(e.message).includes('unknown scalar "contact.email"')) {
+      failures++;
+      console.error(`${name}: unknown name threw ${JSON.stringify(e.message)}`);
+    }
+  }
+}
 // napiBackend() binds the napi addon; wasmBackend() binds the nodejs-target
 // wasm bundle. Running the full corpus through each proves both cores agree and
 // the wasm path is live (reachable, not dead code).

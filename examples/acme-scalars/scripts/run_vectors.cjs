@@ -5,7 +5,7 @@
 //   node run_vectors.cjs --registry registry.json --backend wasm --bundle <pkg/acme_scalars_wasm.js> <vectors.json>...
 //
 // registry.json is the assembled registry dump (ext/examples/dump.rs), standing
-// in for the generated canonical-name-to-id table a real binding ships. Every
+// in for the generated scalar list a real binding ships. Every
 // vector key must resolve in it and every non-built-in scalar must have
 // vectors. Vectors flagged `unresolved` are skipped, as the built-in runners
 // skip them. This is a CLI test runner: its output is the report.
@@ -33,7 +33,7 @@ function loadBackend(args) {
     for (const name of ["parse", "normalize", "validate", "coerceLenient"]) {
       if (typeof addon[name] !== "function") throw new Error(`addon lacks ${name}`);
     }
-    return (id, value) => addon.parse(id, value);
+    return (scalar, value) => addon.parse(scalar, value);
   }
   if (args.backend === "wasm") {
     if (!args.bundle) throw new Error("--bundle is required for the wasm backend");
@@ -41,7 +41,7 @@ function loadBackend(args) {
     for (const name of ["scalar_parse", "scalar_normalize", "scalar_validate", "scalar_coerce_lenient"]) {
       if (typeof wasm[name] !== "function") throw new Error(`wasm bundle lacks ${name}`);
     }
-    return (id, value) => wasm.scalar_parse(id, value);
+    return (scalar, value) => wasm.scalar_parse(scalar, value);
   }
   throw new Error(`unknown backend ${args.backend}`);
 }
@@ -65,14 +65,14 @@ function main() {
     return 2;
   }
   const dump = JSON.parse(fs.readFileSync(args.registry, "utf8"));
-  const ids = new Map(dump.scalars.map((s) => [s.canonical, s.id]));
+  const assembled = new Set(dump.scalars.map((s) => s.canonical));
   const owners = new Map(dump.scalars.map((s) => [s.canonical, s.extension]));
   const parse = loadBackend(args);
   const scalars = loadVectors(args.vectors);
 
-  const missing = [...ids.keys()].filter((c) => !scalars.has(c)).sort();
+  const missing = [...assembled].filter((c) => !scalars.has(c)).sort();
   if (missing.length > 0) throw new Error(`assembled scalars without vectors: ${missing.join(", ")}`);
-  const unknown = [...scalars.keys()].filter((c) => !ids.has(c)).sort();
+  const unknown = [...scalars.keys()].filter((c) => !assembled.has(c)).sort();
   if (unknown.length > 0) throw new Error(`vectors for scalars the assembly does not know: ${unknown.join(", ")}`);
 
   let accepted = 0;
@@ -81,7 +81,6 @@ function main() {
   let failures = 0;
   const exercised = new Set();
   for (const [canonical, cases] of [...scalars.entries()].sort()) {
-    const id = ids.get(canonical);
     if (owners.get(canonical) !== "builtin") exercised.add(canonical);
     for (const c of cases.accepted || []) {
       if (c.unresolved) {
@@ -89,7 +88,7 @@ function main() {
         continue;
       }
       try {
-        const got = parse(id, c.input);
+        const got = parse(canonical, c.input);
         if (c.normalized !== undefined && got !== c.normalized) {
           failures++;
           console.error(`${canonical} parse(${JSON.stringify(c.input)}) = ${JSON.stringify(got)}, want ${JSON.stringify(c.normalized)}`);
@@ -107,7 +106,7 @@ function main() {
         continue;
       }
       try {
-        const got = parse(id, c.input);
+        const got = parse(canonical, c.input);
         failures++;
         console.error(`${canonical} parse(${JSON.stringify(c.input)}) accepted as ${JSON.stringify(got)}`);
       } catch (e) {

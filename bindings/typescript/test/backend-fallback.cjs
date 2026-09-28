@@ -42,12 +42,12 @@ assert.equal(typeof loadBackend().parse, "function");
 // A package copy with dist/ and wasm-node/ but no native/: the relative addon
 // path is missing, @superscalar/<triple> does not resolve (no node_modules
 // above a temp directory), and wasm-node/ carries the backend.
-// Serialized into the child, so it must be self-contained: 67 is AgentSkill.Name.
+// Serialized into the child, so it must be self-contained.
 const probe = (backend) => {
-  backend.validate(67, "careful-refactors");
+  backend.validate("AgentSkill.Name", "careful-refactors");
   let refused = false;
   try {
-    backend.validate(67, "Not A Skill Name!");
+    backend.validate("AgentSkill.Name", "Not A Skill Name!");
   } catch {
     refused = true;
   }

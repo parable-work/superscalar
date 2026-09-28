@@ -8,7 +8,7 @@ sidebar:
 The pages in this section are generated. `superscalar docs` reads the
 registry dump and the conformance corpus and writes one Markdown page per
 scalar into this directory before the site is built. Each page carries the
-scalar's canonical name and id, its primitive, SQL and JSON Schema types,
+scalar's canonical name, its primitive, SQL and JSON Schema types,
 its pattern and bounds, examples, accepted and rejected inputs from the
 corpus, its type mapping in each language and the generated function names.
 

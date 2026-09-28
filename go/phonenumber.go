@@ -9,7 +9,7 @@ import (
 // Best-effort: the Rust core normalize errors on unparseable input, so the fallback returns the trimmed input to preserve this package's never-reject contract. Use ValidatePhoneNumber to enforce rejection.
 func NormalizePhoneNumber(input string) string {
 	trimmed := strings.TrimSpace(input)
-	normalized, err := callScalarNormalize(scalarIDContactPhoneNumber, input)
+	normalized, err := callScalarNormalize(scalarNameContactPhoneNumber, input)
 	if err != nil {
 		return trimmed
 	}
@@ -30,7 +30,7 @@ func (p *ContactPhoneNumber) UnmarshalJSON(data []byte) error {
 }
 
 func ValidatePhoneNumber(input string) []ValidationError {
-	if err := callScalarValidate(scalarIDContactPhoneNumber, input); err != nil {
+	if err := callScalarValidate(scalarNameContactPhoneNumber, input); err != nil {
 		return []ValidationError{{
 			Validator: "custom",
 			Message:   err.Error(),

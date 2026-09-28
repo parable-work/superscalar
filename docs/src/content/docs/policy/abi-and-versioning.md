@@ -7,7 +7,7 @@ sidebar:
 
 SuperScalar's consumers include compiled Go programs linking a static
 archive, Python wheels, npm packages and stored data that carries scalar
-ids and canonical values. This page states what they may rely on across
+names and canonical values. This page states what they may rely on across
 releases.
 
 ## The policy
@@ -15,24 +15,28 @@ releases.
 The policy, as decided before the first release:
 
 > Versioning: SemVer on the repo tag `vX.Y.Z`; all crates and packages share
-> the version. ABI policy: u32 ids and canonical names are append-only
-> forever; changing a scalar's accept set is a minor bump if loosening and a
-> major bump if tightening.
+> the version. ABI policy: canonical scalar names are append-only forever;
+> changing a scalar's accept set is a minor bump if loosening and a major
+> bump if tightening.
+
+The policy first froze numeric `u32` ids beside the names. Before the first
+release the ids were removed: nothing stored them, every durable consumer
+already keyed on the name, and a second frozen identity only added
+collisions. The name is the one identity.
 
 Everything below follows from that.
 
 ## Frozen forever
 
-- Scalar ids. Every scalar has a `u32` id. Once a release carries it, the id
-  means that scalar in every later release. Ids are never renumbered, reused
-  or deleted; the holes in the built-in block (`0` to `4`, `7`, `30` to `38`,
-  `51`, `57`, `61`, `62`, `65`) are permanent.
-- Canonical names. `Contact.Email` is id 8 and always will be. There is no
-  rename: a scalar under a different name is a new scalar with a new id.
-- The id partition. Built-ins own `0..=4095`. Extensions declare a base that
-  is a multiple of 4096 and at least 4096.
-- The C ABI shape. Every entry point takes a `u32` id and a UTF-8 string
-  and returns a `ScalarResult`. The nine generic entry points are
+- Canonical names. A scalar is identified by its canonical name
+  (`Contact.Email`) and nothing else. Once a release carries a name, it means
+  that scalar in every later release. Names are never renamed, reused or
+  deleted: a scalar under a different name is a new scalar. Within one
+  assembly a name is declared once; assembly refuses a name that a built-in
+  and an extension, or two extensions, both declare.
+- The C ABI shape. Every entry point takes the scalar's canonical name as a
+  NUL-terminated UTF-8 string, then its input, and returns a `ScalarResult`.
+  An unknown name returns a `Parse` error, `unknown scalar "<name>"`. The nine generic entry points are
   `scalar_parse`, `scalar_normalize`, `scalar_validate`,
   `scalar_coerce_lenient`, `scalar_result_free`, `scalar_parse_batch`,
   `scalar_normalize_batch`, `scalar_validate_batch` and
@@ -41,7 +45,7 @@ Everything below follows from that.
 
 ## Minor changes
 
-- A new scalar, with the next free id in its block.
+- A new scalar under a new name.
 - Loosening a scalar's accept set: an input that was rejected is now
   accepted. Existing stored values remain valid.
 - Assigning a comparability class to a scalar that had none. From an

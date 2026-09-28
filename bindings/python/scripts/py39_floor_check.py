@@ -38,9 +38,9 @@ exec(compile(source.read_text(), str(source), "exec"), module.__dict__)  # noqa:
 # on 3.9", not "is the catalog complete". The catalog size is pinned in Rust
 # (core/tests/scalar_metadata_complete.rs) and in all four parity readers. Every
 # built-in carries a metadata row.
-assert len(module.SCALAR_METADATA) == len(module.SCALAR_ID_BY_CANONICAL), (
+assert len(module.SCALAR_METADATA) == len(module.VALID_SCALARS), (
     len(module.SCALAR_METADATA),
-    len(module.SCALAR_ID_BY_CANONICAL),
+    len(module.VALID_SCALARS),
 )
 # Two named spot-checks, on `is_sortable` only. Deliberately NOT
 # `== {"comparability_class": None, "is_sortable": True}`: the all-None state is

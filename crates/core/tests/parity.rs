@@ -6,7 +6,7 @@
 //! not prose.
 
 use serde::Deserialize;
-use superscalar::{scalar_def, Registry};
+use superscalar::Registry;
 
 const VECTORS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -94,15 +94,11 @@ fn core_reproduces_every_v2_vector() {
     let mut checked = 0usize;
 
     for (canonical, cases) in &vectors.scalars {
-        let id = match Registry::builtin().by_canonical(canonical) {
-            Some(def) => def.id,
-            None => {
-                failures.push(format!("unknown canonical scalar id: {canonical}"));
-                continue;
-            }
-        };
         let registry = Registry::builtin();
-        let scalar = registry.scalar(id).expect("assembled id has a scalar");
+        let Some(scalar) = registry.scalar(canonical) else {
+            failures.push(format!("unknown canonical scalar: {canonical}"));
+            continue;
+        };
 
         for case in &cases.accepted {
             if case.unresolved || skipped_without_lossless_json(canonical, &case.input) {
@@ -184,12 +180,8 @@ fn parse_is_idempotent_on_canonical_output() {
     let mut failures: Vec<String> = Vec::new();
 
     for (canonical, cases) in &vectors.scalars {
-        let id = Registry::builtin()
-            .by_canonical(canonical)
-            .expect("known canonical scalar id")
-            .id;
         let registry = Registry::builtin();
-        let scalar = registry.scalar(id).expect("assembled id has a scalar");
+        let scalar = registry.scalar(canonical).expect("known canonical scalar");
         for case in &cases.accepted {
             if case.unresolved {
                 continue;
@@ -223,8 +215,7 @@ fn parse_is_idempotent_on_canonical_output() {
 fn v2_covers_every_catalog_scalar() {
     let vectors: Vectors = serde_json::from_str(VECTORS).expect("v2 vectors parse");
     let missing: Vec<&str> = Registry::builtin()
-        .ids()
-        .map(|id| scalar_def(id).canonical)
+        .names()
         .filter(|canonical| !vectors.scalars.contains_key(*canonical))
         .collect();
     assert!(

@@ -10,7 +10,7 @@ mod common;
 use common::rendered;
 use std::fs;
 use std::path::Path;
-use superscalar::{scalar_def, PrimitiveKind, Registry, ScalarId};
+use superscalar::{scalar_def, PrimitiveKind, Registry};
 use superscalar_codegen::{optional_lang_str_literal, Context};
 
 fn with_context<T>(f: impl FnOnce(&Context) -> T) -> T {
@@ -74,15 +74,26 @@ fn one_parse_wrapper_per_scalar() {
     });
 }
 
+/// Every binding calls the core with the scalar's canonical name, and none
+/// carries a numeric id.
 #[test]
-fn frozen_id_carried_verbatim() {
+fn bindings_dispatch_by_canonical_name() {
     with_context(|ctx| {
+        let go = rendered(ctx, "go");
+        let ts = rendered(ctx, "typescript");
         let py = rendered(ctx, "python");
-        let expected = format!("\"Contact.Email\": {}", ScalarId::CONTACT_EMAIL.as_u32());
-        assert!(
-            py.contains(&expected),
-            "python output must carry the frozen id verbatim: {expected:?}"
-        );
+        assert!(go.contains("scalarNameContactEmail = \"Contact.Email\""));
+        assert!(go.contains("return callScalarParse(scalarNameContactEmail, value)"));
+        assert!(ts.contains("backend.parse(\"Contact.Email\", value)"));
+        assert!(py.contains("return _native.parse(\"Contact.Email\", value)"));
+        for (lang, out) in [("go", &go), ("typescript", &ts), ("python", &py)] {
+            assert!(
+                !out.contains("ScalarID")
+                    && !out.contains("scalarId")
+                    && !out.contains("SCALAR_ID"),
+                "{lang} output still names a scalar id"
+            );
+        }
     });
 }
 
@@ -354,7 +365,7 @@ fn generated_validators_preserve_public_contracts_without_regex_reimplementation
             "TS validate wrappers return the legacy tuple shape"
         );
         assert!(
-            ts.contains("return validateWithBackend(8, value);"),
+            ts.contains("return validateWithBackend(\"Contact.Email\", value);"),
             "TS validate wrappers delegate to the Rust-backed backend helper"
         );
         assert!(
@@ -371,7 +382,7 @@ fn generated_validators_preserve_public_contracts_without_regex_reimplementation
             "Go generated scalar types keep the structural ValidateRequired interface"
         );
         assert!(
-            go.contains("return validateScalarValue(8, string(v))"),
+            go.contains("return validateScalarValue(scalarNameContactEmail, string(v))"),
             "Go receiver validators delegate to the Rust-backed core helper"
         );
         assert!(
@@ -701,7 +712,7 @@ fn the_alias_shaper_marks_exactly_the_catalogued_aliases() {
     with_context(|ctx| {
         for entry in &ctx.entries {
             let def = Registry::builtin()
-                .by_canonical(&entry.canonical)
+                .def(&entry.canonical)
                 .expect("every entry is a catalogued scalar");
             match def.alias_of {
                 Some(target) => {
@@ -812,8 +823,12 @@ fn json_value_wrappers_follow_the_any_json_shape() {
         assert!(ts.contains(
             "export function parseGenericJSON(value: unknown): GenericJSON | undefined {\n  return canonicalizeJSONValue("
         ));
-        assert!(ts.contains("  return validateJSONValueWithBackend(17, value);"));
-        assert_eq!(ts.matches("canonicalizeJSONValue(17, value, ").count(), 2);
+        assert!(ts.contains("  return validateJSONValueWithBackend(\"Generic.JSON\", value);"));
+        assert_eq!(
+            ts.matches("canonicalizeJSONValue(\"Generic.JSON\", value, ")
+                .count(),
+            2
+        );
         assert!(
             ts.contains("export function parseContactEmail(value: unknown): ContactEmail | null {")
         );

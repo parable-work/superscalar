@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use chrono::{Datelike, Month, NaiveDate};
@@ -28,10 +27,6 @@ fn normalize_temporal_month(input: &str) -> Option<String> {
 pub struct TemporalMonth;
 
 impl Scalar for TemporalMonth {
-    fn id(&self) -> ScalarId {
-        ScalarId::TEMPORAL_MONTH
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_temporal_month(input).ok_or_else(|| {
             ScalarError::new(ErrorKind::Parse, format!("failed to parse Month: {input}"))

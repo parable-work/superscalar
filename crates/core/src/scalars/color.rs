@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use once_cell::sync::Lazy;
@@ -338,10 +337,6 @@ fn normalize_color(input: &str) -> Result<String, ScalarError> {
 pub struct Color;
 
 impl Scalar for Color {
-    fn id(&self) -> ScalarId {
-        ScalarId::DESIGN_COLOR
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_color(input)
     }

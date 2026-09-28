@@ -11,12 +11,11 @@ import uuid as _uuidlib
 from typing import TYPE_CHECKING
 
 from . import _native
-from ._native_ids import SCALAR_ID_BY_CANONICAL
 
 if TYPE_CHECKING:
     from . import ValidationError
 
-_ID = SCALAR_ID_BY_CANONICAL["Identity.UUID"]
+_NAME = "Identity.UUID"
 
 # base62 alphabet mirrors the shared core (core/src/scalars/uuid_scalar.rs:9). The
 # core owns encode/decode for cross-language parity; this Python copy exists only
@@ -44,12 +43,12 @@ def normalize_identity_uuid(input_value: str) -> str:
     """Normalize a UUID (canonical or base62) to compact base62. Raises on bad input."""
     # Strip surrounding whitespace to match the old pure-Python impl (main:identity_uuid.py:41).
     # Go/TS bindings never stripped, so this stays in the Python binding, not the shared core.
-    return _native.normalize(_ID, input_value.strip())
+    return _native.normalize(_NAME, input_value.strip())
 
 
 def parse_identity_uuid(input_value: str) -> str:
     """Parse a UUID from canonical or base62 form to compact base62. Raises on bad input."""
-    return _native.parse(_ID, input_value.strip())
+    return _native.parse(_NAME, input_value.strip())
 
 
 def parse_identity_uuid_to_uuid(input_value: str | _uuidlib.UUID) -> _uuidlib.UUID:
@@ -69,7 +68,7 @@ def validate_identity_uuid(input_value: str) -> list[ValidationError]:
     from . import ValidationError
 
     try:
-        _native.validate(_ID, input_value.strip())
+        _native.validate(_NAME, input_value.strip())
     except ValueError as exc:
         return [ValidationError(validator="custom", message=str(exc))]
     return []

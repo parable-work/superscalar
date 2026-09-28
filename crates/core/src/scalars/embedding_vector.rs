@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 
@@ -16,10 +15,6 @@ fn normalize_vector(input: &str) -> Result<String, ScalarError> {
 pub struct EmbeddingVector;
 
 impl Scalar for EmbeddingVector {
-    fn id(&self) -> ScalarId {
-        ScalarId::EMBEDDING_VECTOR
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_vector(input)
     }

@@ -1,126 +1,103 @@
-// ScalarId values are FROZEN, append-only: the C ABI keys on them. Never renumber; new scalars take the next u32.
+// A built-in scalar's identity is its canonical name, and names are
+// append-only: a published name keeps its meaning, and a scalar is never
+// renamed (a different name is a different scalar). Nothing else identifies a
+// scalar; there are no numeric ids.
 
 use crate::registry::{PrimitiveKind, ScalarDef, ScalarHooks, ScalarTag};
 
-/// A scalar's frozen u32 identity: the key the C ABI, every generated binding
-/// and every conformance vector use. Built-in scalars are the associated
-/// constants below; an extension mints its own from its `id_base` (see
-/// `Extension`). `ScalarId(n)` is a plain constructor: whether `n` names a
-/// scalar is a question for the assembled `Registry`.
-#[repr(transparent)]
-#[derive(
-    Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug, serde::Serialize, serde::Deserialize,
-)]
-pub struct ScalarId(pub u32);
+/// Declares every built-in canonical name as a constant plus `names::ALL`,
+/// from one list, so a constant cannot exist without appearing in `ALL`.
+macro_rules! builtin_names {
+    ($(
+        $(#[$doc:meta])*
+        $konst:ident = $name:literal,
+    )+) => {
+        /// The canonical name of every built-in scalar, as a constant. Rust
+        /// callers name a built-in through these (`scalar_for(names::CONTACT_EMAIL)`)
+        /// so a misspelling fails to compile. An extension declares its own.
+        pub mod names {
+            $(
+                $(#[$doc])*
+                pub const $konst: &str = $name;
+            )+
 
-impl ScalarId {
-    /// Built-in ids own `0..=BUILTIN_MAX`. Extensions start at a multiple of
-    /// `EXTENSION_BLOCK`.
-    pub const BUILTIN_MAX: u32 = 4095;
-    pub const EXTENSION_BLOCK: u32 = 4096;
+            /// Every built-in name, sorted.
+            pub const ALL: &[&str] = &[$($konst),+];
+        }
+    };
+}
 
-    // Ids 0..=4, 7, 30..=38, 51, 57, 61, 62 and 65 are permanent holes: the
-    // scalars that hold them live in a downstream extension that keeps the
-    // original values (assembled with `AssembleOptions::allow_legacy_ids`). A
-    // new built-in takes the next id after the highest one below, never a
-    // hole; the next is 68.
-    pub const AUTH_JWT: ScalarId = ScalarId(5);
-    pub const AUTH_PASSWORD: ScalarId = ScalarId(6);
-    pub const CONTACT_EMAIL: ScalarId = ScalarId(8);
-    pub const CONTACT_PHONE_NUMBER: ScalarId = ScalarId(9);
-    pub const CRYPTO_RSA_PRIVATE_KEY: ScalarId = ScalarId(10);
-    pub const CRYPTO_RSA_PUBLIC_KEY: ScalarId = ScalarId(11);
-    pub const DESIGN_COLOR: ScalarId = ScalarId(12);
-    pub const EMBEDDING_VECTOR: ScalarId = ScalarId(13);
-    pub const FILE_SIZE_BYTES: ScalarId = ScalarId(14);
-    pub const FINANCE_MONEY: ScalarId = ScalarId(15);
-    pub const GENERIC_INT64: ScalarId = ScalarId(16);
-    pub const GENERIC_JSON: ScalarId = ScalarId(17);
-    pub const GENERIC_PROBABILITY: ScalarId = ScalarId(18);
-    pub const GENERIC_STRING_MAP: ScalarId = ScalarId(19);
-    pub const GEO_LOCATION: ScalarId = ScalarId(20);
-    pub const IDENTITY_NAME: ScalarId = ScalarId(21);
-    pub const IDENTITY_SLUG: ScalarId = ScalarId(22);
-    pub const IDENTITY_UUID: ScalarId = ScalarId(23);
-    pub const IDENTITY_USER_ID: ScalarId = ScalarId(24);
-    pub const LOCALIZATION_LOCALE: ScalarId = ScalarId(25);
-    pub const NETWORK_DOMAIN_NAME: ScalarId = ScalarId(26);
-    pub const NETWORK_IP_ADDRESS: ScalarId = ScalarId(27);
-    pub const NETWORK_URI: ScalarId = ScalarId(28);
-    pub const NETWORK_URL: ScalarId = ScalarId(29);
-    pub const TEMPORAL_CRON_EXPRESSION: ScalarId = ScalarId(39);
-    pub const TEMPORAL_DATE: ScalarId = ScalarId(40);
-    pub const TEMPORAL_DATE_TIME: ScalarId = ScalarId(41);
-    pub const TEMPORAL_DURATION: ScalarId = ScalarId(42);
-    pub const TEMPORAL_MILLISECONDS: ScalarId = ScalarId(43);
-    pub const TEMPORAL_MONTH: ScalarId = ScalarId(44);
-    pub const TEMPORAL_QUARTER: ScalarId = ScalarId(45);
-    pub const TEMPORAL_QUARTER_YEAR: ScalarId = ScalarId(46);
-    pub const TEMPORAL_TIME: ScalarId = ScalarId(47);
-    pub const TEMPORAL_TIME_ZONE: ScalarId = ScalarId(48);
-    pub const TEMPORAL_YEAR: ScalarId = ScalarId(49);
-    pub const TEXT_MARKDOWN: ScalarId = ScalarId(50);
-    pub const TEMPORAL_SECONDS: ScalarId = ScalarId(52);
-    pub const TEMPORAL_MINUTES: ScalarId = ScalarId(53);
-    pub const TEMPORAL_HOURS: ScalarId = ScalarId(54);
-    pub const TEMPORAL_DAYS: ScalarId = ScalarId(55);
-    /// SQL text (presence/type only; no AST validation). Append-only
-    /// discriminant -- never renumber (C ABI).
-    pub const TEXT_SQL: ScalarId = ScalarId(56);
-    pub const CRYPTO_SHA256: ScalarId = ScalarId(58);
-    /// Single DNS label (one hostname segment). Append-only discriminant --
-    /// never renumber (C ABI).
-    pub const NETWORK_DNS_LABEL: ScalarId = ScalarId(59);
+builtin_names! {
+    /// Agent Skills specification name: portable lowercase kebab-case
+    /// directory/frontmatter identity.
+    AGENT_SKILL_NAME = "AgentSkill.Name",
+    AUTH_JWT = "Auth.JWT",
+    AUTH_PASSWORD = "Auth.Password",
+    CONTACT_EMAIL = "Contact.Email",
+    CONTACT_PHONE_NUMBER = "Contact.PhoneNumber",
+    CRYPTO_RSA_PRIVATE_KEY = "Crypto.RSAPrivateKey",
+    CRYPTO_RSA_PUBLIC_KEY = "Crypto.RSAPublicKey",
+    CRYPTO_SHA256 = "Crypto.SHA256",
+    DESIGN_COLOR = "Design.Color",
+    EMBEDDING_VECTOR = "Embedding.Vector",
+    FILE_SIZE_BYTES = "File.SizeBytes",
+    FINANCE_MONEY = "Finance.Money",
+    GENERIC_INT64 = "Generic.Int64",
+    GENERIC_JSON = "Generic.JSON",
+    GENERIC_PROBABILITY = "Generic.Probability",
+    GENERIC_STRING_MAP = "Generic.StringMap",
+    GEO_LOCATION = "Geo.Location",
+    /// Repository-rooted, case-sensitive gitignore-style path pattern.
+    GIT_PATH_PATTERN = "Git.PathPattern",
+    IDENTITY_NAME = "Identity.Name",
+    IDENTITY_SLUG = "Identity.Slug",
+    IDENTITY_UUID = "Identity.UUID",
+    IDENTITY_USER_ID = "Identity.UserID",
+    LOCALIZATION_LOCALE = "Localization.Locale",
+    /// Single DNS label (one hostname segment).
+    NETWORK_DNS_LABEL = "Network.DnsLabel",
+    NETWORK_DOMAIN_NAME = "Network.DomainName",
+    NETWORK_IP_ADDRESS = "Network.IpAddress",
+    NETWORK_URI = "Network.Uri",
+    NETWORK_URL = "Network.Url",
+    /// Positive JavaScript-safe ordering value.
+    ORDERING_RANK = "Ordering.Rank",
+    TEMPORAL_CRON_EXPRESSION = "Temporal.CronExpression",
+    TEMPORAL_DATE = "Temporal.Date",
+    TEMPORAL_DATE_TIME = "Temporal.DateTime",
+    TEMPORAL_DAYS = "Temporal.Days",
+    TEMPORAL_DURATION = "Temporal.Duration",
+    TEMPORAL_HOURS = "Temporal.Hours",
+    TEMPORAL_MILLISECONDS = "Temporal.Milliseconds",
+    TEMPORAL_MINUTES = "Temporal.Minutes",
+    TEMPORAL_MONTH = "Temporal.Month",
+    TEMPORAL_QUARTER = "Temporal.Quarter",
+    TEMPORAL_QUARTER_YEAR = "Temporal.QuarterYear",
     /// RFC 5545 RRULE, without the DTSTART a calendar object would carry beside
     /// it: the anchor instant and the zone live in their own columns on the
     /// owning row, so a rule that also carried them could disagree with them.
     /// Validity only -- expanding a rule into occurrences needs a calendar and
     /// the zone database, and happens once, server-side, outside this crate.
-    pub const TEMPORAL_RECURRENCE_RULE: ScalarId = ScalarId(60);
-    /// Positive JavaScript-safe ordering value. Append-only discriminant.
-    pub const ORDERING_RANK: ScalarId = ScalarId(63);
-    /// Canonical Semantic Versioning 2.0.0 string. Append-only discriminant.
-    pub const VERSION_SEM_VER: ScalarId = ScalarId(64);
-    /// Repository-rooted, case-sensitive gitignore-style path pattern.
-    /// Append-only discriminant.
-    pub const GIT_PATH_PATTERN: ScalarId = ScalarId(66);
-    /// Agent Skills specification name: portable lowercase kebab-case
-    /// directory/frontmatter identity. Append-only discriminant -- never
-    /// renumber (C ABI).
-    pub const AGENT_SKILL_NAME: ScalarId = ScalarId(67);
-
-    /// The frozen u32 form keyed on by the C ABI.
-    pub const fn as_u32(self) -> u32 {
-        self.0
-    }
-
-    /// Whether this id falls in the block reserved for built-in scalars.
-    pub const fn is_builtin_block(self) -> bool {
-        self.0 <= Self::BUILTIN_MAX
-    }
+    TEMPORAL_RECURRENCE_RULE = "Temporal.RecurrenceRule",
+    TEMPORAL_SECONDS = "Temporal.Seconds",
+    TEMPORAL_TIME = "Temporal.Time",
+    TEMPORAL_TIME_ZONE = "Temporal.TimeZone",
+    TEMPORAL_YEAR = "Temporal.Year",
+    TEXT_MARKDOWN = "Text.Markdown",
+    /// SQL text (presence/type only; no AST validation).
+    TEXT_SQL = "Text.Sql",
+    /// Canonical Semantic Versioning 2.0.0 string.
+    VERSION_SEM_VER = "Version.SemVer",
 }
 
-impl From<u32> for ScalarId {
-    fn from(value: u32) -> Self {
-        ScalarId(value)
-    }
-}
-
-impl From<ScalarId> for u32 {
-    fn from(id: ScalarId) -> u32 {
-        id.0
-    }
-}
-
-/// The built-in scalar defs, in ascending id order. A new scalar's `ScalarDef`
-/// is APPENDED at the end and takes the next id, never inserted alphabetically
-/// and never into one of the holes listed on `ScalarId`.
+/// The built-in scalar defs. A new scalar adds its name to `builtin_names!`
+/// above and its `ScalarDef` here; order carries no meaning, since every
+/// lookup and every generated file goes by name.
 /// Reached only through `Registry::builtin()`.
 pub(crate) static CATALOG: [ScalarDef; 48] = [
     ScalarDef {
-        id: ScalarId::AUTH_JWT,
         namespace: "Auth",
-        canonical: "Auth.JWT",
+        canonical: names::AUTH_JWT,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -150,9 +127,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::AUTH_PASSWORD,
         namespace: "Auth",
-        canonical: "Auth.Password",
+        canonical: names::AUTH_PASSWORD,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(128)",
         metadata_primitive: "String",
@@ -182,9 +158,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::CONTACT_EMAIL,
         namespace: "Contact",
-        canonical: "Contact.Email",
+        canonical: names::CONTACT_EMAIL,
         primitive: PrimitiveKind::String,
         sql_type: "CITEXT",
         metadata_primitive: "String",
@@ -214,9 +189,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::CONTACT_PHONE_NUMBER,
         namespace: "Contact",
-        canonical: "Contact.PhoneNumber",
+        canonical: names::CONTACT_PHONE_NUMBER,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(16)",
         metadata_primitive: "String",
@@ -246,9 +220,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::CRYPTO_RSA_PRIVATE_KEY,
         namespace: "Crypto",
-        canonical: "Crypto.RSAPrivateKey",
+        canonical: names::CRYPTO_RSA_PRIVATE_KEY,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -278,9 +251,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::CRYPTO_RSA_PUBLIC_KEY,
         namespace: "Crypto",
-        canonical: "Crypto.RSAPublicKey",
+        canonical: names::CRYPTO_RSA_PUBLIC_KEY,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -310,9 +282,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::DESIGN_COLOR,
         namespace: "Design",
-        canonical: "Design.Color",
+        canonical: names::DESIGN_COLOR,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(9)",
         metadata_primitive: "String",
@@ -342,9 +313,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::EMBEDDING_VECTOR,
         namespace: "Embedding",
-        canonical: "Embedding.Vector",
+        canonical: names::EMBEDDING_VECTOR,
         primitive: PrimitiveKind::String,
         sql_type: "",
         metadata_primitive: "String",
@@ -374,9 +344,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::FILE_SIZE_BYTES,
         namespace: "File",
-        canonical: "File.SizeBytes",
+        canonical: names::FILE_SIZE_BYTES,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -406,9 +375,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::FINANCE_MONEY,
         namespace: "Finance",
-        canonical: "Finance.Money",
+        canonical: names::FINANCE_MONEY,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -438,9 +406,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::GENERIC_INT64,
         namespace: "Generic",
-        canonical: "Generic.Int64",
+        canonical: names::GENERIC_INT64,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -473,9 +440,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::GENERIC_JSON,
         namespace: "Generic",
-        canonical: "Generic.JSON",
+        canonical: names::GENERIC_JSON,
         primitive: PrimitiveKind::String,
         sql_type: "JSONB",
         metadata_primitive: "String",
@@ -507,9 +473,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::GENERIC_PROBABILITY,
         namespace: "Generic",
-        canonical: "Generic.Probability",
+        canonical: names::GENERIC_PROBABILITY,
         primitive: PrimitiveKind::Float,
         sql_type: "DOUBLE PRECISION",
         metadata_primitive: "Float",
@@ -539,9 +504,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::GENERIC_STRING_MAP,
         namespace: "Generic",
-        canonical: "Generic.StringMap",
+        canonical: names::GENERIC_STRING_MAP,
         primitive: PrimitiveKind::String,
         sql_type: "JSONB",
         metadata_primitive: "String",
@@ -573,9 +537,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::GEO_LOCATION,
         namespace: "Geo",
-        canonical: "Geo.Location",
+        canonical: names::GEO_LOCATION,
         primitive: PrimitiveKind::Object,
         sql_type: "POINT",
         metadata_primitive: "String",
@@ -605,9 +568,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::IDENTITY_NAME,
         namespace: "Identity",
-        canonical: "Identity.Name",
+        canonical: names::IDENTITY_NAME,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(80)",
         metadata_primitive: "String",
@@ -637,9 +599,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::IDENTITY_SLUG,
         namespace: "Identity",
-        canonical: "Identity.Slug",
+        canonical: names::IDENTITY_SLUG,
         primitive: PrimitiveKind::String,
         sql_type: "CITEXT",
         metadata_primitive: "String",
@@ -669,9 +630,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::IDENTITY_UUID,
         namespace: "Identity",
-        canonical: "Identity.UUID",
+        canonical: names::IDENTITY_UUID,
         primitive: PrimitiveKind::String,
         sql_type: "UUID",
         metadata_primitive: "String",
@@ -701,9 +661,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::IDENTITY_USER_ID,
         namespace: "Identity",
-        canonical: "Identity.UserID",
+        canonical: names::IDENTITY_USER_ID,
         primitive: PrimitiveKind::String,
         sql_type: "UUID",
         metadata_primitive: "String",
@@ -722,7 +681,7 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         file_upload: None,
         image_constraints: None,
         docstring: "",
-        alias_of: Some(ScalarId::IDENTITY_UUID),
+        alias_of: Some(names::IDENTITY_UUID),
         schema_primitive_override: None,
         schema_omit: false,
         format: None,
@@ -733,9 +692,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::LOCALIZATION_LOCALE,
         namespace: "Localization",
-        canonical: "Localization.Locale",
+        canonical: names::LOCALIZATION_LOCALE,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(35)",
         metadata_primitive: "String",
@@ -765,9 +723,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::NETWORK_DOMAIN_NAME,
         namespace: "Network",
-        canonical: "Network.DomainName",
+        canonical: names::NETWORK_DOMAIN_NAME,
         primitive: PrimitiveKind::String,
         sql_type: "CITEXT",
         metadata_primitive: "String",
@@ -797,9 +754,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::NETWORK_IP_ADDRESS,
         namespace: "Network",
-        canonical: "Network.IpAddress",
+        canonical: names::NETWORK_IP_ADDRESS,
         primitive: PrimitiveKind::String,
         sql_type: "INET",
         metadata_primitive: "String",
@@ -829,9 +785,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::NETWORK_URI,
         namespace: "Network",
-        canonical: "Network.Uri",
+        canonical: names::NETWORK_URI,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -861,9 +816,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::NETWORK_URL,
         namespace: "Network",
-        canonical: "Network.Url",
+        canonical: names::NETWORK_URL,
         primitive: PrimitiveKind::String,
         sql_type: "varchar(4096)",
         metadata_primitive: "String",
@@ -895,9 +849,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_CRON_EXPRESSION,
         namespace: "Temporal",
-        canonical: "Temporal.CronExpression",
+        canonical: names::TEMPORAL_CRON_EXPRESSION,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(100)",
         metadata_primitive: "String",
@@ -927,9 +880,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_DATE,
         namespace: "Temporal",
-        canonical: "Temporal.Date",
+        canonical: names::TEMPORAL_DATE,
         primitive: PrimitiveKind::String,
         sql_type: "DATE",
         metadata_primitive: "String",
@@ -959,9 +911,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_DATE_TIME,
         namespace: "Temporal",
-        canonical: "Temporal.DateTime",
+        canonical: names::TEMPORAL_DATE_TIME,
         primitive: PrimitiveKind::String,
         sql_type: "TIMESTAMPTZ",
         metadata_primitive: "String",
@@ -991,9 +942,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_DURATION,
         namespace: "Temporal",
-        canonical: "Temporal.Duration",
+        canonical: names::TEMPORAL_DURATION,
         primitive: PrimitiveKind::String,
         sql_type: "INTERVAL",
         metadata_primitive: "String",
@@ -1023,9 +973,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_MILLISECONDS,
         namespace: "Temporal",
-        canonical: "Temporal.Milliseconds",
+        canonical: names::TEMPORAL_MILLISECONDS,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -1055,9 +1004,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_MONTH,
         namespace: "Temporal",
-        canonical: "Temporal.Month",
+        canonical: names::TEMPORAL_MONTH,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(2)",
         metadata_primitive: "String",
@@ -1087,9 +1035,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_QUARTER,
         namespace: "Temporal",
-        canonical: "Temporal.Quarter",
+        canonical: names::TEMPORAL_QUARTER,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(2)",
         metadata_primitive: "String",
@@ -1119,9 +1066,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_QUARTER_YEAR,
         namespace: "Temporal",
-        canonical: "Temporal.QuarterYear",
+        canonical: names::TEMPORAL_QUARTER_YEAR,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(7)",
         metadata_primitive: "String",
@@ -1151,9 +1097,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_TIME,
         namespace: "Temporal",
-        canonical: "Temporal.Time",
+        canonical: names::TEMPORAL_TIME,
         primitive: PrimitiveKind::String,
         sql_type: "TIME",
         metadata_primitive: "String",
@@ -1183,9 +1128,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_TIME_ZONE,
         namespace: "Temporal",
-        canonical: "Temporal.TimeZone",
+        canonical: names::TEMPORAL_TIME_ZONE,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(100)",
         metadata_primitive: "String",
@@ -1215,9 +1159,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_YEAR,
         namespace: "Temporal",
-        canonical: "Temporal.Year",
+        canonical: names::TEMPORAL_YEAR,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(4)",
         metadata_primitive: "String",
@@ -1247,9 +1190,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEXT_MARKDOWN,
         namespace: "Text",
-        canonical: "Text.Markdown",
+        canonical: names::TEXT_MARKDOWN,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -1279,9 +1221,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_SECONDS,
         namespace: "Temporal",
-        canonical: "Temporal.Seconds",
+        canonical: names::TEMPORAL_SECONDS,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -1311,9 +1252,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_MINUTES,
         namespace: "Temporal",
-        canonical: "Temporal.Minutes",
+        canonical: names::TEMPORAL_MINUTES,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -1343,9 +1283,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_HOURS,
         namespace: "Temporal",
-        canonical: "Temporal.Hours",
+        canonical: names::TEMPORAL_HOURS,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -1375,9 +1314,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEMPORAL_DAYS,
         namespace: "Temporal",
-        canonical: "Temporal.Days",
+        canonical: names::TEMPORAL_DAYS,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -1407,9 +1345,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::TEXT_SQL,
         namespace: "Text",
-        canonical: "Text.Sql",
+        canonical: names::TEXT_SQL,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -1439,9 +1376,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::CRYPTO_SHA256,
         namespace: "Crypto",
-        canonical: "Crypto.SHA256",
+        canonical: names::CRYPTO_SHA256,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(64)",
         metadata_primitive: "String",
@@ -1478,9 +1414,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::NETWORK_DNS_LABEL,
         namespace: "Network",
-        canonical: "Network.DnsLabel",
+        canonical: names::NETWORK_DNS_LABEL,
         primitive: PrimitiveKind::String,
         sql_type: "CITEXT",
         metadata_primitive: "String",
@@ -1516,13 +1451,9 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
     },
-    // APPENDED, not filed beside the other Temporal.* entries: `index()` reads
-    // both ALL and CATALOG, so an alphabetical insert would desync every later
-    // entry from its discriminant and silently mis-resolve those scalars.
     ScalarDef {
-        id: ScalarId::TEMPORAL_RECURRENCE_RULE,
         namespace: "Temporal",
-        canonical: "Temporal.RecurrenceRule",
+        canonical: names::TEMPORAL_RECURRENCE_RULE,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(512)",
         metadata_primitive: "String",
@@ -1561,13 +1492,9 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
     },
-    // APPENDED in id order. Ids 61, 62 and 65 between these are holes held by
-    // a downstream extension; never move one of these beside an alphabetically
-    // related entry.
     ScalarDef {
-        id: ScalarId::ORDERING_RANK,
         namespace: "Ordering",
-        canonical: "Ordering.Rank",
+        canonical: names::ORDERING_RANK,
         primitive: PrimitiveKind::Int,
         sql_type: "BIGINT",
         metadata_primitive: "Int",
@@ -1604,9 +1531,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::VERSION_SEM_VER,
         namespace: "Version",
-        canonical: "Version.SemVer",
+        canonical: names::VERSION_SEM_VER,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(255)",
         metadata_primitive: "String",
@@ -1643,9 +1569,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::GIT_PATH_PATTERN,
         namespace: "Git",
-        canonical: "Git.PathPattern",
+        canonical: names::GIT_PATH_PATTERN,
         primitive: PrimitiveKind::String,
         sql_type: "VARCHAR(1024)",
         metadata_primitive: "String",
@@ -1686,9 +1611,8 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: ScalarId::AGENT_SKILL_NAME,
         namespace: "AgentSkill",
-        canonical: "AgentSkill.Name",
+        canonical: names::AGENT_SKILL_NAME,
         primitive: PrimitiveKind::String,
         sql_type: "CITEXT",
         metadata_primitive: "String",

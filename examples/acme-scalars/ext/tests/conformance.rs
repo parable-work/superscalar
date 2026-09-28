@@ -7,7 +7,7 @@
 use acme_scalars::{registry, AcmeExtension, ORDER_NUMBER, SCALAR_REF};
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use superscalar::{ErrorKind, Extension, Registry, ScalarId};
+use superscalar::{names, ErrorKind, Extension, Registry};
 
 const CORE_VECTORS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -84,11 +84,10 @@ fn assembled_registry_reproduces_every_vector() {
     let mut checked = 0usize;
 
     for (canonical, cases) in &vectors.scalars {
-        let Some(def) = registry.by_canonical(canonical) else {
+        let Some(scalar) = registry.scalar(canonical) else {
             failures.push(format!("unknown canonical scalar: {canonical}"));
             continue;
         };
-        let scalar = registry.scalar(def.id).expect("assembled id has a scalar");
         for case in cases.accepted.iter().filter(|c| !c.unresolved) {
             checked += 1;
             match scalar.parse(registry, &case.input) {
@@ -159,7 +158,7 @@ fn every_assembled_scalar_has_vectors_and_every_vector_a_scalar() {
     let unknown: Vec<&String> = vectors
         .scalars
         .keys()
-        .filter(|canonical| registry.by_canonical(canonical).is_none())
+        .filter(|canonical| registry.def(canonical).is_none())
         .collect();
     assert!(unknown.is_empty(), "vectors without a scalar: {unknown:?}");
 }
@@ -202,26 +201,19 @@ fn metadata_rows_match_the_defs() {
 }
 
 #[test]
-fn acme_scalars_sit_in_their_block_after_the_builtins() {
+fn acme_scalars_join_the_builtins_under_their_owner() {
     let registry = registry();
     assert_eq!(
         registry.len(),
         Registry::builtin().len() + AcmeExtension.defs().len()
     );
-    assert_eq!(
-        registry.by_canonical("Acme.OrderNumber").map(|d| d.id),
-        Some(ORDER_NUMBER)
-    );
-    assert_eq!(
-        registry.by_canonical("Acme.ScalarRef").map(|d| d.id),
-        Some(SCALAR_REF)
-    );
-    assert_eq!(ORDER_NUMBER, ScalarId(4096));
-    assert_eq!(SCALAR_REF, ScalarId(4097));
+    assert_eq!(ORDER_NUMBER, "Acme.OrderNumber");
+    assert_eq!(SCALAR_REF, "Acme.ScalarRef");
+    assert!(registry.def(ORDER_NUMBER).is_some());
+    assert!(registry.def(SCALAR_REF).is_some());
     assert_eq!(registry.owner(ORDER_NUMBER), Some("acme"));
-    assert_eq!(registry.owner(ScalarId::CONTACT_EMAIL), Some("builtin"));
-    let names: Vec<&str> = registry.extensions().iter().map(|e| e.name).collect();
-    assert_eq!(names, ["builtin", "acme"]);
+    assert_eq!(registry.owner(names::CONTACT_EMAIL), Some("builtin"));
+    assert_eq!(registry.extensions(), ["builtin", "acme"]);
 }
 
 /// The registry-consulting scalar proves which registry a caller dispatched
@@ -264,7 +256,6 @@ fn dump_lists_the_acme_scalars_under_their_owner() {
         .collect();
     assert_eq!(acme.len(), AcmeExtension.defs().len());
     assert_eq!(acme[0]["canonical"], "Acme.OrderNumber");
-    assert_eq!(acme[0]["id"], 4096);
     assert_eq!(acme[0]["is_directive"], true);
     assert_eq!(acme[1]["canonical"], "Acme.ScalarRef");
     assert_eq!(acme[1]["is_directive"], false);

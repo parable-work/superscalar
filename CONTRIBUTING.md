@@ -129,11 +129,11 @@ include a `CHANGELOG.md` entry and a version bump: loosening an accept set is
 a minor bump, tightening one is a major bump. If you find a bug in a scalar,
 file an issue and leave the vector as it is until the change is agreed.
 
-### Frozen ids
+### Frozen names
 
-Scalar ids (the `u32` values in the catalog) and canonical names are
-append-only forever. Never renumber, reuse or delete an id. Holes are
-permanent.
+A scalar's canonical name (`Contact.Email`) is its only identity, and names
+are append-only forever. Never rename, reuse or delete a published name; a
+scalar under a different name is a new scalar.
 
 ### Generated files are never hand-edited
 
@@ -144,8 +144,9 @@ command it prints), and commit the diff. CI fails on drift.
 
 ### Adding a built-in scalar
 
-Add the module under `crates/core/src/scalars/`, register it with the next
-free id, add vectors to `conformance/core-scalars.v2.json`, regenerate the
+Add the module under `crates/core/src/scalars/`, add its name to
+`builtin_names!` and its definition to `CATALOG` in `crates/core/src/catalog.rs`,
+add vectors to `conformance/core-scalars.v2.json`, regenerate the
 bindings and docs, and run `make bindings`. Prefer an extension crate for
 scalars specific to one project; see the `examples/acme-scalars/` walkthrough.
 

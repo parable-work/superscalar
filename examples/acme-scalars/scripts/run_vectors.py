@@ -5,12 +5,12 @@
     run_vectors.py --registry registry.json --backend python --module-dir <dir> <vectors.json>...
 
 `registry.json` is the assembled registry dump (ext/examples/dump.rs); it plays
-the part of the generated canonical-name-to-id table a real binding ships. Every
+the part of the generated scalar list a real binding ships. Every
 vector key must resolve in it, and every non-built-in scalar in it must have
 vectors, so a scalar added without vectors fails here. Vectors flagged
 `unresolved` are skipped, as the built-in runners skip them.
 
-The C backend spawns the consumer once per vector (`c_consumer <id> <input>`,
+The C backend spawns the consumer once per vector (`c_consumer <name> <input>`,
 exit 0 with the value on stdout, exit 1 on reject). The Python backend imports
 `_native` from `--module-dir`, the cdylib copied under an extension-module
 name, and calls `_native.parse`.
@@ -36,9 +36,9 @@ def load_vectors(paths):
 
 
 def make_c_backend(consumer):
-    def parse(scalar_id, value):
+    def parse(scalar, value):
         proc = subprocess.run(
-            [consumer, str(scalar_id), value],
+            [consumer, scalar, value],
             stdout=subprocess.PIPE,
             check=False,
         )
@@ -47,7 +47,7 @@ def make_c_backend(consumer):
             return True, out
         if proc.returncode == 1:
             return False, out
-        raise SystemExit(f"c_consumer exited {proc.returncode} for id {scalar_id}: {out}")
+        raise SystemExit(f"c_consumer exited {proc.returncode} for {scalar}: {out}")
 
     return parse
 
@@ -59,9 +59,9 @@ def make_python_backend(module_dir):
         if not hasattr(native, name):
             raise SystemExit(f"_native lacks {name}")
 
-    def parse(scalar_id, value):
+    def parse(scalar, value):
         try:
-            return True, native.parse(scalar_id, value)
+            return True, native.parse(scalar, value)
         except ValueError as err:
             return False, str(err)
 
@@ -79,7 +79,7 @@ def main() -> int:
 
     with open(args.registry, encoding="utf-8") as handle:
         dump = json.load(handle)
-    ids = {s["canonical"]: s["id"] for s in dump["scalars"]}
+    assembled = {s["canonical"] for s in dump["scalars"]}
     owners = {s["canonical"]: s["extension"] for s in dump["scalars"]}
 
     if args.backend == "c":
@@ -92,24 +92,23 @@ def main() -> int:
         parse = make_python_backend(args.module_dir)
 
     scalars = load_vectors(args.vectors)
-    missing = sorted(set(ids) - set(scalars))
+    missing = sorted(assembled - set(scalars))
     if missing:
         raise SystemExit(f"assembled scalars without vectors: {missing}")
-    unknown = sorted(set(scalars) - set(ids))
+    unknown = sorted(set(scalars) - assembled)
     if unknown:
         raise SystemExit(f"vectors for scalars the assembly does not know: {unknown}")
 
     accepted = rejected = skipped = failures = 0
     exercised_extension_scalars = set()
     for canonical, cases in sorted(scalars.items()):
-        scalar_id = ids[canonical]
         if owners[canonical] != "builtin":
             exercised_extension_scalars.add(canonical)
         for case in cases.get("accepted", []):
             if case.get("unresolved"):
                 skipped += 1
                 continue
-            ok, got = parse(scalar_id, case["input"])
+            ok, got = parse(canonical, case["input"])
             if not ok:
                 failures += 1
                 print(f"{canonical} parse({case['input']!r}) rejected: {got}", file=sys.stderr)
@@ -125,7 +124,7 @@ def main() -> int:
             if case.get("unresolved"):
                 skipped += 1
                 continue
-            ok, got = parse(scalar_id, case["input"])
+            ok, got = parse(canonical, case["input"])
             if ok:
                 failures += 1
                 print(f"{canonical} parse({case['input']!r}) accepted as {got!r}", file=sys.stderr)

@@ -1,9 +1,11 @@
 # {{ gen_note }}
 from {{ python.native_from }} import {{ python.native_name }}
 
-SCALAR_ID_BY_CANONICAL = {
-{% for e in entries %}    {{ e.canonical_literal }}: {{ e.id }},
-{% endfor %}}
+# Every canonical scalar name in the registry, sorted. The name is a scalar's
+# identity: every call into the core passes it.
+VALID_SCALARS = (
+{% for e in entries %}    {{ e.canonical_literal }},
+{% endfor %})
 
 # Semantic facts, one row per scalar with a metadata row.
 # `comparability_class` names an equivalence class, or is None for a scalar
@@ -74,12 +76,12 @@ def comparable_with(a: str, b: str) -> bool:
     return class_a is not None and class_a == meta_b["comparability_class"]
 
 {% for e in entries %}def parse_{{ e.snake }}(value: str) -> str:
-    return _native.parse({{ e.id }}, value)
+    return _native.parse({{ e.canonical_literal }}, value)
 
 def normalize_{{ e.snake }}(value: str) -> str:
-    return _native.normalize({{ e.id }}, value)
+    return _native.normalize({{ e.canonical_literal }}, value)
 
 def validate_{{ e.snake }}(value: str) -> None:
-    _native.validate({{ e.id }}, value)
+    _native.validate({{ e.canonical_literal }}, value)
 
 {% endfor %}

@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{PrimitiveKind, Registry, Scalar, ScalarDef};
 use regex::Regex;
@@ -6,7 +5,6 @@ use regex::Regex;
 /// A scalar whose entire behavior is its declared pattern/length/range,
 /// plus any declared reserved words.
 pub struct DirectiveScalar {
-    id: ScalarId,
     primitive: PrimitiveKind,
     pattern: Option<Regex>,
     min_length: Option<usize>,
@@ -18,24 +16,17 @@ pub struct DirectiveScalar {
 }
 
 impl DirectiveScalar {
-    /// Build the engine for `def`'s own id.
-    pub fn from_def(def: &ScalarDef) -> Self {
-        Self::from_def_as(def.id, def)
-    }
-
-    /// Build the engine reporting `id` but using `def`'s rules. Used for aliases
-    /// (Identity.UserID reports its own id but borrows Identity.UUID's rules).
+    /// Build the engine for `def`'s rules.
     ///
     /// Panics on a pattern that does not compile; `Registry::try_assemble`
     /// checks every declared pattern first, so an assembled registry never
     /// reaches this panic.
-    pub fn from_def_as(id: ScalarId, def: &ScalarDef) -> Self {
+    pub fn from_def(def: &ScalarDef) -> Self {
         let pattern = def.pattern.map(|p| {
             Regex::new(p)
                 .unwrap_or_else(|e| panic!("catalog pattern for {} invalid: {e}", def.canonical))
         });
         Self {
-            id,
             primitive: def.primitive,
             pattern,
             min_length: def.min_length,
@@ -101,10 +92,6 @@ impl DirectiveScalar {
 }
 
 impl Scalar for DirectiveScalar {
-    fn id(&self) -> ScalarId {
-        self.id
-    }
-
     fn validate(&self, _registry: &Registry, input: &str) -> Result<(), ScalarError> {
         match self.primitive {
             PrimitiveKind::Int => {
@@ -196,7 +183,7 @@ impl Scalar for DirectiveScalar {
 
 #[cfg(test)]
 mod case_fold_tests {
-    use crate::catalog::ScalarId;
+    use crate::catalog::names;
     use crate::registry::{scalar_for, Registry};
 
     /// The defect, stated as behaviour: `Identity.Slug` declares
@@ -205,7 +192,7 @@ mod case_fold_tests {
     #[test]
     fn identity_slug_normalize_output_passes_its_own_validator() {
         let registry = Registry::builtin();
-        let slug = scalar_for(ScalarId::IDENTITY_SLUG);
+        let slug = scalar_for(names::IDENTITY_SLUG);
         let normalized = slug
             .normalize(registry, "ACME")
             .expect("normalize does not refuse");
@@ -221,21 +208,21 @@ mod case_fold_tests {
     #[test]
     fn normalize_never_emits_what_validate_refuses() {
         let registry = Registry::builtin();
-        for (id, input) in [
-            (ScalarId::IDENTITY_SLUG, "ACME"),
-            (ScalarId::IDENTITY_SLUG, "Q1-Sales"),
-            (ScalarId::IDENTITY_SLUG, "HubSpot"),
-            (ScalarId::NETWORK_DOMAIN_NAME, "Example.COM"),
-            (ScalarId::TEMPORAL_QUARTER, "Q1"),
-            (ScalarId::AGENT_SKILL_NAME, "Data-Analysis"),
+        for (name, input) in [
+            (names::IDENTITY_SLUG, "ACME"),
+            (names::IDENTITY_SLUG, "Q1-Sales"),
+            (names::IDENTITY_SLUG, "HubSpot"),
+            (names::NETWORK_DOMAIN_NAME, "Example.COM"),
+            (names::TEMPORAL_QUARTER, "Q1"),
+            (names::AGENT_SKILL_NAME, "Data-Analysis"),
         ] {
-            let scalar = scalar_for(id);
+            let scalar = scalar_for(name);
             let normalized = scalar
                 .normalize(registry, input)
                 .expect("normalize does not refuse");
             assert!(
                 scalar.validate(registry, &normalized).is_ok(),
-                "{id:?}: normalize({input:?}) emitted a value validate refuses"
+                "{name}: normalize({input:?}) emitted a value validate refuses"
             );
         }
     }
@@ -246,7 +233,7 @@ mod case_fold_tests {
     #[test]
     fn agent_skill_name_normalize_folds_and_parse_stays_strict() {
         let registry = Registry::builtin();
-        let name = scalar_for(ScalarId::AGENT_SKILL_NAME);
+        let name = scalar_for(names::AGENT_SKILL_NAME);
         assert_eq!(
             name.normalize(registry, "Data-Analysis")
                 .expect("normalize"),
@@ -265,7 +252,7 @@ mod case_fold_tests {
     /// its conformance vector still reads `Q1`.
     #[test]
     fn an_already_valid_value_is_not_refolded() {
-        let quarter = scalar_for(ScalarId::TEMPORAL_QUARTER);
+        let quarter = scalar_for(names::TEMPORAL_QUARTER);
         assert_eq!(
             quarter
                 .normalize(Registry::builtin(), "Q1")
@@ -279,7 +266,7 @@ mod case_fold_tests {
     #[test]
     fn parse_stays_strict_on_uppercase() {
         let registry = Registry::builtin();
-        let slug = scalar_for(ScalarId::IDENTITY_SLUG);
+        let slug = scalar_for(names::IDENTITY_SLUG);
         assert!(slug.parse(registry, "ACME").is_err());
         let normalized = slug.normalize(registry, "ACME").expect("normalize");
         assert!(slug.parse(registry, &normalized).is_ok());

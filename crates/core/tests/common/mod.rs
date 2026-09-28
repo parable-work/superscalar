@@ -5,19 +5,17 @@
 
 use superscalar::{
     ErrorKind, Extension, LegacyAlias, PrimitiveKind, Registry, Scalar, ScalarDef, ScalarError,
-    ScalarHooks, ScalarId, ScalarTag,
+    ScalarHooks, ScalarTag,
 };
 
 /// A string def with every optional field at its default.
 pub const fn def(
-    id: ScalarId,
     namespace: &'static str,
     canonical: &'static str,
     tag: ScalarTag,
     pattern: Option<&'static str>,
 ) -> ScalarDef {
     ScalarDef {
-        id,
         namespace,
         canonical,
         primitive: PrimitiveKind::String,
@@ -56,36 +54,33 @@ pub const fn def(
 
 /// `def` with `alias_of` set.
 pub const fn alias_def(
-    id: ScalarId,
     namespace: &'static str,
     canonical: &'static str,
-    alias_of: ScalarId,
+    alias_of: &'static str,
 ) -> ScalarDef {
-    let mut d = def(id, namespace, canonical, ScalarTag::PatternOnly, None);
+    let mut d = def(namespace, canonical, ScalarTag::PatternOnly, None);
     d.alias_of = Some(alias_of);
     d
 }
 
-pub type Impls = fn() -> Vec<(ScalarId, Box<dyn Scalar>)>;
+pub type Impls = fn() -> Vec<(&'static str, Box<dyn Scalar>)>;
 
-pub fn no_impls() -> Vec<(ScalarId, Box<dyn Scalar>)> {
+pub fn no_impls() -> Vec<(&'static str, Box<dyn Scalar>)> {
     Vec::new()
 }
 
 /// An extension assembled from plain data.
 pub struct TestExtension {
     pub name: &'static str,
-    pub id_base: u32,
     pub defs: &'static [ScalarDef],
     pub impls: Impls,
     pub aliases: &'static [LegacyAlias],
 }
 
 impl TestExtension {
-    pub const fn new(name: &'static str, id_base: u32, defs: &'static [ScalarDef]) -> Self {
+    pub const fn new(name: &'static str, defs: &'static [ScalarDef]) -> Self {
         TestExtension {
             name,
-            id_base,
             defs,
             impls: no_impls,
             aliases: &[],
@@ -107,13 +102,10 @@ impl Extension for TestExtension {
     fn name(&self) -> &'static str {
         self.name
     }
-    fn id_base(&self) -> u32 {
-        self.id_base
-    }
     fn defs(&self) -> &'static [ScalarDef] {
         self.defs
     }
-    fn impls(&self) -> Vec<(ScalarId, Box<dyn Scalar>)> {
+    fn impls(&self) -> Vec<(&'static str, Box<dyn Scalar>)> {
         (self.impls)()
     }
     fn aliases(&self) -> &'static [LegacyAlias] {
@@ -123,12 +115,9 @@ impl Extension for TestExtension {
 
 /// A hand-written scalar that upper-cases its input. Exists to be
 /// distinguishable from `DirectiveScalar` (`is_directive() == false`).
-pub struct Upper(pub ScalarId);
+pub struct Upper;
 
 impl Scalar for Upper {
-    fn id(&self) -> ScalarId {
-        self.0
-    }
     fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
         self.validate(registry, input)?;
         self.normalize(registry, input)
@@ -146,12 +135,9 @@ impl Scalar for Upper {
 
 /// A hand-written scalar whose accept set is the assembled registry's
 /// canonical names: the "custom that consults the registry" case.
-pub struct ScalarRef(pub ScalarId);
+pub struct ScalarRef;
 
 impl Scalar for ScalarRef {
-    fn id(&self) -> ScalarId {
-        self.0
-    }
     fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
         self.validate(registry, input)?;
         Ok(input.to_string())
@@ -160,7 +146,7 @@ impl Scalar for ScalarRef {
         self.parse(registry, input)
     }
     fn validate(&self, registry: &Registry, input: &str) -> Result<(), ScalarError> {
-        if registry.by_canonical(input).is_some() {
+        if registry.def(input).is_some() {
             Ok(())
         } else {
             Err(ScalarError::new(

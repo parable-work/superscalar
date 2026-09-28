@@ -1,4 +1,3 @@
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use phonenumber::{parse, PhoneNumber};
@@ -29,10 +28,6 @@ fn normalize_phone_number(input: &str) -> Result<String, ScalarError> {
 pub struct PhoneNumberScalar;
 
 impl Scalar for PhoneNumberScalar {
-    fn id(&self) -> ScalarId {
-        ScalarId::CONTACT_PHONE_NUMBER
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_phone_number(input)
     }

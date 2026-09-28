@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
-use superscalar::{ErrorKind, Registry, ScalarError, ScalarId};
+use superscalar::{ErrorKind, Registry, Scalar, ScalarError};
 
 /// Which `ScalarValue` field is live; `Bytes` carries object scalars.
 #[repr(C)]
@@ -244,21 +244,69 @@ pub unsafe fn decode_cstr<'a>(input: *const c_char) -> Result<&'a str, ScalarRes
         .map_err(|_| make_err(ErrorCategory::Parse, "input was not valid UTF-8"))
 }
 
-/// Resolve the id in `registry`, decode the input, and run the hook under the
+/// Decode the canonical name (`"Contact.Email"`) a caller passes; the `Err`
+/// is the `ScalarResult` to return for a null pointer or non-UTF-8 bytes.
+///
+/// # Safety
+/// `scalar` must be null or a valid NUL-terminated C string that stays valid
+/// for the lifetime `'a`.
+pub unsafe fn decode_scalar_name<'a>(scalar: *const c_char) -> Result<&'a str, ScalarResult> {
+    if scalar.is_null() {
+        return Err(make_err(ErrorCategory::Parse, "null scalar name pointer"));
+    }
+    CStr::from_ptr(scalar)
+        .to_str()
+        .map_err(|_| make_err(ErrorCategory::Parse, "scalar name was not valid UTF-8"))
+}
+
+/// The `ScalarResult` for a name `registry` does not hold.
+pub fn unknown_scalar(name: &str) -> ScalarResult {
+    make_err(ErrorCategory::Parse, &format!("unknown scalar {name:?}"))
+}
+
+/// Look up the implementation a caller names by its canonical name.
+///
+/// # Safety
+/// `scalar` must be null or a valid NUL-terminated C string that stays valid
+/// for the duration of the call.
+pub unsafe fn resolve_scalar(
+    registry: &Registry,
+    scalar: *const c_char,
+) -> Result<&dyn Scalar, ScalarResult> {
+    let name = decode_scalar_name(scalar)?;
+    registry.scalar(name).ok_or_else(|| unknown_scalar(name))
+}
+
+/// Resolve the scalar by name in `registry`, decode the input, and run the
+/// hook under the panic guard.
+///
+/// # Safety
+/// `scalar` and `input` must each be null or a valid NUL-terminated C string
+/// that stays valid for the duration of the call.
+pub unsafe fn run(
+    registry: &Registry,
+    scalar: *const c_char,
+    input: *const c_char,
+    hook: Hook,
+) -> ScalarResult {
+    match resolve_scalar(registry, scalar) {
+        Ok(scalar) => run_hook(registry, scalar, input, hook),
+        Err(err) => err,
+    }
+}
+
+/// Decode the input and run the hook of an already resolved scalar under the
 /// panic guard.
 ///
 /// # Safety
 /// `input` must be null or a valid NUL-terminated C string that stays valid for
 /// the duration of the call.
-pub unsafe fn run(
+unsafe fn run_hook(
     registry: &Registry,
-    scalar_id: u32,
+    scalar: &dyn Scalar,
     input: *const c_char,
     hook: Hook,
 ) -> ScalarResult {
-    let Some(scalar) = registry.scalar(ScalarId(scalar_id)) else {
-        return make_err(ErrorCategory::Parse, "unknown scalar id");
-    };
     let decoded = match decode_cstr(input) {
         Ok(decoded) => decoded,
         Err(err) => return err,
@@ -282,15 +330,19 @@ pub unsafe fn run(
 /// `error`/`error_category` exactly as the strict hooks map theirs.
 ///
 /// # Safety
-/// `json_in` must be null or a valid NUL-terminated C string that stays valid
-/// for the duration of the call.
+/// `scalar` and `json_in` must each be null or a valid NUL-terminated C string
+/// that stays valid for the duration of the call.
 pub unsafe fn run_coerce_lenient(
     registry: &Registry,
-    scalar_id: u32,
+    scalar: *const c_char,
     json_in: *const c_char,
 ) -> ScalarResult {
-    let Some(def) = registry.def(ScalarId(scalar_id)) else {
-        return make_err(ErrorCategory::Parse, "unknown scalar id");
+    let name = match decode_scalar_name(scalar) {
+        Ok(name) => name,
+        Err(err) => return err,
+    };
+    let Some(def) = registry.def(name) else {
+        return unknown_scalar(name);
     };
     let decoded = match decode_cstr(json_in) {
         Ok(decoded) => decoded,
@@ -325,14 +377,15 @@ pub unsafe fn free_result(result: ScalarResult) {
 }
 
 /// Run a hook over `len` inputs in one crossing. Element `i` of the returned
-/// array equals the single-call result for `inputs[i]`.
+/// array equals the single-call result for `inputs[i]`. The scalar is looked
+/// up once; an unknown name fails every element with the single-call error.
 ///
 /// # Safety
-/// `inputs` must point to `len` valid NUL-terminated C strings (or be null when
-/// `len == 0`).
+/// `scalar` must be null or a valid NUL-terminated C string, and `inputs` must
+/// point to `len` valid NUL-terminated C strings (or be null when `len == 0`).
 pub unsafe fn run_batch(
     registry: &Registry,
-    scalar_id: u32,
+    scalar: *const c_char,
     inputs: *const *const c_char,
     len: usize,
     hook: Hook,
@@ -344,9 +397,17 @@ pub unsafe fn run_batch(
         };
     }
     let elements = slice::from_raw_parts(inputs, len);
+    let resolved = resolve_scalar(registry, scalar);
     let mut out: Vec<ScalarResult> = Vec::with_capacity(len);
     for &input in elements {
-        out.push(run(registry, scalar_id, input, hook));
+        out.push(match &resolved {
+            Ok(implementation) => run_hook(registry, *implementation, input, hook),
+            // Each element owns its own copy of the lookup error.
+            Err(_) => run(registry, scalar, input, hook),
+        });
+    }
+    if let Err(err) = resolved {
+        free_result(err);
     }
     // `Box::into_raw` (not `as_mut_ptr` + `mem::forget`, which is UB under
     // Stacked Borrows) keeps the returned pointer valid for the caller's reads.

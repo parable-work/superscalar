@@ -11,7 +11,7 @@ func normalizeTemporalDate(input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		return "", fmt.Errorf("date must not be empty")
 	}
-	return callScalarNormalize(scalarIDTemporalDate, input)
+	return callScalarNormalize(scalarNameTemporalDate, input)
 }
 
 // The generator-emitted ParseTemporalDate is a plain string conversion; use this when normalization is required.

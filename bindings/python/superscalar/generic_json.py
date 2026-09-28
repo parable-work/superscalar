@@ -11,12 +11,11 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from . import _native
-from ._native_ids import SCALAR_ID_BY_CANONICAL
 
 if TYPE_CHECKING:
     from . import ValidationError
 
-_ID = SCALAR_ID_BY_CANONICAL["Generic.JSON"]
+_NAME = "Generic.JSON"
 
 
 def _as_json_text(input_value: Any) -> str:
@@ -27,12 +26,12 @@ def _as_json_text(input_value: Any) -> str:
 
 def normalize_generic_json(input_value: Any) -> str:
     """Normalize any valid JSON token (string or decoded value) to compact text."""
-    return _native.normalize(_ID, _as_json_text(input_value))
+    return _native.normalize(_NAME, _as_json_text(input_value))
 
 
 def parse_generic_json(input_value: Any) -> str:
     """Parse and normalize any valid JSON token to compact text. Raises on bad input."""
-    return _native.parse(_ID, _as_json_text(input_value))
+    return _native.parse(_NAME, _as_json_text(input_value))
 
 
 def validate_generic_json(input_value: Any) -> list[ValidationError]:
@@ -40,7 +39,7 @@ def validate_generic_json(input_value: Any) -> list[ValidationError]:
     from . import ValidationError
 
     try:
-        _native.validate(_ID, _as_json_text(input_value))
+        _native.validate(_NAME, _as_json_text(input_value))
     except (TypeError, ValueError) as exc:
         return [ValidationError(validator="custom", message=str(exc))]
     return []

@@ -10,12 +10,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from . import _native
-from ._native_ids import SCALAR_ID_BY_CANONICAL
 
 if TYPE_CHECKING:
     from . import ValidationError
 
-_ID = SCALAR_ID_BY_CANONICAL["Temporal.Date"]
+_NAME = "Temporal.Date"
 
 
 def normalize_temporal_date(input_value: str) -> Optional[str]:
@@ -23,7 +22,7 @@ def normalize_temporal_date(input_value: str) -> Optional[str]:
     if not isinstance(input_value, str):
         return None
     try:
-        return _native.normalize(_ID, input_value)
+        return _native.normalize(_NAME, input_value)
     except ValueError:
         return None
 
@@ -33,7 +32,7 @@ def parse_temporal_date(input_value: str) -> Optional[str]:
     if not isinstance(input_value, str):
         return None
     try:
-        return _native.parse(_ID, input_value)
+        return _native.parse(_NAME, input_value)
     except ValueError:
         return None
 

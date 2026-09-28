@@ -10,7 +10,7 @@ func normalizeTemporalMonth(input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		return "", fmt.Errorf("month must not be empty")
 	}
-	return callScalarNormalize(scalarIDTemporalMonth, input)
+	return callScalarNormalize(scalarNameTemporalMonth, input)
 }
 
 // The generator-emitted ParseTemporalMonth is a plain string conversion; use this when normalization is required.

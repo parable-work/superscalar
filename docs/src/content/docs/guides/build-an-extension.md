@@ -45,31 +45,30 @@ examples/acme-scalars/
 `superscalar.toml`, no codegen binary and no generated Go, Python or
 TypeScript package. The runners load each build output directly: the static
 archive through the C program, the napi cdylib as a `.node` file, the PyO3
-cdylib as `_native`, and the wasm-pack bundle. They look up scalar ids by
-canonical name in the registry dump, which stands in for the tables generated
-wrappers carry. The example's `README.md` says how a published extension
+cdylib as `_native`, and the wasm-pack bundle. They call each export with the
+scalar's canonical name and check the vector files against the names in the
+registry dump, which stands in for the scalar list generated wrappers carry. The example's `README.md` says how a published extension
 would package the same crates with `napi build`, `maturin` and `wasm-pack`.
 
 The two scalars are chosen to cover both kinds of rule. `Acme.OrderNumber`
-(id 4096) is a directive scalar with pattern `^ORD-[0-9]{6}$` and no
-implementation. `Acme.ScalarRef` (id 4097) is a deep scalar whose `validate`
+is a directive scalar with pattern `^ORD-[0-9]{6}$` and no
+implementation. `Acme.ScalarRef` is a deep scalar whose `validate`
 accepts any canonical scalar name present in the assembled registry, so its
 vectors pass only if the binding really dispatches into the assembled
 registry and not the built-in one.
 
-## 1. Pick an id block
+## 1. Pick a namespace
 
-Built-in ids own `0..=4095`. An extension declares an `id_base` that is a
-multiple of 4096 and at least 4096, and its ids live in
-`[id_base, id_base + 4096)`. The example uses 4096
-(`ScalarId::EXTENSION_BLOCK`), the first extension block. Once published,
-your ids and canonical names are frozen under the same rule as the built-ins.
+A scalar's canonical name, `Namespace.Name`, is its only identity: the C ABI,
+every binding and every vector name the scalar by it. Once published, your
+names are frozen under the same rule as the built-ins: never renamed, never
+reused.
 
-Two extensions with the same base cannot be assembled together, so if your
-extension is meant to be combined with others, pick a base they do not use;
-the first block is the one most likely to be taken. There is no central
-allocation of blocks; this is a coordination problem the design leaves to
-extension authors.
+Assembly refuses a name that two contributions both declare, built-in or
+extension. Put your scalars in a namespace the built-ins do not use and that
+other extensions you combine with are unlikely to use, such as a project
+prefix. The example uses `Acme`. Distinct names never collide, so there is
+nothing else to coordinate.
 
 ## 2. Declare the extension
 
@@ -77,31 +76,27 @@ extension authors.
 
 ```rust
 use std::sync::LazyLock;
-use superscalar::{
-    ErrorKind, Extension, Registry, Scalar, ScalarDef, ScalarError, ScalarId, ScalarTag,
-};
+use superscalar::{ErrorKind, Extension, Registry, Scalar, ScalarDef, ScalarError, ScalarTag};
 
 pub const NAME: &str = "acme";
-pub const ID_BASE: u32 = ScalarId::EXTENSION_BLOCK; // 4096
-pub const ORDER_NUMBER: ScalarId = ScalarId(ID_BASE);
-pub const SCALAR_REF: ScalarId = ScalarId(ID_BASE + 1);
+pub const ORDER_NUMBER: &str = "Acme.OrderNumber";
+pub const SCALAR_REF: &str = "Acme.ScalarRef";
 
 pub static DEFS: [ScalarDef; 2] = [
-    ScalarDef { id: ORDER_NUMBER, namespace: "Acme", canonical: "Acme.OrderNumber",
+    ScalarDef { namespace: "Acme", canonical: ORDER_NUMBER,
                 tag: ScalarTag::PatternOnly, pattern: Some("^ORD-[0-9]{6}$"),
                 /* other fields ... */ },
-    ScalarDef { id: SCALAR_REF, namespace: "Acme", canonical: "Acme.ScalarRef",
+    ScalarDef { namespace: "Acme", canonical: SCALAR_REF,
                 tag: ScalarTag::CustomLogic, /* other fields ... */ },
 ];
 
 pub struct ScalarRef;
 impl Scalar for ScalarRef {
-    fn id(&self) -> ScalarId { SCALAR_REF }
     fn validate(&self, registry: &Registry, input: &str) -> Result<(), ScalarError> {
         if input.trim().is_empty() {
             return Err(ScalarError::new(ErrorKind::Empty, "empty scalar name"));
         }
-        if registry.by_canonical(input).is_some() { return Ok(()); }
+        if registry.def(input).is_some() { return Ok(()); }
         Err(ScalarError::new(ErrorKind::Enum, format!("unknown scalar: {input}")))
     }
     fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
@@ -115,9 +110,8 @@ impl Scalar for ScalarRef {
 pub struct AcmeExtension;
 impl Extension for AcmeExtension {
     fn name(&self) -> &'static str { NAME }
-    fn id_base(&self) -> u32 { ID_BASE }
     fn defs(&self) -> &'static [ScalarDef] { &DEFS }
-    fn impls(&self) -> Vec<(ScalarId, Box<dyn Scalar>)> {
+    fn impls(&self) -> Vec<(&'static str, Box<dyn Scalar>)> {
         vec![(SCALAR_REF, Box::new(ScalarRef))]
     }
 }
@@ -128,18 +122,17 @@ pub fn registry() -> &'static Registry {
 }
 ```
 
-`Registry::assemble` runs thirteen checks and panics with both owners named
-on any conflict: an unaligned or reserved `id_base`, an id outside the block,
-a duplicate id or canonical name across built-ins and extensions, a
-namespace that does not match the canonical prefix, a dangling or chained
-alias, an implementation registered for a definition the extension does not
-own, a `CustomLogic` definition with no implementation, a `PatternOnly`
+`Registry::assemble` runs nine checks and panics with both owners named on
+any conflict: a duplicate extension name, a canonical name declared by two
+contributions, a namespace that does not match the canonical prefix, a
+dangling or chained alias, an implementation registered under a name the
+extension does not declare, a `CustomLogic` definition with no implementation, a `PatternOnly`
 definition with one, or a pattern that does not compile. A non-panicking
 `try_assemble` exists for tests. `Acme.OrderNumber` has no implementation and
 gets the generic directive validator built from its pattern.
 
-A consumer that only reads definitions (a def by id or name, alias
-resolution, comparability) should not link the implementations at all. Give
+A consumer that only reads definitions (a def by name, alias resolution,
+comparability) should not link the implementations at all. Give
 it `Definitions`, assembled from the same static slice and never through the
 `Extension` trait, whose `impls()` would pull every implementation in:
 
@@ -180,7 +173,8 @@ superscalar_wasm::export_wasm!(acme_scalars::registry);
 The result is one native artifact per process that carries the whole
 assembled catalog: your Go program links one static archive that answers for
 `Contact.Email` and `Acme.OrderNumber` alike. The C ABI is unchanged from the
-built-in packages (a `u32` id and a UTF-8 string in, a `ScalarResult` out),
+built-in packages (a canonical name and a UTF-8 string in, a `ScalarResult`
+out),
 so the same nine entry points exist and the built-in header applies.
 `napi`, `pyo3` and `wasm-bindgen` stay direct dependencies of your binding
 crates because the macros expand to items carrying those frameworks'
@@ -200,8 +194,8 @@ own header that includes it and declares them by hand.
 
 ## 4. Configure codegen
 
-The example stops at step 3: its runners call the raw exports with numeric
-ids. A real extension ships typed packages, with `ParseAcmeOrderNumber` in Go
+The example stops at step 3: its runners call the raw exports with canonical
+names. A real extension ships typed packages, with `ParseAcmeOrderNumber` in Go
 next to the built-in `ParseContactEmail`, and those come from the code
 generator. Nothing in this step is in the example; it is what you add next.
 
@@ -315,9 +309,9 @@ built-ins still behave and that its scalars behave:
 - Through each binding, `scripts/smoke.sh` builds the artifact and hands it
   to a runner with both files: `run_vectors.py` for the C program (one
   process per vector) and the PyO3 module, `run_vectors.cjs` for the napi
-  addon and the wasm bundle. The runners map names to ids through the
-  registry dump, and fail if an assembled scalar has no vectors or a vector
-  names a scalar the assembly does not know.
+  addon and the wasm bundle. The runners pass each vector's canonical name to
+  the export, and fail if a scalar in the registry dump has no vectors or a
+  vector names a scalar the assembly does not know.
 
 See [conformance](/superscalar/guides/conformance/) for how vector files
 merge.
@@ -326,7 +320,7 @@ The `acme-example` CI job runs `scripts/smoke.sh` (`make acme` locally):
 `cargo fmt --check`, `cargo clippy`, `cargo test`, the registry dump, then
 the C, napi, wasm and Python bindings, each over both vector files. It then
 runs `scripts/check_third_scalar.sh` (`make acme-third-scalar`), which
-applies a patch adding `Acme.Sku` (id 4098) with its vectors, reruns the
+applies a patch adding `Acme.Sku` with its vectors, reruns the
 smoke, and fails if any file outside `examples/acme-scalars/` changed. That
 check is the acceptance test for the whole model: a scalar was added without
 touching any file under `crates/`.
@@ -338,7 +332,7 @@ xtask in `--check` mode in the same job.
 ## Combining with other extensions
 
 `Registry::assemble` takes a slice, so a downstream can assemble several
-extensions into one registry as long as their id blocks and canonical names
-do not collide. The generated wrappers and the native artifact then carry all
+extensions into one registry as long as their canonical names do not
+collide. The generated wrappers and the native artifact then carry all
 of them. Nothing in the design lets two separately built native artifacts be
 merged at runtime; assembly happens in Rust, at build time.

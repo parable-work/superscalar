@@ -61,17 +61,13 @@ func (p ScalarPattern) MatchString(value string) bool {
 	return err == nil && matched
 }
 
-// Frozen scalar ids: the stable u32 C ABI contract, one constant per registry entry.
+// Canonical scalar names, one constant per registry entry. A scalar's name is
+// its identity: every call into the core passes it.
 const (
-{% for e in entries %}	scalarID{{ e.camel }} uint32 = {{ e.id }}
+{% for e in entries %}	scalarName{{ e.camel }} = {{ e.canonical_literal }}
 {% endfor %})
 
-// ScalarIDByCanonical maps a canonical scalar string to its frozen u32 id.
-var ScalarIDByCanonical = map[string]uint32{
-{% for e in entries %}	{{ e.canonical_literal }}: {{ e.id }},
-{% endfor %}}
-
-{{ go.after_ids }}// VALID_SCALARS lists every canonical scalar name known to scalar-lib.
+{{ go.before_scalar_list }}// VALID_SCALARS lists every canonical scalar name in the registry, sorted.
 var VALID_SCALARS = []{{ go.scalar_list_type }}{
 {% for e in entries %}	{{ go.scalar_list_type }}({{ e.canonical_literal }}),
 {% endfor %}}
@@ -208,8 +204,8 @@ func ComparableWith(a, b string) bool {
 	return metaA.ComparabilityClass != "" && metaA.ComparabilityClass == metaB.ComparabilityClass
 }
 
-func patternForCanonical(canonicalId string) string {
-	meta := ScalarMetadataByCanonical[canonicalId]
+func patternForCanonical(canonical string) string {
+	meta := ScalarMetadataByCanonical[canonical]
 	if meta == nil {
 		return ""
 	}
@@ -244,8 +240,8 @@ func patternForCanonical(canonicalId string) string {
 	return []ValidationError{{ "{" }}{{ "{" }}Validator: validator, Message: message{{ "}" }}{{ "}" }}
 }
 
-func validateScalarValue(id uint32, value string) (bool, []ValidationError) {
-	if err := callScalarValidate(id, value); err != nil {
+func validateScalarValue(canonical string, value string) (bool, []ValidationError) {
+	if err := callScalarValidate(canonical, value); err != nil {
 		return false, validationErrorsFromError(err)
 	}
 	return true, nil
@@ -310,23 +306,23 @@ func scalarStringValue(value any) string {
 	return fmt.Sprint(value)
 }
 
-func ValidatorFor(canonicalId string) func(string) error {
-	switch canonicalId {
+func ValidatorFor(canonical string) func(string) error {
+	switch canonical {
 {% for e in metadata_entries %}{% if e.has_validator %}	case {{ e.canonical_literal }}:
-		return func(value string) error { return callScalarValidate({{ e.id }}, value) }
+		return func(value string) error { return callScalarValidate(scalarName{{ e.camel }}, value) }
 {% endif %}{% endfor %}	default:
 		return nil
 	}
 }
 
 {% for e in entries %}{% if not e.is_object %}// Parse{{ e.camel }} validates and returns the canonical form of a {{ e.canonical }} value.
-func Parse{{ e.camel }}(value string) (string, error) { return callScalarParse({{ e.id }}, value) }
+func Parse{{ e.camel }}(value string) (string, error) { return callScalarParse(scalarName{{ e.camel }}, value) }
 
 // Normalize{{ e.camel }} returns the canonical form of a {{ e.canonical }} value without enforcing shape.
-func Normalize{{ e.camel }}(value string) (string, error) { return callScalarNormalize({{ e.id }}, value) }
+func Normalize{{ e.camel }}(value string) (string, error) { return callScalarNormalize(scalarName{{ e.camel }}, value) }
 
 // Validate{{ e.camel }} enforces the shape of a {{ e.canonical }} value.
-func Validate{{ e.camel }}(value string) error { return callScalarValidate({{ e.id }}, value) }
+func Validate{{ e.camel }}(value string) error { return callScalarValidate(scalarName{{ e.camel }}, value) }
 
 {% if not e.is_alias_member %}
 func (v {{ e.camel }}) String() string {
@@ -348,7 +344,7 @@ func (v {{ e.camel }}) TrimSpace() string {
 {% endif %}
 {% if e.has_validator %}// Validate validates {{ e.camel }} and returns whether validation passed along with any errors.
 func (v {{ e.camel }}) Validate() (bool, []ValidationError) {
-	return validateScalarValue({{ e.id }}, {% if e.go_type == "string" %}string(v){% else %}scalarStringValue(v){% endif %})
+	return validateScalarValue(scalarName{{ e.camel }}, {% if e.go_type == "string" %}string(v){% else %}scalarStringValue(v){% endif %})
 }
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.

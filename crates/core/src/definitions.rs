@@ -1,7 +1,7 @@
 //! `Definitions`: the assembled scalar definitions, with no implementations.
 //!
 //! WHY THIS IS ITS OWN TYPE. A consumer that needs only definitions -- a def
-//! by id or canonical name, alias resolution, comparability, iterating the
+//! by canonical name, alias resolution, comparability, iterating the
 //! catalog -- must not link the scalar implementations. `Registry` cannot give
 //! it that: assembling one calls the built-in impl table and every extension's
 //! `impls()`, and a call through `&dyn Extension` keeps `impls` reachable
@@ -18,18 +18,17 @@
 //! exactly one home.
 //!
 //! The checks that run here are the ones that need only defs: no two defs
-//! share an id (`DuplicateId`) or a canonical name (`DuplicateCanonical`),
-//! every `namespace` is its canonical prefix (`NamespaceMismatch`), and every
-//! `alias_of` names an assembled def (`DanglingAlias`) that is not itself an
-//! alias (`AliasChain`). Pattern compilation, the impl checks, the id-block
-//! checks and extension naming belong to `Registry` assembly, which runs them
-//! around these in its documented order, so for the same input both report
-//! the same `AssemblyError`.
+//! share a canonical name (`DuplicateCanonical`), every `namespace` is its
+//! canonical prefix (`NamespaceMismatch`), and every `alias_of` names an
+//! assembled def (`DanglingAlias`) that is not itself an alias (`AliasChain`).
+//! Pattern compilation, the impl checks and extension naming belong to
+//! `Registry` assembly, which runs them around these in its documented order,
+//! so for the same input both report the same `AssemblyError`.
 
-use crate::catalog::{ScalarId, CATALOG};
+use crate::catalog::CATALOG;
 use crate::extension::AssemblyError;
 use crate::registry::ScalarDef;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 /// Owner name the built-in defs report in assembly errors. The same value
@@ -47,8 +46,7 @@ pub type DefSource = (&'static str, &'static [ScalarDef]);
 /// implementation. `Definitions::builtin()` is the process-wide built-in set;
 /// `Registry::definitions` is the set a registry was assembled from.
 pub struct Definitions {
-    by_id: BTreeMap<u32, &'static ScalarDef>,
-    by_canonical: HashMap<&'static str, ScalarId>,
+    by_name: BTreeMap<&'static str, &'static ScalarDef>,
 }
 
 static BUILTIN: LazyLock<Definitions> = LazyLock::new(|| Definitions::assemble(&[]));
@@ -80,40 +78,31 @@ impl Definitions {
     /// Assembly over every source, built-ins included. `Registry` calls this
     /// with its own built-in entry first.
     pub(crate) fn try_assemble_sources(
-        sources: impl Iterator<Item = DefSource> + Clone,
+        sources: impl Iterator<Item = DefSource>,
     ) -> Result<Definitions, AssemblyError> {
-        let by_canonical = check_unique_identities(sources.clone())?;
-        let by_id: BTreeMap<u32, &'static ScalarDef> = sources
-            .flat_map(|(_, defs)| defs.iter())
-            .map(|def| (def.id.0, def))
-            .collect();
-        check_def_consistency(&by_id)?;
-        Ok(Definitions {
-            by_id,
-            by_canonical,
-        })
+        let by_name = check_unique_names(sources)?;
+        check_def_consistency(&by_name)?;
+        Ok(Definitions { by_name })
     }
 
-    /// Every def keyed by id, for the `Registry` checks that run after these.
-    pub(crate) fn by_id(&self) -> &BTreeMap<u32, &'static ScalarDef> {
-        &self.by_id
+    /// Every def keyed by canonical name, for the `Registry` checks that run
+    /// after these.
+    pub(crate) fn by_name(&self) -> &BTreeMap<&'static str, &'static ScalarDef> {
+        &self.by_name
     }
 
-    /// The def for `id`, or `None` for an id no source declared.
-    pub fn def(&self, id: ScalarId) -> Option<&'static ScalarDef> {
-        self.by_id.get(&id.0).copied()
+    /// The def named `canonical` (`"Contact.Email"`), or `None` for a name no
+    /// source declared. Exact and case-sensitive.
+    pub fn def(&self, canonical: &str) -> Option<&'static ScalarDef> {
+        self.by_name.get(canonical).copied()
     }
 
-    /// Look up a def by its canonical identity string, e.g. `"Contact.Email"`.
-    /// Exact and case-sensitive.
-    pub fn by_canonical(&self, name: &str) -> Option<&'static ScalarDef> {
-        self.by_canonical.get(name).and_then(|id| self.def(*id))
-    }
-
-    /// Resolve an alias to the id that carries the implementation. An unknown
-    /// id resolves to itself.
-    pub fn resolved(&self, id: ScalarId) -> ScalarId {
-        self.def(id).and_then(|def| def.alias_of).unwrap_or(id)
+    /// Resolve an alias to the name that carries the implementation. A name
+    /// that is not an alias, or not assembled, resolves to itself.
+    pub fn resolved<'a>(&self, canonical: &'a str) -> &'a str {
+        self.def(canonical)
+            .and_then(|def| def.alias_of)
+            .unwrap_or(canonical)
     }
 
     /// Whether a comparison or join between a column of scalar `a` and one of
@@ -134,7 +123,7 @@ impl Definitions {
     /// scalars are comparable only when both declare the SAME named class.
     /// `None` on either side is self-comparable-only and never matches across.
     /// An alias resolves first, since `alias_of` means one implementation under
-    /// two ids (`Identity.UserID` and `Identity.UUID` are the only such pair),
+    /// two names (`Identity.UserID` and `Identity.UUID` are the only such pair),
     /// so they are the same scalar for this purpose. The class is read through
     /// the RESOLVED def so the alias inherits the target's class; reading the
     /// raw field on each side would break transitivity one hop out.
@@ -161,77 +150,66 @@ impl Definitions {
     /// false), and no walk over the built-in catalog can see that, because the
     /// one alias pair carries no class on either side. Putting the resolution
     /// inside the rule is what lets a synthetic table catch it.
-    pub fn comparable_with(&self, a: ScalarId, b: ScalarId) -> bool {
-        comparable_in(a, b, |id| {
-            self.def(id)
+    pub fn comparable_with(&self, a: &str, b: &str) -> bool {
+        comparable_in(a, b, |name| {
+            self.def(name)
                 .map_or((None, None), |def| (def.alias_of, def.comparability_class))
         })
     }
 
-    /// Every assembled id, ascending.
-    pub fn ids(&self) -> impl Iterator<Item = ScalarId> + '_ {
-        self.by_id.keys().map(|id| ScalarId(*id))
+    /// Every assembled canonical name, sorted.
+    pub fn names(&self) -> impl Iterator<Item = &'static str> + '_ {
+        self.by_name.keys().copied()
     }
 
-    /// Every assembled def, in ascending id order.
+    /// Every assembled def, sorted by canonical name.
     pub fn defs(&self) -> impl Iterator<Item = &'static ScalarDef> + '_ {
-        self.by_id.values().copied()
+        self.by_name.values().copied()
     }
 
     /// Number of assembled scalars.
     pub fn len(&self) -> usize {
-        self.by_id.len()
+        self.by_name.len()
     }
 
     /// Whether no scalar is assembled. Never true for an assembly that
     /// includes the built-ins; present for `clippy::len_without_is_empty`.
     pub fn is_empty(&self) -> bool {
-        self.by_id.is_empty()
+        self.by_name.is_empty()
     }
 }
 
-/// Assembly checks 4 and 5: no two defs share an id (`DuplicateId`); no two
-/// defs share a canonical name, compared exact and case-sensitive
-/// (`DuplicateCanonical`). Returns the canonical-to-id index, which is well
-/// defined only once check 5 has passed.
-fn check_unique_identities(
-    sources: impl Iterator<Item = DefSource> + Clone,
-) -> Result<HashMap<&'static str, ScalarId>, AssemblyError> {
-    let mut owner_by_id: BTreeMap<u32, &'static str> = BTreeMap::new();
-    for (owner, defs) in sources.clone() {
-        for def in defs {
-            if let Some(first) = owner_by_id.insert(def.id.0, owner) {
-                return Err(AssemblyError::DuplicateId {
-                    id: def.id,
-                    first,
-                    second: owner,
-                });
-            }
-        }
-    }
-    let mut by_canonical: HashMap<&'static str, ScalarId> = HashMap::new();
-    let mut owner_by_canonical: HashMap<&'static str, &'static str> = HashMap::new();
+/// Assembly check 2: no two defs share a canonical name, compared exact and
+/// case-sensitive (`DuplicateCanonical`). Returns the name index, which is
+/// well defined only once the check has passed.
+fn check_unique_names(
+    sources: impl Iterator<Item = DefSource>,
+) -> Result<BTreeMap<&'static str, &'static ScalarDef>, AssemblyError> {
+    let mut by_name: BTreeMap<&'static str, &'static ScalarDef> = BTreeMap::new();
+    let mut owner_by_name: BTreeMap<&'static str, &'static str> = BTreeMap::new();
     for (owner, defs) in sources {
         for def in defs {
-            if let Some(first) = owner_by_canonical.insert(def.canonical, owner) {
+            if let Some(first) = owner_by_name.insert(def.canonical, owner) {
                 return Err(AssemblyError::DuplicateCanonical {
                     canonical: def.canonical,
                     first,
                     second: owner,
                 });
             }
-            by_canonical.insert(def.canonical, def.id);
+            by_name.insert(def.canonical, def);
         }
     }
-    Ok(by_canonical)
+    Ok(by_name)
 }
 
-/// Assembly checks 6, 7 and 8, over every def in id order: `namespace` is the
-/// canonical prefix before the first `.` (`NamespaceMismatch`); every
+/// Assembly checks 3, 4 and 5, over every def in name order: `namespace` is
+/// the canonical prefix before the first `.` (`NamespaceMismatch`); every
 /// `alias_of` target exists (`DanglingAlias`) and is not itself an alias
 /// (`AliasChain`).
-fn check_def_consistency(by_id: &BTreeMap<u32, &'static ScalarDef>) -> Result<(), AssemblyError> {
-    for def in by_id.values() {
+fn check_def_consistency(
+    by_name: &BTreeMap<&'static str, &'static ScalarDef>,
+) -> Result<(), AssemblyError> {
+    for def in by_name.values() {
         let prefix = def.canonical.split('.').next().unwrap_or_default();
         if def.namespace != prefix {
             return Err(AssemblyError::NamespaceMismatch {
@@ -240,11 +218,11 @@ fn check_def_consistency(by_id: &BTreeMap<u32, &'static ScalarDef>) -> Result<()
             });
         }
     }
-    for def in by_id.values() {
+    for def in by_name.values() {
         let Some(target) = def.alias_of else {
             continue;
         };
-        let Some(target_def) = by_id.get(&target.0) else {
+        let Some(target_def) = by_name.get(target) else {
             return Err(AssemblyError::DanglingAlias {
                 canonical: def.canonical,
                 alias_of: target,

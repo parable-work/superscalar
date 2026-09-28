@@ -27,7 +27,6 @@ use superscalar::{LegacyAlias, PrimitiveKind, Registry, ScalarDef, ScalarTag};
 pub struct Entry {
     pub camel: String,
     pub snake: String,
-    pub id: u32,
     pub canonical: String,
     pub canonical_literal: String,
     pub is_object: bool,
@@ -177,12 +176,11 @@ fn has_validator(def: &ScalarDef) -> bool {
     !matches!(def.tag, ScalarTag::Structural)
 }
 
-/// One template entry per assembled def, in `Registry::ids()` order.
+/// One template entry per assembled def, in `Registry::names()` order.
 pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
     registry
         .defs()
         .map(|def| {
-            let id = def.id;
             let canonical = def.canonical.to_string();
             let camel = symbol_from_canonical(&canonical);
             let snake = to_snake(&camel);
@@ -196,11 +194,12 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 .map(|target| format!("{:?}", target.canonical))
                 .unwrap_or_default();
             let is_object = def.primitive == PrimitiveKind::Object;
-            let is_alias_member =
-                def.alias_of.is_some() || registry.defs().any(|other| other.alias_of == Some(id));
+            let is_alias_member = def.alias_of.is_some()
+                || registry
+                    .defs()
+                    .any(|other| other.alias_of == Some(def.canonical));
             Entry {
                 snake,
-                id: id.as_u32(),
                 canonical,
                 canonical_literal: canonical_literal.clone(),
                 is_object,
@@ -260,9 +259,11 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
 /// Named anchors in the built-in templates where an extension places code
 /// it renders itself. The generated file is byte-identical whether the
 /// insert is empty or absent; an extension that needs, say, a Go allowlist
-/// of its own next to the scalar ids renders it and sets the anchor. The
+/// of its own next to the scalar list renders it and sets the anchor. The
 /// text is emitted verbatim, so an insert ends with its own newline.
-pub const GO_AFTER_IDS: &str = "go.after_ids";
+///
+/// Before `VALID_SCALARS` in the Go output.
+pub const GO_BEFORE_SCALAR_LIST: &str = "go.before_scalar_list";
 /// After the per-scalar `<Camel>Pattern` variables in the Go output.
 pub const GO_AFTER_PATTERNS: &str = "go.after_patterns";
 
@@ -272,11 +273,11 @@ pub const GO_AFTER_PATTERNS: &str = "go.after_patterns";
 pub struct Context<'a> {
     pub registry: &'a Registry,
     pub config: &'a Config,
-    /// `registry.ids()` order.
+    /// `registry.names()` order.
     pub entries: Vec<Entry>,
     pub legacy_aliases: &'a [LegacyAlias],
     pub gen_note: &'a str,
-    /// Anchor name (`GO_AFTER_IDS`, ...) -> rendered text. Empty for the
+    /// Anchor name (`GO_BEFORE_SCALAR_LIST`, ...) -> rendered text. Empty for the
     /// built-in assembly.
     pub inserts: BTreeMap<String, String>,
 }

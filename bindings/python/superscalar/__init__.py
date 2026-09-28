@@ -10,7 +10,7 @@ names they share.
 from dataclasses import dataclass
 
 from ._generated import *  # noqa: F401,F403
-from ._generated import SCALAR_ID_BY_CANONICAL  # noqa: F401
+from ._generated import VALID_SCALARS  # noqa: F401
 from ._generated import SCALAR_METADATA  # noqa: F401
 
 

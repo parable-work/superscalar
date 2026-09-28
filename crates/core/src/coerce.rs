@@ -134,14 +134,14 @@ impl Registry {
             return LenientCoerceResult::null();
         }
 
-        let Some(def) = self.by_canonical(scalar_name) else {
+        let Some(def) = self.def(scalar_name) else {
             return LenientCoerceResult::failed(ScalarError::new(
                 ErrorKind::Enum,
                 format!("unknown scalar: {scalar_name}"),
             ));
         };
         let scalar = self
-            .scalar(def.id)
+            .scalar(def.canonical)
             .expect("every assembled def has a scalar slot");
 
         match def.metadata_primitive {
@@ -334,10 +334,8 @@ mod tests {
     fn metadata_omitted_scalar_fails_without_panicking() {
         use crate::extension::Extension;
         use crate::registry::{PrimitiveKind, Scalar, ScalarDef, ScalarHooks, ScalarTag};
-        use crate::ScalarId;
 
         static DEFS: [ScalarDef; 1] = [ScalarDef {
-            id: ScalarId(ScalarId::EXTENSION_BLOCK),
             namespace: "Acme",
             canonical: "Acme.SecretRef",
             primitive: PrimitiveKind::String,
@@ -373,13 +371,10 @@ mod tests {
             fn name(&self) -> &'static str {
                 "acme"
             }
-            fn id_base(&self) -> u32 {
-                ScalarId::EXTENSION_BLOCK
-            }
             fn defs(&self) -> &'static [ScalarDef] {
                 &DEFS
             }
-            fn impls(&self) -> Vec<(ScalarId, Box<dyn Scalar>)> {
+            fn impls(&self) -> Vec<(&'static str, Box<dyn Scalar>)> {
                 Vec::new()
             }
         }

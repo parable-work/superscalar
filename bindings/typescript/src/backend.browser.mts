@@ -12,24 +12,24 @@ import {
 // ScalarBackend is inlined (not imported from ./backend) so the browser ESM
 // compile never pulls in backend.ts and clobbers its CJS-emitted backend.js.
 export interface ScalarBackend {
-  parse(id: number, value: string): string;
-  normalize(id: number, value: string): string;
-  validate(id: number, value: string): void;
+  parse(scalar: string, value: string): string;
+  normalize(scalar: string, value: string): string;
+  validate(scalar: string, value: string): void;
   // Lenient ("flag, don't block") coercion: a JSON document string in, the
   // serialized LenientCoerceResult JSON
   // ({"value":<json|null>,"error":<{kind,message}|null>}) out. Throws only on an
-  // unknown id or unparseable jsonIn; a captured coercion failure rides in the
+  // unknown scalar name or unparseable jsonIn; a captured coercion failure rides in the
   // result's error.
-  coerceLenient(id: number, jsonIn: string): string;
+  coerceLenient(scalar: string, jsonIn: string): string;
 }
 
 const wasmBackendInstance: ScalarBackend = {
-  parse: (id: number, value: string): string => scalar_parse(id, value),
-  normalize: (id: number, value: string): string => scalar_normalize(id, value),
-  validate: (id: number, value: string): void => {
-    scalar_validate(id, value);
+  parse: (scalar: string, value: string): string => scalar_parse(scalar, value),
+  normalize: (scalar: string, value: string): string => scalar_normalize(scalar, value),
+  validate: (scalar: string, value: string): void => {
+    scalar_validate(scalar, value);
   },
-  coerceLenient: (id: number, jsonIn: string): string => scalar_coerce_lenient(id, jsonIn),
+  coerceLenient: (scalar: string, jsonIn: string): string => scalar_coerce_lenient(scalar, jsonIn),
 };
 
 export function napiBackend(): ScalarBackend {

@@ -8,11 +8,11 @@ sidebar:
 The registry is the one place that says which scalars exist and how each one
 behaves. Every binding, the code generator and the docs generator read it;
 nothing else defines a scalar. If you want to know whether a name is a scalar,
-what its id is, or what type it maps to in Go, the answer is a registry entry.
+what it accepts, or what type it maps to in Go, the answer is a registry entry.
 
 It is three Rust files in the core crate. `registry.rs` holds the
 `ScalarDef` struct, the `PrimitiveKind` and `ScalarTag` enums, the `Scalar`
-trait and `Registry`. `catalog.rs` holds the `ScalarId` type and the 48
+trait and `Registry`. `catalog.rs` holds the `names` constants and the 48
 built-in definitions. `definitions.rs` holds `Definitions`, the assembled
 definitions without implementations, and the comparability rule.
 
@@ -20,8 +20,8 @@ definitions without implementations, and the comparability rule.
 
 Each `ScalarDef` records, among other fields:
 
-- `id`, a stable `u32`, and `canonical`, the dotted name (`Contact.Email`).
-  Both are frozen once published; see
+- `canonical`, the dotted name (`Contact.Email`). It is the scalar's only
+  identity and is frozen once published; see
   [ABI and versioning](/superscalar/policy/abi-and-versioning/).
 - `primitive` (`String`, `Int`, `Float`, `Bool`, `Object`), the storage
   primitive, plus `sql_type` (`CITEXT` for `Contact.Email`) and
@@ -43,7 +43,7 @@ Each `ScalarDef` records, among other fields:
 - `type_mappings`, the type the scalar becomes in each target: for
   `Contact.Email`, `string` in TypeScript, `str` in Python, `string` in Go,
   `String` in Rust, `CITEXT` in SQL and `string` in JSON Schema.
-- `alias_of`, for a scalar that shares another scalar's implementation.
+- `alias_of`, the name of the scalar whose implementation this one shares.
   The one built-in alias is `Identity.UserID`, which resolves to
   `Identity.UUID`.
 - `comparability_class`, an optional equivalence class for cross-scalar
@@ -57,18 +57,24 @@ The `Scalar` trait is the behaviour side: `parse`, `normalize` and
 exists for deep and structural scalars; directive scalars get a generic
 implementation built from the definition's rules.
 
-## Ids are frozen, holes are permanent
+## The name is the identity
 
-Built-in ids are `u32` values in the block `0..=4095`. The 48 built-ins do
-not occupy `0..=47`: the ids `0` to `4`, `7`, `30` to `38`, `51`, `57`, `61`,
-`62` and `65` are unused. Those ids belong to scalars that live in a
-downstream extension (most were removed from the built-in set when the
-library was extracted), and they are never reused. The next free built-in id
-is `68`.
+A scalar is identified by its canonical name and nothing else. The C ABI,
+the WASM, napi and PyO3 exports, the generated wrappers and the conformance
+vectors all name a scalar by it, and stored data records it. Names are
+append-only: a published name keeps its meaning and is never renamed or
+reused. In Rust, `names::CONTACT_EMAIL` and its siblings are constants for
+the built-in names, so a misspelled built-in fails to compile; lookups take
+any `&str`.
 
-The reason is byte compatibility. Generated bindings and stored data carry
-the numeric id, and a renumbering would change what an existing consumer
-means by `8`. Holes cost nothing.
+Every lookup is exact and case-sensitive. `Registry::names()` and
+`Registry::defs()` iterate in name order, and so do the generated files and
+the dump, so where a definition sits in the catalog carries no meaning.
+
+Earlier versions also gave each scalar a frozen `u32` id. Nothing stored the
+id, every durable consumer already keyed on the name, and a second identity
+let two contributions collide on a number while meaning different scalars.
+It was removed before the first release.
 
 ## Namespaces
 
@@ -80,25 +86,20 @@ does not equal the prefix of the canonical name.
 
 ## The open registry
 
-The registry described above is closed: the built-in catalog is the only
-catalog. The extension model opens it so a downstream project can add scalars
-in its own crate. The design is agreed and is being implemented; the shape is:
+The built-in catalog is not the only one: a downstream project can add
+scalars in its own crate.
 
-- `ScalarId` becomes a newtype `ScalarId(pub u32)` with associated constants
-  for the built-ins (`ScalarId::CONTACT_EMAIL`), keeping every current value.
-- An `Extension` trait supplies a name, an `id_base` that is a multiple of
-  4096 and at least 4096, a static slice of `ScalarDef`s, hand-written
-  `Scalar` implementations, and optional legacy aliases for generated
-  symbols.
+- An `Extension` trait supplies a name, a static slice of `ScalarDef`s,
+  hand-written `Scalar` implementations keyed by canonical name, and optional
+  legacy aliases for generated symbols.
 - `Registry::builtin()` returns the 48 built-ins.
   `Registry::assemble(&[&dyn Extension])` returns built-ins plus extensions
-  and panics on any conflict: overlapping ids, duplicate canonical names, a
-  definition outside its extension's block, a `CustomLogic` definition with
-  no implementation, or a pattern that does not compile.
-- Lookups (`def`, `by_canonical`, `scalar`) move from free functions onto the
-  `Registry` value, and the `Scalar` trait hooks receive the registry so a
-  scalar can validate against the assembled catalog rather than the built-in
-  one.
+  and panics on any conflict: a canonical name two contributions declare, a
+  `CustomLogic` definition with no implementation, or a pattern that does not
+  compile, among others.
+- Lookups (`def`, `scalar`, `owner`, `resolved`) live on the `Registry`
+  value, and the `Scalar` trait hooks receive the registry so a scalar can
+  validate against the assembled catalog rather than the built-in one.
 - `Registry::dump()` serialises the assembled registry to JSON in a stable
   field order. The code generator and the docs generator consume the dump.
 - `Definitions` is the same catalog without implementations; see below.
@@ -124,15 +125,15 @@ use superscalar::Definitions;
 
 // The built-ins.
 let builtin = Definitions::builtin();
-let email = builtin.by_canonical("Contact.Email").expect("built-in");
+let email = builtin.def("Contact.Email").expect("built-in");
 
 // The built-ins plus an extension's defs, each as an (owner, defs) pair.
 let assembled = Definitions::assemble(&[("acme", &acme_scalars::DEFS)]);
-assert!(assembled.comparable_with(email.id, email.id));
+assert!(assembled.comparable_with(email.canonical, email.canonical));
 ```
 
-It answers `def`, `by_canonical`, `resolved`, `comparable_with`, `ids`,
-`defs`, `len` and `is_empty` with exactly the semantics of the `Registry`
+It answers `def`, `resolved`, `comparable_with`, `names`, `defs`, `len` and
+`is_empty` with exactly the semantics of the `Registry`
 methods of the same names. That is by construction: a `Registry` assembles a
 `Definitions` first and delegates every one of those lookups to it
 (`Registry::definitions()` returns it), so the lookup and comparability rules
@@ -141,10 +142,10 @@ live in one place. The free function `scalar_def` reads
 
 `Definitions` assembly runs the checks that need only definitions, in the
 same order and with the same `AssemblyError` as `Registry` assembly:
-duplicate ids, duplicate canonical names, a namespace that is not the
-canonical prefix, and a dangling or chained alias. Pattern compilation, the
-implementation checks, the id-block checks and extension naming need
-implementations or a compiled pattern and stay with `Registry`, so a set of
+duplicate canonical names, a namespace that is not the canonical prefix, and
+a dangling or chained alias. Pattern compilation, the implementation checks
+and extension naming need implementations or a compiled pattern and stay
+with `Registry`, so a set of
 definitions can assemble here and still be refused by `Registry`; validate
 the full extension through `Registry` in its own tests.
 

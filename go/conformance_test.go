@@ -67,16 +67,15 @@ func TestV2Conformance(t *testing.T) {
 	spec := loadCorpus(t)
 	accepted, rejected, skipped := 0, 0, 0
 	for canonical, sc := range spec.Scalars {
-		id, ok := ScalarIDByCanonical[canonical]
-		if !ok {
-			t.Fatalf("no generated id for %q", canonical)
+		if !KnownScalar(canonical) {
+			t.Fatalf("no generated scalar for %q", canonical)
 		}
 		for _, c := range sc.Accepted {
 			if c.Unresolved {
 				skipped++
 				continue
 			}
-			got, err := callScalarParse(id, c.Input)
+			got, err := callScalarParse(canonical, c.Input)
 			if err != nil {
 				t.Errorf("%s parse(%q) error: %v", canonical, c.Input, err)
 				continue
@@ -93,7 +92,7 @@ func TestV2Conformance(t *testing.T) {
 				skipped++
 				continue
 			}
-			if _, err := callScalarParse(id, c.Input); err == nil {
+			if _, err := callScalarParse(canonical, c.Input); err == nil {
 				t.Errorf("%s parse(%q) unexpectedly succeeded", canonical, c.Input)
 			}
 			rejected++

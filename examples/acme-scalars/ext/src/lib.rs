@@ -16,25 +16,21 @@
 use std::sync::LazyLock;
 use superscalar::{
     Definitions, ErrorKind, Extension, PrimitiveKind, Registry, Scalar, ScalarDef, ScalarError,
-    ScalarHooks, ScalarId, ScalarTag,
+    ScalarHooks, ScalarTag,
 };
 
-/// First id of the Acme block. An extension's ids live in
-/// `[id_base, id_base + 4096)`; the built-ins own `0..=4095`.
-pub const ID_BASE: u32 = ScalarId::EXTENSION_BLOCK;
+/// `Acme.OrderNumber`. A scalar's canonical name is its identity; names are
+/// append-only and never renamed.
+pub const ORDER_NUMBER: &str = "Acme.OrderNumber";
+/// `Acme.ScalarRef`.
+pub const SCALAR_REF: &str = "Acme.ScalarRef";
 
-/// `Acme.OrderNumber`, frozen at 4096.
-pub const ORDER_NUMBER: ScalarId = ScalarId(ID_BASE);
-/// `Acme.ScalarRef`, frozen at 4097.
-pub const SCALAR_REF: ScalarId = ScalarId(ID_BASE + 1);
-
-/// The Acme catalog. Ids are append-only: a new scalar takes the next free id
-/// in the block and nothing is ever renumbered.
+/// The Acme catalog. A new scalar adds its name above and its def here; order
+/// carries no meaning.
 pub static DEFS: [ScalarDef; 2] = [
     ScalarDef {
-        id: ORDER_NUMBER,
         namespace: "Acme",
-        canonical: "Acme.OrderNumber",
+        canonical: ORDER_NUMBER,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -71,9 +67,8 @@ pub static DEFS: [ScalarDef; 2] = [
         metadata_omit: false,
     },
     ScalarDef {
-        id: SCALAR_REF,
         namespace: "Acme",
-        canonical: "Acme.ScalarRef",
+        canonical: SCALAR_REF,
         primitive: PrimitiveKind::String,
         sql_type: "TEXT",
         metadata_primitive: "String",
@@ -115,7 +110,7 @@ pub static DEFS: [ScalarDef; 2] = [
     },
 ];
 
-/// The extension: name, block, defs, and the one hand-written impl.
+/// The extension: name, defs, and the one hand-written impl.
 pub struct AcmeExtension;
 
 impl Extension for AcmeExtension {
@@ -123,15 +118,11 @@ impl Extension for AcmeExtension {
         NAME
     }
 
-    fn id_base(&self) -> u32 {
-        ID_BASE
-    }
-
     fn defs(&self) -> &'static [ScalarDef] {
         &DEFS
     }
 
-    fn impls(&self) -> Vec<(ScalarId, Box<dyn Scalar>)> {
+    fn impls(&self) -> Vec<(&'static str, Box<dyn Scalar>)> {
         vec![(SCALAR_REF, Box::new(ScalarRef))]
     }
 }
@@ -141,10 +132,6 @@ impl Extension for AcmeExtension {
 pub struct ScalarRef;
 
 impl Scalar for ScalarRef {
-    fn id(&self) -> ScalarId {
-        SCALAR_REF
-    }
-
     fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
         self.validate(registry, input)?;
         Ok(input.to_string())
@@ -158,7 +145,7 @@ impl Scalar for ScalarRef {
         if input.trim().is_empty() {
             return Err(ScalarError::new(ErrorKind::Empty, "empty scalar name"));
         }
-        if registry.by_canonical(input).is_some() {
+        if registry.def(input).is_some() {
             return Ok(());
         }
         Err(ScalarError::new(
@@ -170,8 +157,8 @@ impl Scalar for ScalarRef {
 
 static REGISTRY: LazyLock<Registry> = LazyLock::new(|| Registry::assemble(&[&AcmeExtension]));
 
-/// The assembled registry: every built-in scalar plus the Acme block. Built
-/// once, on first use; assembly panics on an id or name collision, which is a
+/// The assembled registry: every built-in scalar plus the Acme scalars. Built
+/// once, on first use; assembly panics on a name collision, which is a
 /// programming error in the extension set and never a runtime condition.
 pub fn registry() -> &'static Registry {
     &REGISTRY
@@ -185,8 +172,8 @@ static DEFINITIONS: LazyLock<Definitions> =
     LazyLock::new(|| Definitions::assemble(&[(NAME, &DEFS)]));
 
 /// The Acme definitions without their implementations: every built-in def plus
-/// the Acme block, for a consumer that only looks defs up (by id or canonical
-/// name), resolves aliases or asks about comparability. It never calls
+/// the Acme defs, for a consumer that only looks defs up by canonical name,
+/// resolves aliases or asks about comparability. It never calls
 /// `AcmeExtension::impls`, so a build that uses only this links no scalar
 /// implementation, which is what keeps a size-capped WASM bundle small.
 /// Answers every definition question exactly as `registry()` does.

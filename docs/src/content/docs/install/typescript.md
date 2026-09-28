@@ -42,7 +42,7 @@ conditions need no configuration. You never import a backend directly;
 `superscalar/wasm` exposes the raw WASM exports (`scalar_parse` and friends)
 for a caller that wants that build explicitly. Its `scalar_parse` throws an
 error named `ScalarParseError` when the core rejects the input, and a plain
-`Error` for an unknown scalar id, so a caller can tell an invalid value from
+`Error` for an unknown scalar name, so a caller can tell an invalid value from
 a runtime failure.
 
 ## Quickstart

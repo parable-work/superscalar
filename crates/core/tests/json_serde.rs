@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use superscalar::{scalar_for, scalars::json_scalar::serde as json_serde, Registry, ScalarId};
+use superscalar::{names, scalar_for, scalars::json_scalar::serde as json_serde, Registry};
 
 // Local adapter fixtures: a struct shaped like a generated consumer's, with
 // Generic.JSON fields in every standard container.
@@ -133,7 +133,7 @@ fn existing_generic_json_scalar_uses_the_same_lossless_parser() {
     let input = example();
     let text = input.to_string();
     let registry = Registry::builtin();
-    let scalar = scalar_for(ScalarId::GENERIC_JSON);
+    let scalar = scalar_for(names::GENERIC_JSON);
     let parsed = scalar.parse(registry, &text).unwrap();
     assert_eq!(json_serde::parse_value(&parsed).unwrap(), input);
     scalar.validate(registry, &parsed).unwrap();
@@ -143,7 +143,7 @@ fn existing_generic_json_scalar_uses_the_same_lossless_parser() {
 #[test]
 fn json_features_do_not_reinterpret_non_json_string_map_keys() {
     let registry = Registry::builtin();
-    let scalar = scalar_for(ScalarId::GENERIC_STRING_MAP);
+    let scalar = scalar_for(names::GENERIC_STRING_MAP);
     for key in [
         "$serde_json::private::Number",
         "$serde_json::private::RawValue",
@@ -160,7 +160,7 @@ fn json_features_do_not_reinterpret_non_json_string_map_keys() {
 #[test]
 fn json_features_do_not_reinterpret_object_scalar_keys() {
     let registry = Registry::builtin();
-    let scalar = scalar_for(ScalarId::GEO_LOCATION);
+    let scalar = scalar_for(names::GEO_LOCATION);
     for key in [
         "$serde_json::private::Number",
         "$serde_json::private::RawValue",

@@ -56,37 +56,40 @@ macro_rules! export_c_abi {
         /// Validate shape and return the canonical normalized value.
         ///
         /// # Safety
-        /// `input` must be null or a valid NUL-terminated C string valid for the call.
+        /// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+        /// each be null or a valid NUL-terminated C string valid for the call.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_parse(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             input: *const ::std::os::raw::c_char,
         ) -> $crate::ScalarResult {
-            $crate::run($registry(), scalar_id, input, $crate::Hook::Parse)
+            $crate::run($registry(), scalar, input, $crate::Hook::Parse)
         }
 
         /// Transform toward canonical form without enforcing shape.
         ///
         /// # Safety
-        /// `input` must be null or a valid NUL-terminated C string valid for the call.
+        /// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+        /// each be null or a valid NUL-terminated C string valid for the call.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_normalize(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             input: *const ::std::os::raw::c_char,
         ) -> $crate::ScalarResult {
-            $crate::run($registry(), scalar_id, input, $crate::Hook::Normalize)
+            $crate::run($registry(), scalar, input, $crate::Hook::Normalize)
         }
 
         /// Enforce shape; on success `value` is empty (read `ok`).
         ///
         /// # Safety
-        /// `input` must be null or a valid NUL-terminated C string valid for the call.
+        /// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+        /// each be null or a valid NUL-terminated C string valid for the call.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_validate(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             input: *const ::std::os::raw::c_char,
         ) -> $crate::ScalarResult {
-            $crate::run($registry(), scalar_id, input, $crate::Hook::Validate)
+            $crate::run($registry(), scalar, input, $crate::Hook::Validate)
         }
 
         /// Lenient ("flag, don't block") coercion: JSON value in, JSON value out.
@@ -99,13 +102,14 @@ macro_rules! export_c_abi {
         /// `error`/`error_category` exactly as the strict hooks map theirs.
         ///
         /// # Safety
-        /// `json_in` must be null or a valid NUL-terminated C string valid for the call.
+        /// `scalar` (a canonical name) and `json_in` must each be null or a valid
+        /// NUL-terminated C string valid for the call.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_coerce_lenient(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             json_in: *const ::std::os::raw::c_char,
         ) -> $crate::ScalarResult {
-            $crate::run_coerce_lenient($registry(), scalar_id, json_in)
+            $crate::run_coerce_lenient($registry(), scalar, json_in)
         }
 
         $($extra)*
@@ -122,40 +126,43 @@ macro_rules! export_c_abi {
         /// Batch `scalar_parse`. See `run_batch`.
         ///
         /// # Safety
+        /// `scalar` must be null or a valid NUL-terminated canonical name, and
         /// `inputs` must point to `len` valid NUL-terminated C strings.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_parse_batch(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             inputs: *const *const ::std::os::raw::c_char,
             len: usize,
         ) -> $crate::ScalarResultArray {
-            $crate::run_batch($registry(), scalar_id, inputs, len, $crate::Hook::Parse)
+            $crate::run_batch($registry(), scalar, inputs, len, $crate::Hook::Parse)
         }
 
         /// Batch `scalar_normalize`. See `run_batch`.
         ///
         /// # Safety
+        /// `scalar` must be null or a valid NUL-terminated canonical name, and
         /// `inputs` must point to `len` valid NUL-terminated C strings.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_normalize_batch(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             inputs: *const *const ::std::os::raw::c_char,
             len: usize,
         ) -> $crate::ScalarResultArray {
-            $crate::run_batch($registry(), scalar_id, inputs, len, $crate::Hook::Normalize)
+            $crate::run_batch($registry(), scalar, inputs, len, $crate::Hook::Normalize)
         }
 
         /// Batch `scalar_validate`. See `run_batch`.
         ///
         /// # Safety
+        /// `scalar` must be null or a valid NUL-terminated canonical name, and
         /// `inputs` must point to `len` valid NUL-terminated C strings.
         #[no_mangle]
         pub unsafe extern "C" fn scalar_validate_batch(
-            scalar_id: u32,
+            scalar: *const ::std::os::raw::c_char,
             inputs: *const *const ::std::os::raw::c_char,
             len: usize,
         ) -> $crate::ScalarResultArray {
-            $crate::run_batch($registry(), scalar_id, inputs, len, $crate::Hook::Validate)
+            $crate::run_batch($registry(), scalar, inputs, len, $crate::Hook::Validate)
         }
 
         /// Release a `ScalarResultArray` and every result it owns.

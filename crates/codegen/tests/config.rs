@@ -127,17 +127,19 @@ fn go_inserts_land_at_their_anchors_and_the_list_type_is_configurable() {
     let config = Config::parse(&text, common::config().root).expect("parse");
     let mut ctx = common::context(&config);
     ctx.inserts.insert(
-        superscalar_codegen::GO_AFTER_IDS.to_string(),
-        "var AFTER_IDS = 1\n\n".to_string(),
+        superscalar_codegen::GO_BEFORE_SCALAR_LIST.to_string(),
+        "var BEFORE_SCALAR_LIST = 1\n\n".to_string(),
     );
     ctx.inserts.insert(
         superscalar_codegen::GO_AFTER_PATTERNS.to_string(),
         "var AFTER_PATTERNS = 2\n\n".to_string(),
     );
     let go = common::rendered(&ctx, "go");
-    let ids = go.find("var AFTER_IDS = 1\n").expect("after_ids insert");
+    let ids = go
+        .find("var BEFORE_SCALAR_LIST = 1\n")
+        .expect("before_scalar_list insert");
     let list = go.find("// VALID_SCALARS lists").expect("scalar list");
-    assert!(ids < list, "after_ids sits before the scalar list");
+    assert!(ids < list, "before_scalar_list sits before the scalar list");
     assert!(go.contains("var VALID_SCALARS = []ScalarName{"));
     assert!(go.contains("\tScalarName(\"Contact.Email\"),"));
     let patterns = go

@@ -1,6 +1,5 @@
 //! Canonical = Go RFC3339Nano: sub-seconds are preserved (fraction kept, trailing zeros trimmed, omitted when zero).
 
-use crate::catalog::ScalarId;
 use crate::error::{ErrorKind, ScalarError};
 use crate::registry::{Registry, Scalar};
 use chrono::{Datelike, FixedOffset, NaiveDate, NaiveDateTime, SecondsFormat, TimeZone, Utc};
@@ -114,10 +113,6 @@ fn parse_datetime_candidate(trimmed: &str) -> Option<ChronoDateTime<FixedOffset>
 pub struct DateTimeScalar;
 
 impl Scalar for DateTimeScalar {
-    fn id(&self) -> ScalarId {
-        ScalarId::TEMPORAL_DATE_TIME
-    }
-
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_datetime(input).ok_or_else(|| {
             ScalarError::new(

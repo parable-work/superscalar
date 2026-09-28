@@ -6,34 +6,27 @@
 mod common;
 
 use common::{def, ScalarRef, TestExtension};
-use superscalar::{ErrorKind, Registry, Scalar, ScalarId, ScalarTag};
+use superscalar::{names, ErrorKind, Registry, Scalar, ScalarTag};
 
-const ORDER_NUMBER: ScalarId = ScalarId(ScalarId::EXTENSION_BLOCK);
-const SCALAR_REF: ScalarId = ScalarId(ScalarId::EXTENSION_BLOCK + 1);
+const ORDER_NUMBER: &str = "Acme.OrderNumber";
+const SCALAR_REF: &str = "Acme.ScalarRef";
 
 static ACME_DEFS: [superscalar::ScalarDef; 2] = [
     def(
-        ORDER_NUMBER,
         "Acme",
-        "Acme.OrderNumber",
+        ORDER_NUMBER,
         ScalarTag::PatternOnly,
         Some("^ORD-[0-9]{6}$"),
     ),
-    def(
-        SCALAR_REF,
-        "Acme",
-        "Acme.ScalarRef",
-        ScalarTag::CustomLogic,
-        None,
-    ),
+    def("Acme", SCALAR_REF, ScalarTag::CustomLogic, None),
 ];
 
-fn acme_impls() -> Vec<(ScalarId, Box<dyn Scalar>)> {
-    vec![(SCALAR_REF, Box::new(ScalarRef(SCALAR_REF)))]
+fn acme_impls() -> Vec<(&'static str, Box<dyn Scalar>)> {
+    vec![(SCALAR_REF, Box::new(ScalarRef))]
 }
 
 fn acme() -> TestExtension {
-    TestExtension::new("acme", ScalarId::EXTENSION_BLOCK, &ACME_DEFS).with_impls(acme_impls)
+    TestExtension::new("acme", &ACME_DEFS).with_impls(acme_impls)
 }
 
 fn assembled() -> Registry {
@@ -44,18 +37,11 @@ fn assembled() -> Registry {
 fn assembly_adds_the_extension_after_the_builtins() {
     let registry = assembled();
     assert_eq!(registry.len(), Registry::builtin().len() + 2);
-    assert_eq!(
-        registry
-            .extensions()
-            .iter()
-            .map(|e| (e.name, e.id_base, e.legacy_ids))
-            .collect::<Vec<_>>(),
-        [("builtin", 0, false), ("acme", 4096, false)]
-    );
+    assert_eq!(registry.extensions(), ["builtin", "acme"]);
     assert_eq!(registry.owner(ORDER_NUMBER), Some("acme"));
-    assert_eq!(registry.owner(ScalarId::CONTACT_EMAIL), Some("builtin"));
-    let all: Vec<u32> = registry.ids().map(|id| id.0).collect();
-    assert_eq!(all[all.len() - 2..], [4096, 4097]);
+    assert_eq!(registry.owner(names::CONTACT_EMAIL), Some("builtin"));
+    let all: Vec<&str> = registry.names().collect();
+    assert_eq!(all[..2], [ORDER_NUMBER, SCALAR_REF]);
 }
 
 #[test]
@@ -63,14 +49,13 @@ fn directive_scalar_runs_from_the_def_alone() {
     let registry = assembled();
     let order = registry.scalar(ORDER_NUMBER).expect("assembled");
     assert!(order.is_directive());
-    assert_eq!(order.id(), ORDER_NUMBER);
     assert_eq!(order.parse(&registry, "ORD-000123").unwrap(), "ORD-000123");
     assert_eq!(order.normalize(&registry, "ORD-12").unwrap(), "ORD-12");
     assert!(order.validate(&registry, "ORD-000123").is_ok());
     let rejected = order.parse(&registry, "ORD-12").unwrap_err();
     assert_eq!(rejected.kind, ErrorKind::Pattern);
     assert_eq!(
-        registry.by_canonical("Acme.OrderNumber").map(|d| d.id),
+        registry.def(ORDER_NUMBER).map(|d| d.canonical),
         Some(ORDER_NUMBER)
     );
 }
@@ -108,19 +93,19 @@ fn custom_scalar_consults_the_assembled_registry() {
 fn builtin_scalars_behave_the_same_through_the_assembly() {
     let registry = assembled();
     let builtin = Registry::builtin();
-    for (id, input) in [
-        (ScalarId::CONTACT_EMAIL, " Alice@Example.com "),
-        (ScalarId::DESIGN_COLOR, "#FF0000"),
+    for (name, input) in [
+        (names::CONTACT_EMAIL, " Alice@Example.com "),
+        (names::DESIGN_COLOR, "#FF0000"),
         (
-            ScalarId::IDENTITY_USER_ID,
+            names::IDENTITY_USER_ID,
             "550e8400-e29b-41d4-a716-446655440000",
         ),
-        (ScalarId::TEMPORAL_DATE, "2026-01-15"),
-        (ScalarId::FINANCE_MONEY, " 12345 "),
+        (names::TEMPORAL_DATE, "2026-01-15"),
+        (names::FINANCE_MONEY, " 12345 "),
     ] {
-        let through_assembly = registry.scalar(id).expect("slot").parse(&registry, input);
-        let through_builtin = builtin.scalar(id).expect("slot").parse(builtin, input);
-        assert_eq!(through_assembly, through_builtin, "{}", id.0);
+        let through_assembly = registry.scalar(name).expect("slot").parse(&registry, input);
+        let through_builtin = builtin.scalar(name).expect("slot").parse(builtin, input);
+        assert_eq!(through_assembly, through_builtin, "{name}");
     }
     let coerced = registry.coerce_lenient(&serde_json::json!(" 12345 "), "Finance.Money");
     assert_eq!(coerced.value, Some(serde_json::json!(12345)));
@@ -133,8 +118,8 @@ fn the_builtin_registry_is_untouched_by_an_assembly() {
     let _registry = assembled();
     let builtin = Registry::builtin();
     assert_eq!(builtin.len(), 48);
-    assert!(builtin.by_canonical("Acme.OrderNumber").is_none());
     assert!(builtin.def(ORDER_NUMBER).is_none());
+    assert!(builtin.scalar(ORDER_NUMBER).is_none());
 }
 
 #[test]
@@ -142,10 +127,16 @@ fn dump_attributes_extension_scalars_to_their_owner() {
     let dump = assembled().dump();
     let scalars = dump["scalars"].as_array().expect("array");
     assert_eq!(scalars.len(), 50);
-    let order = &scalars[48];
-    assert_eq!(order["canonical"], "Acme.OrderNumber");
+    let by_name = |name: &str| {
+        scalars
+            .iter()
+            .find(|scalar| scalar["canonical"] == name)
+            .unwrap_or_else(|| panic!("{name} is in the dump"))
+    };
+    let order = by_name(ORDER_NUMBER);
     assert_eq!(order["extension"], "acme");
     assert_eq!(order["is_directive"], true);
-    assert_eq!(scalars[49]["is_directive"], false);
-    assert_eq!(dump["extensions"][1]["name"], "acme");
+    assert_eq!(by_name(SCALAR_REF)["is_directive"], false);
+    assert_eq!(by_name(names::CONTACT_EMAIL)["extension"], "builtin");
+    assert_eq!(dump["extensions"], serde_json::json!(["builtin", "acme"]));
 }

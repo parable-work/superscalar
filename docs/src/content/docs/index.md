@@ -24,8 +24,9 @@ implemented; where today's names differ, the page says so.
 A scalar is a string-shaped value with a name and a rule. The name is
 canonical and dotted, `Namespace.Name`, and it never changes. The rule says
 which inputs are accepted and what the accepted input looks like once it is
-normalized. Every scalar also carries a stable numeric id (a `u32`), the
-primitive it is stored as, its SQL and JSON Schema types, and the type it maps
+normalized. The name is the scalar's identity: the C ABI and every binding
+name the scalar by it. The definition also records the primitive it is
+stored as, its SQL and JSON Schema types, and the type it maps
 to in each binding language. That record is the scalar's definition in the
 registry; see [the registry](/superscalar/concepts/registry/).
 

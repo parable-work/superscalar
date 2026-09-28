@@ -19,7 +19,7 @@ import pathlib
 import pytest
 
 import superscalar as ps
-from superscalar import _native, SCALAR_ID_BY_CANONICAL
+from superscalar import _native, VALID_SCALARS
 
 CORPUS = json.loads(
     (pathlib.Path(__file__).resolve().parents[3] / "conformance" / "core-scalars.v2.json").read_text()
@@ -62,8 +62,7 @@ def _rejects():
 
 @pytest.mark.parametrize("canonical,inp,normalized", list(_accepts()))
 def test_accept(canonical, inp, normalized):
-    sid = SCALAR_ID_BY_CANONICAL[canonical]
-    got = _native.parse(sid, inp)
+    got = _native.parse(canonical, inp)
     if normalized is not None:
         assert got == normalized
     else:
@@ -72,9 +71,20 @@ def test_accept(canonical, inp, normalized):
 
 @pytest.mark.parametrize("canonical,inp", list(_rejects()))
 def test_reject(canonical, inp):
-    sid = SCALAR_ID_BY_CANONICAL[canonical]
     with pytest.raises(ValueError):
-        _native.parse(sid, inp)
+        _native.parse(canonical, inp)
+
+
+def test_corpus_names_exactly_the_registry():
+    # Every corpus key is a scalar the core dispatches by name, and every
+    # scalar has vectors.
+    assert sorted(CORPUS["scalars"]) == list(VALID_SCALARS)
+
+
+def test_unknown_scalar_name_raises():
+    # Names are exact and case-sensitive: a lowercased built-in is unknown.
+    with pytest.raises(ValueError, match='unknown scalar "contact.email"'):
+        _native.parse("contact.email", "a@b.com")
 
 
 def test_generated_wrappers_route():
@@ -108,8 +118,10 @@ def test_datetime_subsecond_preserved():
     # Enriched-core behavior: sub-seconds preserved in Go
     # RFC3339Nano minimal form (trailing zeros trimmed), not dropped (legacy)
     # nor zero-padded (JS toISOString).
-    sid = SCALAR_ID_BY_CANONICAL["Temporal.DateTime"]
-    assert _native.parse(sid, "2026-01-15T12:00:00.5Z") == "2026-01-15T12:00:00.5Z"
+    assert (
+        _native.parse("Temporal.DateTime", "2026-01-15T12:00:00.5Z")
+        == "2026-01-15T12:00:00.5Z"
+    )
 
 
 def test_metadata_parity():

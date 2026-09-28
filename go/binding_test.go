@@ -5,18 +5,11 @@ import (
 	"testing"
 )
 
-// Finance.Money (Int) and an out-of-range id, named so they do not collide with
-// the generated scalarID constants in generated.go (which already define
-// scalarIDFinanceMoney and scalarIDTemporalDate).
-const (
-	scalarIDFinanceMoneyForTest uint32 = 15
-	scalarIDUnknownForTest      uint32 = 99999
-)
 
 func TestCallScalarCoerceLenientTrimsMoneyString(t *testing.T) {
 	// Finance.Money is an Int scalar: a padded numeric JSON string coerces to
 	// the bare integer, serialized as the JSON document "12345".
-	got, err := callScalarCoerceLenient(scalarIDFinanceMoneyForTest, `" 12345 "`)
+	got, err := callScalarCoerceLenient(scalarNameFinanceMoney, `" 12345 "`)
 	if err != nil {
 		t.Fatalf("coerce_lenient money: unexpected error: %v", err)
 	}
@@ -27,7 +20,7 @@ func TestCallScalarCoerceLenientTrimsMoneyString(t *testing.T) {
 
 func TestCallScalarCoerceLenientNullPassthrough(t *testing.T) {
 	// A JSON null passes through cleanly as the JSON document "null".
-	got, err := callScalarCoerceLenient(scalarIDFinanceMoneyForTest, "null")
+	got, err := callScalarCoerceLenient(scalarNameFinanceMoney, "null")
 	if err != nil {
 		t.Fatalf("coerce_lenient null: unexpected error: %v", err)
 	}
@@ -39,14 +32,14 @@ func TestCallScalarCoerceLenientNullPassthrough(t *testing.T) {
 func TestCallScalarCoerceLenientBadDateIsError(t *testing.T) {
 	// Temporal.Date is a String scalar: an unparseable date surfaces the
 	// captured coercion failure as an error at the C ABI boundary.
-	_, err := callScalarCoerceLenient(scalarIDTemporalDate, `"not-a-date"`)
+	_, err := callScalarCoerceLenient(scalarNameTemporalDate, `"not-a-date"`)
 	if err == nil {
 		t.Fatal("coerce_lenient bad date: expected an error, got nil")
 	}
 }
 
 func TestCallScalarCoerceLenientInvalidJSONIsError(t *testing.T) {
-	_, err := callScalarCoerceLenient(scalarIDFinanceMoneyForTest, "{not json")
+	_, err := callScalarCoerceLenient(scalarNameFinanceMoney, "{not json")
 	if err == nil {
 		t.Fatal("coerce_lenient invalid json: expected an error, got nil")
 	}
@@ -55,9 +48,20 @@ func TestCallScalarCoerceLenientInvalidJSONIsError(t *testing.T) {
 	}
 }
 
-func TestCallScalarCoerceLenientUnknownIDIsError(t *testing.T) {
-	_, err := callScalarCoerceLenient(scalarIDUnknownForTest, "123")
+func TestCallScalarCoerceLenientUnknownNameIsError(t *testing.T) {
+	_, err := callScalarCoerceLenient("No.Such", "123")
 	if err == nil {
-		t.Fatal("coerce_lenient unknown id: expected an error, got nil")
+		t.Fatal("coerce_lenient unknown name: expected an error, got nil")
+	}
+	if !strings.Contains(err.Error(), `unknown scalar "No.Such"`) {
+		t.Fatalf("coerce_lenient unknown name: got %q", err.Error())
+	}
+}
+
+func TestCallScalarParseUnknownNameIsError(t *testing.T) {
+	// Names are exact and case-sensitive.
+	_, err := callScalarParse("contact.email", "a@b.com")
+	if err == nil || !strings.Contains(err.Error(), `unknown scalar "contact.email"`) {
+		t.Fatalf("parse under a lowercased name: got %v", err)
 	}
 }

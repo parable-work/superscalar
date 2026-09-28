@@ -1,8 +1,8 @@
-use crate::catalog::{ScalarId, CATALOG};
+use crate::catalog::CATALOG;
 use crate::definitions::Definitions;
 use crate::directive::DirectiveScalar;
 use crate::error::ScalarError;
-use crate::extension::{AssembleOptions, AssemblyError, Extension, ExtensionInfo, LegacyAlias};
+use crate::extension::{AssemblyError, Extension, LegacyAlias};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::sync::{Arc, LazyLock};
@@ -159,11 +159,12 @@ impl ScalarHooks {
 /// directives in the deleted `scalars.graphql` catalog. Per-language bindings
 /// are generated from these.
 pub struct ScalarDef {
-    pub id: ScalarId,
     /// The canonical prefix before the first '.', e.g. "Contact". Redundant with
     /// `canonical` and asserted equal at assembly; present so codegen and docs
     /// can group without string-splitting in three template languages.
     pub namespace: &'static str,
+    /// The scalar's identity: `"Contact.Email"`. Unique within an assembly and
+    /// append-only: a published name keeps its meaning and is never renamed.
     pub canonical: &'static str,
     pub primitive: PrimitiveKind,
     pub sql_type: &'static str,
@@ -190,9 +191,9 @@ pub struct ScalarDef {
     /// The scalar's long-form documentation block. Empty string means no
     /// docstring.
     pub docstring: &'static str,
-    /// If set, this id shares the target's implementation (e.g.
-    /// Identity.UserID -> Identity.UUID). One impl, two ids.
-    pub alias_of: Option<ScalarId>,
+    /// If set, the canonical name of the scalar whose implementation this one
+    /// shares (e.g. Identity.UserID -> Identity.UUID). One impl, two names.
+    pub alias_of: Option<&'static str>,
     /// When the registry's runtime `primitive` deliberately diverges from the
     /// not-yet-ratified schema declaration, this holds the DSL primitive the
     /// generated schema catalogs must still emit so they match the audited
@@ -327,7 +328,6 @@ impl ScalarDef {
 /// `Send + Sync` so the registry can hold `Arc<dyn Scalar>` and hand out
 /// `&'static dyn Scalar` from a process-wide assembly.
 pub trait Scalar: Send + Sync {
-    fn id(&self) -> ScalarId;
     /// Validate shape, then return the canonical normalized form.
     fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError>;
     /// Transform toward canonical form without enforcing shape. A validate-only
@@ -357,15 +357,15 @@ struct Slot {
 /// collisions once and then read-only. The only thing bindings and codegen
 /// consume; `Registry::builtin()` is the process-wide built-in assembly.
 ///
-/// Every definition lookup (`def`, `by_canonical`, `resolved`,
-/// `comparable_with`, `ids`, `defs`, `len`) is answered by the registry's
+/// Every definition lookup (`def`, `resolved`, `comparable_with`, `names`,
+/// `defs`, `len`) is answered by the registry's
 /// [`Definitions`], which a consumer that needs no implementation can
 /// assemble on its own.
 pub struct Registry {
     definitions: Definitions,
-    slots: BTreeMap<u32, Slot>,
+    slots: BTreeMap<&'static str, Slot>,
     legacy_aliases: Vec<LegacyAlias>,
-    extensions: Vec<ExtensionInfo>,
+    extensions: Vec<&'static str>,
 }
 
 static BUILTIN: LazyLock<Registry> = LazyLock::new(|| Registry::assemble(&[]));
@@ -374,9 +374,8 @@ static BUILTIN: LazyLock<Registry> = LazyLock::new(|| Registry::assemble(&[]));
 /// once so the trait methods are called exactly once each.
 struct Pending {
     name: &'static str,
-    id_base: u32,
     defs: &'static [ScalarDef],
-    impls: Vec<(ScalarId, Box<dyn Scalar>)>,
+    impls: Vec<(&'static str, Box<dyn Scalar>)>,
     aliases: &'static [LegacyAlias],
 }
 
@@ -390,27 +389,18 @@ impl Registry {
     /// owners: an assembly that fails is a programming error in the extension
     /// set, never a runtime condition.
     pub fn assemble(extensions: &[&dyn Extension]) -> Registry {
-        Self::assemble_with(extensions, AssembleOptions::default())
-    }
-
-    /// `assemble` with options (see `AssembleOptions::allow_legacy_ids`).
-    pub fn assemble_with(extensions: &[&dyn Extension], options: AssembleOptions) -> Registry {
-        match Self::try_assemble(extensions, options) {
+        match Self::try_assemble(extensions) {
             Ok(registry) => registry,
             Err(err) => panic!("scalar registry assembly failed: {err}"),
         }
     }
 
-    /// Non-panicking `assemble_with`, for tests and tooling. Runs the checks in
-    /// the documented order and stops at the first failure.
-    pub fn try_assemble(
-        extensions: &[&dyn Extension],
-        options: AssembleOptions,
-    ) -> Result<Registry, AssemblyError> {
+    /// Non-panicking `assemble`, for tests and tooling. Runs the checks in the
+    /// documented order and stops at the first failure.
+    pub fn try_assemble(extensions: &[&dyn Extension]) -> Result<Registry, AssemblyError> {
         let mut pending: Vec<Pending> = Vec::with_capacity(extensions.len() + 1);
         pending.push(Pending {
             name: crate::builtin::NAME,
-            id_base: 0,
             defs: &CATALOG,
             impls: crate::builtin::impls(),
             aliases: &[],
@@ -418,40 +408,30 @@ impl Registry {
         for ext in extensions {
             pending.push(Pending {
                 name: ext.name(),
-                id_base: ext.id_base(),
                 defs: ext.defs(),
                 impls: ext.impls(),
                 aliases: ext.aliases(),
             });
         }
-        // The built-in block is index 0; the id-block checks are about
-        // extensions only and skip it. The phases run in the documented order
-        // (extension-model.md section 2.6) and each stops at its first failure.
-        check_id_blocks(&pending[1..], options)?;
+        // The phases run in the documented order and each stops at its first
+        // failure.
         check_extension_names(&pending)?;
         let definitions =
             Definitions::try_assemble_sources(pending.iter().map(|ext| (ext.name, ext.defs)))?;
-        let defs_by_id = definitions.by_id();
-        check_impls(&pending, defs_by_id)?;
-        check_patterns_and_legacy_aliases(&pending, defs_by_id)?;
+        let defs_by_name = definitions.by_name();
+        check_impls(&pending, defs_by_name)?;
+        check_patterns_and_legacy_aliases(&pending, defs_by_name)?;
 
-        let mut legacy_aliases: Vec<LegacyAlias> = Vec::new();
-        let mut infos: Vec<ExtensionInfo> = Vec::with_capacity(pending.len());
-        for ext in &pending {
-            let legacy_ids = ext.id_base < ScalarId::EXTENSION_BLOCK
-                || ext.defs.iter().any(|def| !in_block(def.id, ext.id_base));
-            infos.push(ExtensionInfo {
-                name: ext.name,
-                id_base: ext.id_base,
-                legacy_ids: legacy_ids && ext.name != crate::builtin::NAME,
-            });
-            legacy_aliases.extend(ext.aliases.iter().copied());
-        }
+        let extensions: Vec<&'static str> = pending.iter().map(|ext| ext.name).collect();
+        let legacy_aliases: Vec<LegacyAlias> = pending
+            .iter()
+            .flat_map(|ext| ext.aliases.iter().copied())
+            .collect();
         Ok(Registry {
             definitions,
             slots: build_slots(pending),
             legacy_aliases,
-            extensions: infos,
+            extensions,
         })
     }
 
@@ -461,46 +441,43 @@ impl Registry {
         &self.definitions
     }
 
-    /// The def for `id`, or `None` for an id no extension declared.
-    pub fn def(&self, id: ScalarId) -> Option<&'static ScalarDef> {
-        self.definitions.def(id)
+    /// The def named `canonical` (`"Contact.Email"`), or `None` for a name no
+    /// extension declared. Exact and case-sensitive.
+    pub fn def(&self, canonical: &str) -> Option<&'static ScalarDef> {
+        self.definitions.def(canonical)
     }
 
-    /// Look up a def by its canonical identity string, e.g. `"Contact.Email"`.
-    /// Exact and case-sensitive.
-    pub fn by_canonical(&self, name: &str) -> Option<&'static ScalarDef> {
-        self.definitions.by_canonical(name)
+    /// The implementation serving `canonical` (hand-written or directive
+    /// engine), or `None` for a name no extension declared.
+    pub fn scalar(&self, canonical: &str) -> Option<&dyn Scalar> {
+        self.slots.get(canonical).map(|slot| &*slot.scalar)
     }
 
-    /// The implementation serving `id` (hand-written or directive engine).
-    pub fn scalar(&self, id: ScalarId) -> Option<&dyn Scalar> {
-        self.slots.get(&id.0).map(|slot| &*slot.scalar)
+    /// The name of the extension that declared `canonical` (`"builtin"` for
+    /// built-ins).
+    pub fn owner(&self, canonical: &str) -> Option<&'static str> {
+        self.slots.get(canonical).map(|slot| slot.owner)
     }
 
-    /// The name of the extension that declared `id` (`"builtin"` for built-ins).
-    pub fn owner(&self, id: ScalarId) -> Option<&'static str> {
-        self.slots.get(&id.0).map(|slot| slot.owner)
-    }
-
-    /// Resolve an alias to the id that carries the implementation. An unknown
-    /// id resolves to itself.
-    pub fn resolved(&self, id: ScalarId) -> ScalarId {
-        self.definitions.resolved(id)
+    /// Resolve an alias to the name that carries the implementation. A name
+    /// that is not an alias, or not assembled, resolves to itself.
+    pub fn resolved<'a>(&self, canonical: &'a str) -> &'a str {
+        self.definitions.resolved(canonical)
     }
 
     /// Whether a comparison or join between a column of scalar `a` and one of
     /// `b` is semantically meaningful: [`Definitions::comparable_with`] over
     /// this registry's definitions, which documents the rule.
-    pub fn comparable_with(&self, a: ScalarId, b: ScalarId) -> bool {
+    pub fn comparable_with(&self, a: &str, b: &str) -> bool {
         self.definitions.comparable_with(a, b)
     }
 
-    /// Every assembled id, ascending.
-    pub fn ids(&self) -> impl Iterator<Item = ScalarId> + '_ {
-        self.definitions.ids()
+    /// Every assembled canonical name, sorted.
+    pub fn names(&self) -> impl Iterator<Item = &'static str> + '_ {
+        self.definitions.names()
     }
 
-    /// Every assembled def, in ascending id order.
+    /// Every assembled def, sorted by canonical name.
     pub fn defs(&self) -> impl Iterator<Item = &'static ScalarDef> + '_ {
         self.definitions.defs()
     }
@@ -522,25 +499,24 @@ impl Registry {
         &self.legacy_aliases
     }
 
-    /// The extensions in this assembly, built-ins first.
-    pub fn extensions(&self) -> &[ExtensionInfo] {
+    /// The names of the extensions in this assembly, `"builtin"` first.
+    pub fn extensions(&self) -> &[&'static str] {
         &self.extensions
     }
 
     /// The whole assembled catalog as JSON with a fixed field order, for docs
-    /// generation and downstream tooling. Scalars are in `ids()` order.
+    /// generation and downstream tooling. Scalars are sorted by canonical name.
     pub fn dump(&self) -> serde_json::Value {
         #[derive(Serialize)]
         struct Dump<'a> {
             dump_version: u32,
             superscalar_version: &'static str,
-            extensions: &'a [ExtensionInfo],
+            extensions: &'a [&'static str],
             scalars: Vec<DumpScalar<'a>>,
             legacy_aliases: &'a [LegacyAlias],
         }
         #[derive(Serialize)]
         struct DumpScalar<'a> {
-            id: u32,
             canonical: &'a str,
             namespace: &'a str,
             extension: &'a str,
@@ -564,7 +540,7 @@ impl Registry {
             type_mappings: &'a [(&'a str, &'a str)],
             file_upload: Option<&'a FileUploadConfig>,
             image_constraints: Option<&'a ImageConstraints>,
-            alias_of: Option<u32>,
+            alias_of: Option<&'a str>,
             schema_primitive_override: Option<&'a str>,
             schema_omit: bool,
             metadata_omit: bool,
@@ -580,7 +556,6 @@ impl Registry {
             .map(|slot| {
                 let def = slot.def;
                 DumpScalar {
-                    id: def.id.0,
                     canonical: def.canonical,
                     namespace: def.namespace,
                     extension: slot.owner,
@@ -604,7 +579,7 @@ impl Registry {
                     type_mappings: def.type_mappings,
                     file_upload: def.file_upload,
                     image_constraints: def.image_constraints,
-                    alias_of: def.alias_of.map(|id| id.0),
+                    alias_of: def.alias_of,
                     schema_primitive_override: def.schema_primitive_override,
                     schema_omit: def.schema_omit,
                     metadata_omit: def.metadata_omit,
@@ -617,7 +592,7 @@ impl Registry {
             })
             .collect();
         serde_json::to_value(Dump {
-            dump_version: 1,
+            dump_version: 2,
             superscalar_version: env!("CARGO_PKG_VERSION"),
             extensions: &self.extensions,
             scalars,
@@ -627,43 +602,8 @@ impl Registry {
     }
 }
 
-/// Assembly checks 1 and 2: every extension's `id_base` is block-aligned
-/// (`IdBaseNotAligned`); then, unless `allow_legacy_ids`, no extension sits in
-/// the reserved built-in block (`IdBaseReserved`) and every def id lies inside
-/// its extension's block (`IdOutOfBlock`). `exts` excludes the built-in block.
-fn check_id_blocks(exts: &[Pending], options: AssembleOptions) -> Result<(), AssemblyError> {
-    for ext in exts {
-        if ext.id_base % ScalarId::EXTENSION_BLOCK != 0 {
-            return Err(AssemblyError::IdBaseNotAligned {
-                extension: ext.name,
-                id_base: ext.id_base,
-            });
-        }
-    }
-    if options.allow_legacy_ids {
-        return Ok(());
-    }
-    for ext in exts {
-        if ext.id_base < ScalarId::EXTENSION_BLOCK {
-            return Err(AssemblyError::IdBaseReserved {
-                extension: ext.name,
-            });
-        }
-        for def in ext.defs {
-            if !in_block(def.id, ext.id_base) {
-                return Err(AssemblyError::IdOutOfBlock {
-                    extension: ext.name,
-                    id: def.id,
-                    canonical: def.canonical,
-                });
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Assembly check 3: extension names are unique and none is `"builtin"`
-/// (`DuplicateExtensionName`). Checks 4 to 8 run in `Definitions` assembly,
+/// Assembly check 1: extension names are unique and none is `"builtin"`
+/// (`DuplicateExtensionName`). Checks 2 to 5 run in `Definitions` assembly,
 /// which needs no extension names beyond the owner it reports.
 fn check_extension_names(pending: &[Pending]) -> Result<(), AssemblyError> {
     let exts = &pending[1..];
@@ -677,54 +617,48 @@ fn check_extension_names(pending: &[Pending]) -> Result<(), AssemblyError> {
     Ok(())
 }
 
-/// Assembly checks 9, 10 and 11: every registered impl names a def its own
-/// extension owns (`ForeignImpl`) and reports that id (`ImplIdMismatch`); then
-/// exhaustiveness after alias resolution: a def whose resolved tag is not
-/// `PatternOnly` has an impl (`MissingImpl`), a resolved `PatternOnly` def has
-/// none, and an alias never carries its own impl (both `UnexpectedImpl`).
+/// Assembly checks 6 and 7: every registered impl names a def its own
+/// extension declares (`ForeignImpl`); then exhaustiveness after alias
+/// resolution: a def whose resolved tag is not `PatternOnly` has an impl
+/// (`MissingImpl`), a resolved `PatternOnly` def has none, and an alias never
+/// carries its own impl (both `UnexpectedImpl`).
 fn check_impls(
     pending: &[Pending],
-    defs_by_id: &BTreeMap<u32, &'static ScalarDef>,
+    defs_by_name: &BTreeMap<&'static str, &'static ScalarDef>,
 ) -> Result<(), AssemblyError> {
     for ext in pending {
-        for (id, scalar) in &ext.impls {
-            if !ext.defs.iter().any(|def| def.id == *id) {
+        for (canonical, _) in &ext.impls {
+            if !ext.defs.iter().any(|def| def.canonical == *canonical) {
                 return Err(AssemblyError::ForeignImpl {
                     extension: ext.name,
-                    id: *id,
-                });
-            }
-            if scalar.id() != *id {
-                return Err(AssemblyError::ImplIdMismatch {
-                    registered: *id,
-                    reported: scalar.id(),
+                    canonical,
                 });
             }
         }
     }
-    let has_impl = |id: ScalarId| {
+    let has_impl = |canonical: &str| {
         pending
             .iter()
-            .any(|ext| ext.impls.iter().any(|(impl_id, _)| *impl_id == id))
+            .any(|ext| ext.impls.iter().any(|(name, _)| *name == canonical))
     };
-    for def in defs_by_id.values() {
+    for def in defs_by_name.values() {
         let resolved = def
             .alias_of
-            .and_then(|target| defs_by_id.get(&target.0).copied())
+            .and_then(|target| defs_by_name.get(target).copied())
             .unwrap_or(def);
-        if def.alias_of.is_some() && has_impl(def.id) {
+        if def.alias_of.is_some() && has_impl(def.canonical) {
             return Err(AssemblyError::UnexpectedImpl {
                 canonical: def.canonical,
             });
         }
         let expects_impl = resolved.tag != ScalarTag::PatternOnly;
-        if expects_impl && !has_impl(resolved.id) {
+        if expects_impl && !has_impl(resolved.canonical) {
             return Err(AssemblyError::MissingImpl {
                 canonical: def.canonical,
                 tag: resolved.tag,
             });
         }
-        if !expects_impl && has_impl(def.id) {
+        if !expects_impl && has_impl(def.canonical) {
             return Err(AssemblyError::UnexpectedImpl {
                 canonical: def.canonical,
             });
@@ -733,14 +667,14 @@ fn check_impls(
     Ok(())
 }
 
-/// Assembly checks 12 and 13: every declared `pattern` compiles
+/// Assembly checks 8 and 9: every declared `pattern` compiles
 /// (`InvalidPattern`); every `LegacyAlias.target` is the generated symbol of
 /// some def (`DanglingLegacyAlias`).
 fn check_patterns_and_legacy_aliases(
     pending: &[Pending],
-    defs_by_id: &BTreeMap<u32, &'static ScalarDef>,
+    defs_by_name: &BTreeMap<&'static str, &'static ScalarDef>,
 ) -> Result<(), AssemblyError> {
-    for def in defs_by_id.values() {
+    for def in defs_by_name.values() {
         if let Some(pattern) = def.pattern {
             if let Err(err) = regex::Regex::new(pattern) {
                 return Err(AssemblyError::InvalidPattern {
@@ -750,7 +684,7 @@ fn check_patterns_and_legacy_aliases(
             }
         }
     }
-    let symbols: Vec<String> = defs_by_id.values().map(|def| def.symbol()).collect();
+    let symbols: Vec<String> = defs_by_name.values().map(|def| def.symbol()).collect();
     for ext in pending {
         for alias in ext.aliases {
             if !symbols.iter().any(|symbol| symbol == alias.target) {
@@ -765,23 +699,28 @@ fn check_patterns_and_legacy_aliases(
 }
 
 /// The build step after every check has passed. Non-alias slots are filled
-/// first so an alias can borrow its target's `Arc` regardless of id order; a
-/// def with no registered impl gets a `DirectiveScalar` over its own def.
-fn build_slots(pending: Vec<Pending>) -> BTreeMap<u32, Slot> {
-    let mut slots: BTreeMap<u32, Slot> = BTreeMap::new();
+/// first, then each alias borrows its target's implementation; a def with no
+/// registered impl gets a `DirectiveScalar` over its own def.
+fn build_slots(pending: Vec<Pending>) -> BTreeMap<&'static str, Slot> {
+    let mut slots: BTreeMap<&'static str, Slot> = BTreeMap::new();
+    let mut aliases: Vec<(&'static ScalarDef, &'static str)> = Vec::new();
     for ext in pending {
-        let mut impls: BTreeMap<u32, Arc<dyn Scalar>> = ext
+        let mut impls: BTreeMap<&'static str, Arc<dyn Scalar>> = ext
             .impls
             .into_iter()
-            .map(|(id, boxed)| (id.0, Arc::from(boxed)))
+            .map(|(canonical, boxed)| (canonical, Arc::from(boxed)))
             .collect();
-        for def in ext.defs.iter().filter(|def| def.alias_of.is_none()) {
-            let scalar: Arc<dyn Scalar> = match impls.remove(&def.id.0) {
+        for def in ext.defs {
+            if def.alias_of.is_some() {
+                aliases.push((def, ext.name));
+                continue;
+            }
+            let scalar: Arc<dyn Scalar> = match impls.remove(def.canonical) {
                 Some(custom) => custom,
                 None => Arc::new(DirectiveScalar::from_def(def)),
             };
             slots.insert(
-                def.id.0,
+                def.canonical,
                 Slot {
                     def,
                     owner: ext.name,
@@ -789,66 +728,32 @@ fn build_slots(pending: Vec<Pending>) -> BTreeMap<u32, Slot> {
                 },
             );
         }
-        for def in ext.defs.iter().filter(|def| def.alias_of.is_some()) {
-            slots.insert(
-                def.id.0,
-                Slot {
-                    def,
-                    owner: ext.name,
-                    // Filled in the alias pass below once every target
-                    // slot exists; a placeholder directive engine over the
-                    // alias's own def keeps the map total meanwhile.
-                    scalar: Arc::new(DirectiveScalar::from_def(def)),
-                },
-            );
-        }
     }
-    let alias_ids: Vec<u32> = slots
-        .values()
-        .filter(|slot| slot.def.alias_of.is_some())
-        .map(|slot| slot.def.id.0)
-        .collect();
-    for alias_id in alias_ids {
-        let target = slots[&alias_id]
-            .def
-            .alias_of
-            .expect("filtered to aliases above");
-        let target_slot = &slots[&target.0];
-        let scalar: Arc<dyn Scalar> = if target_slot.scalar.is_directive() {
-            Arc::new(DirectiveScalar::from_def_as(
-                ScalarId(alias_id),
-                target_slot.def,
-            ))
-        } else {
-            Arc::clone(&target_slot.scalar)
-        };
-        if let Some(slot) = slots.get_mut(&alias_id) {
-            slot.scalar = scalar;
-        }
+    for (def, owner) in aliases {
+        let target = def.alias_of.expect("collected as an alias above");
+        let scalar = Arc::clone(&slots[target].scalar);
+        slots.insert(def.canonical, Slot { def, owner, scalar });
     }
     slots
 }
 
-fn in_block(id: ScalarId, id_base: u32) -> bool {
-    id.0 >= id_base && id.0 < id_base.saturating_add(ScalarId::EXTENSION_BLOCK)
-}
-
-/// Built-in catalog lookup. Panics on an id the built-in set does not hold;
-/// callers with an untrusted id use `Definitions::def` or `Registry::def`.
-/// Reads [`Definitions::builtin`], so it links no scalar implementation.
-pub fn scalar_def(id: ScalarId) -> &'static ScalarDef {
+/// Built-in catalog lookup by canonical name. Panics on a name the built-in
+/// set does not hold; callers with an untrusted name use `Definitions::def` or
+/// `Registry::def`. Reads [`Definitions::builtin`], so it links no scalar
+/// implementation.
+pub fn scalar_def(canonical: &str) -> &'static ScalarDef {
     Definitions::builtin()
-        .def(id)
-        .unwrap_or_else(|| panic!("scalar id {} is not a built-in scalar", id.0))
+        .def(canonical)
+        .unwrap_or_else(|| panic!("{canonical:?} is not a built-in scalar"))
 }
 
 /// Dispatch to a built-in scalar's implementation (custom or directive
-/// engine). Panics on an id the built-in registry does not hold; callers with
-/// an untrusted id use `Registry::scalar`.
-pub fn scalar_for(id: ScalarId) -> &'static dyn Scalar {
+/// engine) by canonical name. Panics on a name the built-in registry does not
+/// hold; callers with an untrusted name use `Registry::scalar`.
+pub fn scalar_for(canonical: &str) -> &'static dyn Scalar {
     Registry::builtin()
-        .scalar(id)
-        .unwrap_or_else(|| panic!("scalar id {} is not a built-in scalar", id.0))
+        .scalar(canonical)
+        .unwrap_or_else(|| panic!("{canonical:?} is not a built-in scalar"))
 }
 
 #[cfg(test)]
