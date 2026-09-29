@@ -75,26 +75,37 @@ count per bucket.
 
 ## Running against your own build or extension
 
-Multi-file loading is part of the extension work for v0.1.0; today's runners
-read the one built-in file. Once it lands, every runner takes a list of
-vector files rather than one hard-coded path.
-Loading merges the files: `scalars` keys must be disjoint across files (the
-runner fails otherwise), `metadata` keys likewise, `metadata_excluded` lists
-concatenate, and `non_sortable_count` values sum. The total case count is
-asserted per assembly so a missing file is noticed.
+The Go, Python and TypeScript runners above read one fixed path,
+`conformance/core-scalars.v2.json`. An extension runs the built-in file and
+its own files together through its assembled registry. The
+`examples/acme-scalars/` extension does it in two places, each over
+`conformance/core-scalars.v2.json` plus
+`examples/acme-scalars/conformance/acme-scalars.v2.json`:
 
-The file lists in use:
+- `ext/tests/conformance.rs` merges the two files and runs every vector
+  through the assembled registry. `scalars` keys and `metadata` keys must be
+  disjoint across files, and `metadata_excluded` lists concatenate. Every
+  assembled scalar must have vectors, every vector must name an assembled
+  scalar, and each metadata row must match its def.
+- `scripts/run_vectors.py` (C and Python) and `scripts/run_vectors.cjs`
+  (napi and WASM) take a registry dump (`--registry`) and any number of
+  vector files. They merge `scalars` the same way and fail when a key is in
+  two files, an assembled scalar has no vectors, a vector names a scalar the
+  assembly does not know, or no extension scalar was exercised. They check
+  parse results only, not the metadata section. `scripts/smoke.sh`
+  (`make acme`) builds each binding and runs them over both files.
 
-- Built-in bindings in this repository: `conformance/core-scalars.v2.json`.
-- The `examples/acme-scalars/` extension: `conformance/core-scalars.v2.json`
-  plus `conformance/acme-scalars.v2.json`.
-- Your extension: the built-in file at the version you depend on, plus one
-  file per extension you assemble.
+A vector file left off the list fails the run, because its scalars then have
+no vectors. No multi-file runner reads `non_sortable_count`; only the
+single-file runners check it.
 
-Copy a runner from the acme example into your extension, set its file list,
-and run it in your CI against each binding you ship. If the built-in vectors
-fail through your assembly, the fault is in how the registry was assembled or
-how the binding was built, not in the built-ins.
+For your extension, the list is the built-in file at the version you depend
+on plus one file per extension you assemble. Copy the acme runners and
+`ext/examples/dump.rs`, point them at your registry and files, and run them
+in CI against each binding you ship. The acme example has no Go runner; a
+generated Go package needs its own test over the same list. If the built-in
+vectors fail through your assembly, the fault is in how the registry was
+assembled or how the binding was built, not in the built-ins.
 
 ## Vectors are the versioning unit
 

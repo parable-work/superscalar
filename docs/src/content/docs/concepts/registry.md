@@ -39,7 +39,7 @@ Each `ScalarDef` records, among other fields:
   `reserved_words`.
 - `examples` and `description`, which the generated reference and the docs
   check read. A scalar with an empty description fails `superscalar docs
-  --check` (part of the CLI being implemented for v0.1.0).
+  --check` (`make docs-check`).
 - `type_mappings`, the type the scalar becomes in each target: for
   `Contact.Email`, `string` in TypeScript, `str` in Python, `string` in Go,
   `String` in Rust, `CITEXT` in SQL and `string` in JSON Schema.
@@ -80,32 +80,66 @@ It was removed before the first release.
 
 The part of the canonical name before the dot is the namespace: `Contact`,
 `Identity`, `Temporal`, `Network`, and so on. It groups scalars in the
-generated reference and in the codegen output. Under the open registry below,
-a definition carries its namespace as a field, and assembly rejects one that
-does not equal the prefix of the canonical name.
+generated reference and in the codegen output. A definition also carries it
+in its `namespace` field, and assembly rejects one that does not equal the
+prefix of the canonical name.
 
 ## The open registry
 
-The built-in catalog is not the only one: a downstream project can add
-scalars in its own crate.
+A downstream crate adds scalars by implementing the `Extension` trait
+(`extension.rs`):
 
-- An `Extension` trait supplies a name, a static slice of `ScalarDef`s,
-  hand-written `Scalar` implementations keyed by canonical name, and optional
-  legacy aliases for generated symbols.
-- `Registry::builtin()` returns the 48 built-ins.
-  `Registry::assemble(&[&dyn Extension])` returns built-ins plus extensions
-  and panics on any conflict: a canonical name two contributions declare, a
-  `CustomLogic` definition with no implementation, or a pattern that does not
-  compile, among others.
-- Lookups (`def`, `scalar`, `owner`, `resolved`) live on the `Registry`
-  value, and the `Scalar` trait hooks receive the registry so a scalar can
-  validate against the assembled catalog rather than the built-in one.
-- `Registry::dump()` serialises the assembled registry to JSON in a stable
-  field order. The code generator and the docs generator consume the dump.
-- `Definitions` is the same catalog without implementations; see below.
+- `name()`, the owner name (`"acme"`). It must be unique within an assembly
+  and must not be `"builtin"`.
+- `defs()`, a `&'static [ScalarDef]` declared the same way as the built-in
+  catalog.
+- `impls()`, hand-written `Scalar` implementations, each keyed by the
+  canonical name of a def the extension declares. A def with no entry runs
+  on the directive engine, built from its rules; an alias shares its
+  target's implementation.
+- `aliases()`, optional `LegacyAlias` entries: flat names the generated
+  bindings alias to a canonical symbol (`Email` to `ContactEmail`). Empty by
+  default.
+
+`Registry::builtin()` is the 48 built-ins, assembled on first use.
+`Registry::assemble(&[&dyn Extension])` assembles the built-ins plus the
+given extensions and panics if a check fails; `Registry::try_assemble` runs
+the same checks and returns the `AssemblyError` instead. The checks run in
+this order and stop at the first failure:
+
+1. An extension name repeats or is `"builtin"` (`DuplicateExtensionName`).
+2. Two contributions declare the same canonical name (`DuplicateCanonical`).
+3. A `namespace` is not the canonical prefix (`NamespaceMismatch`).
+4. An `alias_of` names no assembled scalar (`DanglingAlias`).
+5. An `alias_of` names another alias (`AliasChain`).
+6. An extension registers an implementation for a name it does not declare
+   (`ForeignImpl`).
+7. After alias resolution, a def whose tag is not `PatternOnly` has no
+   implementation (`MissingImpl`), or a `PatternOnly` def or an alias
+   registers one (`UnexpectedImpl`).
+8. A `pattern` does not compile (`InvalidPattern`).
+9. A legacy alias targets a symbol no assembled scalar generates
+   (`DanglingLegacyAlias`).
+
+An assembled registry is read-only. It answers `def`, `scalar`, `owner`
+(`"builtin"` for a built-in), `resolved`, `comparable_with`, `names`, `defs`,
+`len`, `extensions` and `legacy_aliases`. The `Scalar` methods `parse`,
+`normalize` and `validate` receive the registry, so a scalar can check input
+against the assembled catalog rather than the built-in one. The free
+functions `scalar_def` and `scalar_for` cover the built-ins only and panic on
+any other name.
+
+`Registry::dump()` returns the assembled registry as JSON with a fixed field
+order: `dump_version` (2), `superscalar_version`, `extensions`, `scalars`
+(each def's fields plus its owner, `is_sortable` and `is_directive`, sorted
+by canonical name) and `legacy_aliases`. `superscalar registry dump`
+(`make dump`) prints the built-in registry's dump; the acme example prints
+its own and its vector runners read the scalar list from it. The code
+generator and the docs generator read the `Registry` itself, not the dump.
 
 The [build an extension](/superscalar/guides/build-an-extension/) guide
-walks through the example extension that exercises all of this.
+walks through `examples/acme-scalars/`, which exercises all of this.
+`Definitions`, below, is the same catalog without implementations.
 
 ## Definitions without implementations
 
@@ -140,12 +174,11 @@ methods of the same names. That is by construction: a `Registry` assembles a
 live in one place. The free function `scalar_def` reads
 `Definitions::builtin()` for the same reason.
 
-`Definitions` assembly runs the checks that need only definitions, in the
-same order and with the same `AssemblyError` as `Registry` assembly:
-duplicate canonical names, a namespace that is not the canonical prefix, and
-a dangling or chained alias. Pattern compilation, the implementation checks
-and extension naming need implementations or a compiled pattern and stay
-with `Registry`, so a set of
-definitions can assemble here and still be refused by `Registry`; validate
-the full extension through `Registry` in its own tests.
+`Definitions` assembly runs checks 2 to 5 from the list above, the ones that
+need only definitions, in the same order and with the same `AssemblyError`
+as `Registry` assembly. Checks 1 and 6 to 9 need extension names,
+implementations, compiled patterns or legacy aliases and run only in
+`Registry` assembly, so a set of definitions can assemble here and still be
+refused by `Registry`; validate the full extension through `Registry` in its
+own tests.
 

@@ -127,8 +127,10 @@ any conflict: a duplicate extension name, a canonical name declared by two
 contributions, a namespace that does not match the canonical prefix, a
 dangling or chained alias, an implementation registered under a name the
 extension does not declare, a `CustomLogic` definition with no implementation, a `PatternOnly`
-definition with one, or a pattern that does not compile. A non-panicking
-`try_assemble` exists for tests. `Acme.OrderNumber` has no implementation and
+definition with one, a pattern that does not compile, or a legacy alias
+whose target no assembled scalar generates. A non-panicking `try_assemble`
+exists for tests; [the registry](/superscalar/concepts/registry/#the-open-registry)
+lists the checks in order. `Acme.OrderNumber` has no implementation and
 gets the generic directive validator built from its pattern.
 
 A consumer that only reads definitions (a def by name, alias resolution,

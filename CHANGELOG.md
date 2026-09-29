@@ -176,5 +176,15 @@ bump they require (minor when loosening, major when tightening).
   sample `superscalar.toml` now parses (`[registry] source = "builtin"`,
   `[go] module` set, no `[rust_metadata]` stub) and the sample xtask is
   complete. Documentation only.
+- The registry page's open-registry section describes what ships: the four
+  `Extension` methods, `assemble` and `try_assemble`, the nine assembly
+  checks in the order they run with their `AssemblyError` variants, the
+  lookups on `Registry`, and the dump's fields. It no longer says the code
+  generator and the docs generator consume the dump; they read the
+  `Registry`. The build-an-extension guide adds the legacy alias check to its
+  list. The conformance guide no longer calls multi-file loading future work:
+  it says which runners read one file and which merge several, and drops the
+  claims that `non_sortable_count` sums across files and that a total case
+  count is asserted. Documentation only.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main
