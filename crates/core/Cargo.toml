@@ -5,7 +5,7 @@ description = "Scalar types library: one Rust core for every scalar's parse/norm
 # a standalone path dependency from crates that are NOT part of this workspace
 # and from Dockerfiles that COPY only this crate's directory. Values match the
 # workspace [workspace.package] block.
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 rust-version = "1.95.0"
 authors = ["Parable Work, Inc."]

@@ -1,6 +1,6 @@
 {
   "name": "superscalar",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Scalar types library: napi (Node) + WASM (browser) bindings over the Rust core.",
   "license": "Apache-2.0",
   "author": "Parable Work, Inc.",

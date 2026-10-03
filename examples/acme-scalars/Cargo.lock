@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "acme-scalars"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "acme-scalars-ffi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "acme-scalars",
  "superscalar-ffi",
@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "acme-scalars-napi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "acme-scalars",
  "napi",
@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "acme-scalars-python"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "acme-scalars",
  "pyo3",
@@ -42,7 +42,7 @@ dependencies = [
 
 [[package]]
 name = "acme-scalars-wasm"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "acme-scalars",
  "superscalar-wasm",
@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "chrono",
  "once_cell",
@@ -791,7 +791,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-ffi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde_json",
  "superscalar",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-napi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "napi",
  "napi-build",
@@ -810,7 +810,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-python"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "pyo3",
  "serde_json",
@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-wasm"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "js-sys",
  "serde_json",

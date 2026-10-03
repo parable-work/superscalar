@@ -25,7 +25,7 @@ builtin = []
 [dependencies]
 # The bindings promise the conformance corpus, whose exact-number vectors
 # need `lossless-json`; named here so it holds without the core default.
-superscalar = { path = "../core", version = "0.1.0", features = ["lossless-json"] }
+superscalar = { path = "../core", version = "0.0.1", features = ["lossless-json"] }
 serde_json = "1.0.149"
 # extension-module is added by maturin (see pyproject.toml [tool.maturin]) so
 # `cargo check`/clippy on the host do not try to link libpython.

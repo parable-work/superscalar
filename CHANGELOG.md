@@ -10,6 +10,8 @@ bump they require (minor when loosening, major when tightening).
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-10-03
+
 ### Added
 
 - Repository bootstrap: license, contribution guide, code of conduct,
@@ -187,4 +189,5 @@ bump they require (minor when loosening, major when tightening).
   claims that `non_sortable_count` sums across files and that a total case
   count is asserted. Documentation only.
 
-[Unreleased]: https://github.com/parable-work/superscalar/commits/main
+[Unreleased]: https://github.com/parable-work/superscalar/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/parable-work/superscalar/releases/tag/v0.0.1

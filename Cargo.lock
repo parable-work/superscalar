@@ -827,7 +827,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "chrono",
  "once_cell",
@@ -840,7 +840,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-codegen"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "minijinja",
  "serde",
@@ -852,7 +852,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-ffi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde_json",
  "superscalar",
@@ -860,7 +860,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-napi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "napi",
  "napi-build",
@@ -871,7 +871,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-python"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "pyo3",
  "serde_json",
@@ -880,7 +880,7 @@ dependencies = [
 
 [[package]]
 name = "superscalar-wasm"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "js-sys",
  "serde_json",
