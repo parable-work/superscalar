@@ -443,7 +443,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		HasCustomParse:     false,
 		HasCustomValidate:  true,
 		HasValidator:       true,
-		Examples:           []string{"+1234567890"},
+		Examples:           []string{"+14155552671"},
 		ComparabilityClass: "",
 		IsSortable:         true,
 	},

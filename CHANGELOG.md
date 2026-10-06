@@ -138,8 +138,7 @@ bump they require (minor when loosening, major when tightening).
     new vectors cover the inclusive bounds, integers, negative values, member
     order, number spelling, negative zero, and the refusals above. Two new
     core tests keep definitions honest: a JSON-valued scalar declares no
-    `pattern` or length bounds, and every example parses to itself
-    (`Contact.PhoneNumber`'s `+1234567890` is a recorded exception).
+    `pattern` or length bounds, and every example parses to itself.
 - A scalar's canonical name is its only identity; numeric scalar ids are
   gone. Every C ABI entry point takes the name where it took a `uint32_t`
   (`scalar_parse(const char *scalar, const char *input)` and the other eight),
@@ -232,5 +231,10 @@ bump they require (minor when loosening, major when tightening).
   it says which runners read one file and which merge several, and drops the
   claims that `non_sortable_count` sums across files and that a total case
   count is asserted. Documentation only.
+- `Contact.PhoneNumber`'s example is `+14155552671`, a number the scalar
+  accepts in its canonical E.164 form. The old example, `+1234567890`, failed
+  the scalar's own validation, yet the generated Go and TypeScript metadata
+  and the reference docs showed it. Metadata only: no vector or accept-set
+  change, no bump required.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

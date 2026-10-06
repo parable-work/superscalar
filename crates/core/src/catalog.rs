@@ -203,7 +203,7 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         maximum: None,
         case_insensitive: false,
         reserved_words: &[],
-        examples: &["+1234567890"],
+        examples: &["+14155552671"],
         description: "Phone number in E.164 format",
         type_mappings: &[("typescript", "string"), ("python", "str"), ("go", "string"), ("rust", "String"), ("sql", "VARCHAR(16)"), ("json_schema", "string")],
         file_upload: None,
