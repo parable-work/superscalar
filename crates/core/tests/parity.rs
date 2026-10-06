@@ -253,9 +253,9 @@ fn declared_pattern_accepts_every_canonical_form() {
             continue;
         };
         // `pattern`, `minLength` and `maxLength` are string-only JSON Schema keywords:
-        // against an object-typed schema they are inert and gate nothing. Geo.Location
-        // declares a pattern for its INPUT form while emitting an object, so asserting
-        // it here would be checking a rule no request is ever held to.
+        // against an object-typed schema they are inert and gate nothing, and a
+        // JSON-valued scalar declares none
+        // (`json_valued_scalars_declare_no_string_rules`).
         if meta.json_schema_type != Some("string") {
             continue;
         }

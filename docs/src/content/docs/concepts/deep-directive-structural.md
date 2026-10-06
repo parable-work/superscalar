@@ -43,12 +43,22 @@ base62 forms and canonicalises to base62, `Temporal.RecurrenceRule` parses
 recurrence rules. The rule lives in one Rust module under
 `crates/core/src/scalars/`, implemented once and called by every binding.
 
-17 of the 48 built-ins are deep scalars: `Contact.Email`,
+18 of the 48 built-ins are deep scalars: `Contact.Email`,
 `Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Generic.JSON`,
-`Generic.StringMap`, `Git.PathPattern`, `Identity.UUID`, `Identity.UserID`
-(an alias of `Identity.UUID`), `Network.Url`, `Network.DnsLabel`,
-`Temporal.Date`, `Temporal.DateTime`, `Temporal.Duration`, `Temporal.Month`,
-`Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
+`Generic.StringMap`, `Geo.Location`, `Git.PathPattern`, `Identity.UUID`,
+`Identity.UserID` (an alias of `Identity.UUID`), `Network.Url`,
+`Network.DnsLabel`, `Temporal.Date`, `Temporal.DateTime`, `Temporal.Duration`,
+`Temporal.Month`, `Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
+
+A deep scalar whose value is JSON keeps the `String` primitive, because its
+input and canonical form are JSON text, and declares the value's shape in
+`json_schema_type`: `object` for `Generic.StringMap` and `Geo.Location`,
+`array` for `Embedding.Vector`, `any` for `Generic.JSON`. Such a scalar
+declares no `pattern` or length bounds, which are rules on a string; a schema
+toolchain that sees one treats the value as a string. `Generic.StringMap` and
+`Geo.Location` also set the `parse` hook, so a generated runtime hands the
+value to the core and decodes the canonical JSON it returns into a native
+object.
 
 A deep scalar may still declare a `pattern` in its definition. `Contact.Email`
 does; the pattern documents the shape and feeds the generated reference,
@@ -62,15 +72,17 @@ the generic validator.
 ## Structural scalars
 
 Tag `Structural`. A structural scalar is object-shaped: its value is a JSON
-object with a defined set of fields rather than a string with a pattern. The
-shape and its metadata type live in the core under
-`crates/core/src/metadata/`, and the value crosses the C ABI as a bincode
-buffer rather than a UTF-8 string.
+object with a defined set of fields rather than a string with a pattern. Like
+every scalar it crosses the C ABI as text, here the object's JSON. The
+generated bindings give a structural scalar no validator (`HasValidator` and
+`hasValidator` are false, and Go has no `Validate` method for it).
 
-`Geo.Location` is the one built-in structural scalar. The extension model
-keeps the `file_upload` and `image_constraints` definition fields for
-structural scalars an extension adds, such as file or image metadata with
-upload limits.
+No built-in is structural: `Geo.Location`, an object, is a deep scalar so
+that every binding validates it through the core (its module and value type
+are under `crates/core/src/metadata/`). The extension model keeps the
+`Structural` tag and the `file_upload` and `image_constraints` definition
+fields for structural scalars an extension adds, such as file or image
+metadata with upload limits.
 
 Structural scalars are never sortable, because a JSON object has no total
 order. See
@@ -80,7 +92,8 @@ order. See
 
 If the accept set can be written as a regular expression plus bounds, make a
 directive scalar. If acceptance depends on parsing (dates, durations,
-numbers with units, encodings), make a deep scalar. If the value is a record
-rather than a string, make a structural scalar. The
+numbers with units, encodings), make a deep scalar; that includes a JSON
+value the core checks, such as `Geo.Location`'s object. If the value is a
+record the bindings carry without a validator, make a structural scalar. The
 [add a built-in scalar](/superscalar/guides/add-a-builtin-scalar/) guide
 covers each path.

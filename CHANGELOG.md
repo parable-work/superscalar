@@ -94,6 +94,52 @@ bump they require (minor when loosening, major when tightening).
 
 ### Changed
 
+- `Geo.Location` is a JSON-object scalar, `{"lat": <number>, "lon": <number>}`,
+  and its definition agrees with itself. Breaking: the accept set tightens and
+  the canonical form changes, a major bump.
+  - Accept set: the `"lat,lon"` string is refused by `parse`, `normalize` and
+    `validate` (it was accepted and normalized to the object); so are an
+    unknown or duplicate key (unknown keys were ignored), `lat` outside
+    [-90, 90] or `lon` outside [-180, 180] (unchecked before), and a member
+    that is not a JSON number. Text that is not JSON fails as `parse` (with a
+    message naming the object form when it is a `"lat,lon"` string); another
+    JSON type, a missing, unknown or duplicate key, or a member that is not a
+    number fails as `custom`; an out-of-range degree fails as `range`.
+  - Canonical form: `{"lat":<lat>,"lon":<lon>}` with each number as
+    `JSON.stringify` and Go's `encoding/json` write it: `{"lat":90,"lon":-180}`
+    (was `90.0` and `-180.0`), negative zero as `0`, exponent form below
+    1e-6.
+  - Definition: primitive `String` (was `Object`), tag `CustomLogic` (was
+    `Structural`, which turned the generated validators off), no `pattern`
+    (was the `lat,lon` regex), no `schema_primitive_override` (was `String`,
+    so the emitted schema primitive is still `String`), the `parse` hook set,
+    the example `{"lat":37.7749,"lon":-122.4194}`, and a docstring stating
+    that a Postgres `POINT` is (x, y) with x = `lon` and y = `lat`. The row now
+    has the same shape as `Generic.StringMap`'s. Type mappings: Go
+    ``struct{ Lat float64 `json:"lat"`; Lon float64 `json:"lon"` }``, Python
+    `superscalar.GeoLocation` (was `dict`), Rust
+    `superscalar::metadata::geo_location::Location` (was a struct
+    declaration, not a type); TypeScript, SQL `POINT` and JSON Schema `object`
+    are unchanged. No built-in is `Structural` or `PrimitiveKind::Object` now.
+  - Go: `GeoLocation` has JSON tags and marshals as `{"lat":...,"lon":...}`
+    (was `{"Lat":...,"Lon":...}`). It gains `ParseGeoLocation`,
+    `NormalizeGeoLocation`, `ValidateGeoLocation`, the `String`, `Validate`
+    and `ValidateRequired` methods and a `ValidatorFor` case; its metadata row
+    has `HasValidator` and `HasCustomParse` true. `GeoLocationPattern` is
+    removed. A zero `GeoLocation` is the point (0, 0), not a missing required
+    value.
+  - TypeScript: the metadata row has `hasValidator` true and no pattern; the
+    `GeoLocation` type and wrappers are unchanged.
+  - Python: `superscalar.GeoLocation`, a `TypedDict` with `lat` and `lon`.
+  - Rust: `metadata::geo_location::Location` deserializes under the scalar's
+    rules (unknown and duplicate keys, ranges) and gains `Location::new`,
+    `FromStr` and `Display`, which writes the canonical text.
+  - Conformance: the `"lat,lon"` vector moves from accepted to rejected, and
+    new vectors cover the inclusive bounds, integers, negative values, member
+    order, number spelling, negative zero, and the refusals above. Two new
+    core tests keep definitions honest: a JSON-valued scalar declares no
+    `pattern` or length bounds, and every example parses to itself
+    (`Contact.PhoneNumber`'s `+1234567890` is a recorded exception).
 - A scalar's canonical name is its only identity; numeric scalar ids are
   gone. Every C ABI entry point takes the name where it took a `uint32_t`
   (`scalar_parse(const char *scalar, const char *input)` and the other eight),

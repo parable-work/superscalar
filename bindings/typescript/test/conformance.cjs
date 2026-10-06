@@ -28,6 +28,9 @@ const {
   validateGenericJSON,
   parseGenericStringMap,
   parseGenericStringMapStrict,
+  parseGeoLocation,
+  parseGeoLocationStrict,
+  validateGeoLocation,
 } = require("../dist/generated.js");
 // validateNetworkUrl is the generated public wrapper over the Rust-backed core.
 // Exercise it directly so the regression test covers the package export surface.
@@ -210,6 +213,39 @@ for (const [label, got] of [
     failures++;
     console.error(`generated wrapper ${label} returned ${JSON.stringify(got)}, want the object {"a":"1","b":"2"}`);
   }
+}
+
+// Geo.Location crosses the core as JSON text too: the wrappers take the
+// object or its text and hand back the canonical {lat, lon} object; anything
+// else, the old "lat,lon" string included, is refused.
+for (const [label, got] of [
+  ["parseGeoLocationStrict", parseGeoLocationStrict(' { "lon": -122.4194, "lat": 37.7749 } ')],
+  ["parseGeoLocation", parseGeoLocation({ lon: -122.4194, lat: 37.7749 })],
+]) {
+  if (typeof got !== "object" || got === null || JSON.stringify(got) !== '{"lat":37.7749,"lon":-122.4194}') {
+    failures++;
+    console.error(`generated wrapper ${label} returned ${JSON.stringify(got)}, want the object {"lat":37.7749,"lon":-122.4194}`);
+  }
+}
+for (const [value, wantValid] of [
+  [{ lat: 90, lon: -180 }, true],
+  ['{"lat":0,"lon":0}', true],
+  [{ lat: 90.5, lon: 0 }, false],
+  [{ lat: 1, lon: 2, alt: 3 }, false],
+  [{ lat: "1", lon: 2 }, false],
+  ["37.7749,-122.4194", false],
+  [[37.7749, -122.4194], false],
+  [42, false],
+]) {
+  const [valid] = validateGeoLocation(value);
+  if (valid !== wantValid) {
+    failures++;
+    console.error(`validateGeoLocation(${JSON.stringify(value)}) valid = ${valid}, want ${wantValid}`);
+  }
+}
+if (parseGeoLocation("37.7749,-122.4194") !== null) {
+  failures++;
+  console.error('parseGeoLocation("37.7749,-122.4194") accepted the retired "lat,lon" string');
 }
 
 // Generic.JSON is any JSON value, explicit null included: the generated

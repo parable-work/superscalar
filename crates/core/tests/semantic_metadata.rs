@@ -66,12 +66,17 @@ fn non_sortable_set_is_exactly_the_four_table_scalars() {
 }
 
 /// A primitive-only predicate (the ticket's literal wording) would call these
-/// three sortable. The SDK spec requires them not to be. This is the regression
+/// four sortable. The SDK spec requires them not to be. This is the regression
 /// test for that divergence: it fails the moment the allowlist is widened to
 /// admit their declared JSON shape, or inverted back to a primitive rule.
 #[test]
 fn string_primitive_json_scalars_are_not_sortable() {
-    for canonical in ["Embedding.Vector", "Generic.JSON", "Generic.StringMap"] {
+    for canonical in [
+        "Embedding.Vector",
+        "Generic.JSON",
+        "Generic.StringMap",
+        "Geo.Location",
+    ] {
         let def = Registry::builtin().def(canonical).expect("catalogued");
         assert_eq!(
             def.primitive,
@@ -128,10 +133,74 @@ fn structural_and_object_scalars_declare_an_object_json_shape() {
     // same walk that produced them would make them tautological -- the whole
     // job of this pair is to be an outside statement about the catalog that a
     // change to the catalog has to come and update. A new Structural scalar
-    // SHOULD fail here and be looked at. Geo.Location is the one built-in of
-    // each kind.
-    assert_eq!(structural, 1);
-    assert_eq!(objects, 1);
+    // SHOULD fail here and be looked at. No built-in is of either kind: the
+    // one that was, Geo.Location, is a `String`-primitive `CustomLogic` scalar
+    // like Generic.StringMap, so the loop above checks an extension's rows
+    // only once a built-in joins them and this pair is raised.
+    assert_eq!(structural, 0);
+    assert_eq!(objects, 0);
+}
+
+/// A scalar whose value is JSON (`object`, `array` or `any`) declares no
+/// `pattern`, `min_length` or `max_length`. Those are rules on a string, and a
+/// schema toolchain that sees one treats the value as a string: a downstream
+/// validator keys "structured JSON" off an object or array shape with no
+/// string rule, so a stray pattern silently turns the object back into text.
+/// Geo.Location carried a `lat,lon` pattern beside its object shape until this
+/// test existed.
+#[test]
+fn json_valued_scalars_declare_no_string_rules() {
+    let mut checked = 0;
+    for def in Registry::builtin().defs() {
+        if !matches!(def.json_schema_type, "object" | "array" | "any") {
+            continue;
+        }
+        checked += 1;
+        assert_eq!(def.pattern, None, "{} pattern", def.canonical);
+        assert_eq!(def.min_length, None, "{} min_length", def.canonical);
+        assert_eq!(def.max_length, None, "{} max_length", def.canonical);
+    }
+    assert_eq!(
+        checked, 4,
+        "Embedding.Vector, Generic.JSON, Generic.StringMap, Geo.Location"
+    );
+}
+
+/// Every example a def declares is a value of its scalar, written in canonical
+/// form: `parse` accepts it and returns it unchanged. The examples reach the
+/// generated metadata tables and the reference docs, so an example in a form
+/// the scalar refuses (Geo.Location's old `"37.7749,-122.4194"`) documents the
+/// wrong wire form in every binding.
+///
+/// `KNOWN_INVALID` lists the examples that predate this test and are not
+/// values; each must still fail, so a fix has to remove its entry here.
+#[test]
+fn every_example_is_a_canonical_value() {
+    const KNOWN_INVALID: &[(&str, &str)] = &[("Contact.PhoneNumber", "+1234567890")];
+    let registry = Registry::builtin();
+    let mut checked = 0;
+    for def in registry.defs() {
+        let scalar = registry.scalar(def.canonical).expect("assembled");
+        for example in def.examples {
+            let parsed = scalar.parse(registry, example);
+            if KNOWN_INVALID.contains(&(def.canonical, example)) {
+                assert!(
+                    parsed.is_err(),
+                    "{} example {example:?} now parses",
+                    def.canonical
+                );
+                continue;
+            }
+            checked += 1;
+            assert_eq!(
+                parsed.as_deref(),
+                Ok(*example),
+                "{} example {example:?}",
+                def.canonical
+            );
+        }
+    }
+    assert!(checked > 0, "the catalog declares examples");
 }
 
 /// `json_schema_type` is a plain `&'static str` with no enum and no domain
@@ -191,10 +260,9 @@ fn every_metadata_bearing_scalar_declares_a_json_schema_type() {
 /// `ScalarDef::is_sortable`. It does NOT check `md.primitive != "Type"`: over
 /// the table `primitive == "Type"` is a strict subset of
 /// `json_schema_type == "object"`, so that clause was redundant and untestable.
-/// `Geo.Location` is the case that makes the row-side derivation non-trivial:
-/// it carries a `schema_primitive_override` so its metadata primitive is
-/// "String" while its registry primitive is `Object`, and only the JSON shape
-/// gets it right on both sides.
+/// Every non-sortable built-in has the metadata primitive "String", so a
+/// derivation from the primitive would call all four sortable; only the JSON
+/// shape gets them right.
 #[test]
 fn registry_predicate_emitted_field_and_row_derivation_agree() {
     use superscalar::scalar_metadata_by_canonical_name;
@@ -476,10 +544,10 @@ fn check_class_invariants(rows: &[ClassRow]) -> Result<(), String> {
         // against an `Int` scalar is not made legal by sharing a class name,
         // and a SQL validator would emit a comparison the engine cannot
         // execute. Reads the REGISTRY primitive, not `metadata_primitive`. The
-        // two disagree only for `Geo.Location`, and the registry value is the
-        // right one because comparability asks whether two RUNTIME values can
-        // be compared, while `metadata_primitive` exists to keep the generated
-        // schema catalogs matching an audited baseline.
+        // two agree on every built-in, and where an extension's differ the
+        // registry value is the right one because comparability asks whether
+        // two RUNTIME values can be compared, while `metadata_primitive` exists
+        // to keep the generated schema catalogs matching an audited baseline.
         let (first_primitive, first_canonical) =
             *primitives.entry(class).or_insert((primitive, canonical));
         if first_primitive != primitive {

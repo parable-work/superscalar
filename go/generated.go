@@ -224,8 +224,8 @@ type GenericStringMap map[string]string
 
 // Geo.Location - "Geographic location with latitude and longitude"
 type GeoLocation struct {
-	Lat float64
-	Lon float64
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
 }
 
 // Git.PathPattern - "Repository-rooted, case-sensitive gitignore-style path pattern"
@@ -728,9 +728,9 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Primitive:          "String",
 		Description:        "Geographic location with latitude and longitude",
 		TypeScriptType:     "{ lat: number; lon: number }",
-		PythonType:         "dict",
-		RustType:           "struct Location { lat: f64, lon: f64 }",
-		GoType:             "struct{ Lat float64; Lon float64 }",
+		PythonType:         "superscalar.GeoLocation",
+		RustType:           "superscalar::metadata::geo_location::Location",
+		GoType:             "struct{ Lat float64 `json:\"lat\"`; Lon float64 `json:\"lon\"` }",
 		SQLType:            "POINT",
 		JSONSchemaType:     "object",
 		Format:             "",
@@ -738,12 +738,12 @@ var SCALAR_METADATA = []ScalarMetadata{
 		MinLength:          0,
 		Maximum:            nil,
 		Minimum:            nil,
-		Pattern:            "^-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?$",
+		Pattern:            "",
 		HasCustomNormalize: false,
-		HasCustomParse:     false,
+		HasCustomParse:     true,
 		HasCustomValidate:  false,
-		HasValidator:       false,
-		Examples:           []string{"37.7749,-122.4194"},
+		HasValidator:       true,
+		Examples:           []string{"{\"lat\":37.7749,\"lon\":-122.4194}"},
 		ComparabilityClass: "",
 		IsSortable:         false,
 	},
@@ -1631,7 +1631,6 @@ var CryptoRSAPrivateKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPr
 var CryptoRSAPublicKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPublicKey"))
 var CryptoSHA256Pattern = ScalarPattern(patternForCanonical("Crypto.SHA256"))
 var DesignColorPattern = ScalarPattern(patternForCanonical("Design.Color"))
-var GeoLocationPattern = ScalarPattern(patternForCanonical("Geo.Location"))
 var GitPathPatternPattern = ScalarPattern(patternForCanonical("Git.PathPattern"))
 var IdentitySlugPattern = ScalarPattern(patternForCanonical("Identity.Slug"))
 var IdentityUUIDPattern = ScalarPattern(patternForCanonical("Identity.UUID"))
@@ -1689,8 +1688,12 @@ func validateScalarValue(canonical string, value string) (bool, []ValidationErro
 // Numeric and boolean kinds are exempt: 0 and false are legitimate values that
 // Go cannot distinguish from an absent JSON key, so treating them as missing
 // rejects valid payloads. The Python (`is None`) and TypeScript (`=== null`)
-// bindings already accept them; this keeps Go in parity.
+// bindings already accept them; this keeps Go in parity. GeoLocation is exempt
+// for the same reason: its zero value is the point {"lat":0,"lon":0}.
 func scalarRequiredValueMissing(value any) bool {
+	if _, ok := value.(GeoLocation); ok {
+		return false
+	}
 	rv := reflect.ValueOf(value)
 	if !rv.IsValid() {
 		return true
@@ -1716,6 +1719,11 @@ func scalarStringValue(value any) string {
 		return string(v)
 	case GenericStringMap:
 		encoded, err := json.Marshal(map[string]string(v))
+		if err == nil {
+			return string(encoded)
+		}
+	case GeoLocation:
+		encoded, err := json.Marshal(v)
 		if err == nil {
 			return string(encoded)
 		}
@@ -1778,6 +1786,8 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameGenericProbability, value) }
 	case "Generic.StringMap":
 		return func(value string) error { return callScalarValidate(scalarNameGenericStringMap, value) }
+	case "Geo.Location":
+		return func(value string) error { return callScalarValidate(scalarNameGeoLocation, value) }
 	case "Git.PathPattern":
 		return func(value string) error { return callScalarValidate(scalarNameGitPathPattern, value) }
 	case "Identity.Name":
@@ -2451,6 +2461,36 @@ func (v GenericStringMap) Validate() (bool, []ValidationError) {
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.
 func (v GenericStringMap) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseGeoLocation validates and returns the canonical form of a Geo.Location value.
+func ParseGeoLocation(value string) (string, error) {
+	return callScalarParse(scalarNameGeoLocation, value)
+}
+
+// NormalizeGeoLocation returns the canonical form of a Geo.Location value without enforcing shape.
+func NormalizeGeoLocation(value string) (string, error) {
+	return callScalarNormalize(scalarNameGeoLocation, value)
+}
+
+// ValidateGeoLocation enforces the shape of a Geo.Location value.
+func ValidateGeoLocation(value string) error { return callScalarValidate(scalarNameGeoLocation, value) }
+
+func (v GeoLocation) String() string {
+	return scalarStringValue(v)
+}
+
+// Validate validates GeoLocation and returns whether validation passed along with any errors.
+func (v GeoLocation) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameGeoLocation, scalarStringValue(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GeoLocation) ValidateRequired() (bool, []ValidationError) {
 	if scalarRequiredValueMissing(v) {
 		return false, []ValidationError{{Validator: "required", Message: "required field"}}
 	}

@@ -74,10 +74,13 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
         .contains("`parse_contact_email`, `normalize_contact_email`, `validate_contact_email`"));
     assert!(email.contains("`Registry::scalar(\"Contact.Email\")`"));
 
-    // Object scalars have no Go functions, and the Go UUID override reaches
+    // A JSON-object scalar carried as text has Go functions, a type mapping
+    // with backticks gets a wider code span, and the Go UUID override reaches
     // the per-language table.
     let location = fs::read_to_string(out.join("geo-location.md")).expect("page");
-    assert!(location.contains("| Go | `struct{ Lat float64; Lon float64 }` | none (object-valued"));
+    assert!(location.contains(
+        "| Go | ``struct{ Lat float64 `json:\"lat\"`; Lon float64 `json:\"lon\"` }`` | `ParseGeoLocation`"
+    ));
     let uuid = fs::read_to_string(out.join("identity-uuid.md")).expect("page");
     assert!(uuid.contains("| Go | `UUID` |"));
     let datetime = fs::read_to_string(out.join("temporal-date-time.md")).expect("page");

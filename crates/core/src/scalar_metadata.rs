@@ -219,7 +219,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         format: None,
         max_length: None,
         min_length: None,
-        pattern: Some("^-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?$"),
+        pattern: None,
         comparability_class: None,
         is_sortable: false,
     },

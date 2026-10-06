@@ -47,6 +47,7 @@ from .generic_json import (  # noqa: E402,F401
     parse_generic_json,
     validate_generic_json,
 )
+from .geo_location import GeoLocation  # noqa: E402,F401
 from .identity_uuid import (  # noqa: E402,F401
     normalize_identity_uuid,
     parse_identity_uuid,

@@ -251,8 +251,12 @@ func validateScalarValue(canonical string, value string) (bool, []ValidationErro
 // Numeric and boolean kinds are exempt: 0 and false are legitimate values that
 // Go cannot distinguish from an absent JSON key, so treating them as missing
 // rejects valid payloads. The Python (`is None`) and TypeScript (`=== null`)
-// bindings already accept them; this keeps Go in parity.
+// bindings already accept them; this keeps Go in parity. GeoLocation is exempt
+// for the same reason: its zero value is the point {"lat":0,"lon":0}.
 func scalarRequiredValueMissing(value any) bool {
+	if _, ok := value.(GeoLocation); ok {
+		return false
+	}
 	rv := reflect.ValueOf(value)
 	if !rv.IsValid() {
 		return true
@@ -278,6 +282,11 @@ func scalarStringValue(value any) string {
 		return string(v)
 	case GenericStringMap:
 		encoded, err := json.Marshal(map[string]string(v))
+		if err == nil {
+			return string(encoded)
+		}
+	case GeoLocation:
+		encoded, err := json.Marshal(v)
 		if err == nil {
 			return string(encoded)
 		}

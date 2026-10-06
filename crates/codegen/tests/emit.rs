@@ -31,11 +31,13 @@ fn one_parse_wrapper_per_scalar() {
 
         // Object-primitive scalars (canonical form is a Go struct) are skipped by
         // the Go emitter only; Python and TS still emit a wrapper for every scalar.
+        // No built-in is one: a JSON-object built-in is a String-primitive
+        // scalar carried as its JSON text.
         let object_count = Registry::builtin()
             .defs()
             .filter(|def| def.primitive == PrimitiveKind::Object)
             .count();
-        assert_eq!(object_count, 1, "object-primitive scalar count");
+        assert_eq!(object_count, 0, "object-primitive scalar count");
 
         let py = rendered(ctx, "python");
         let go = rendered(ctx, "go");
@@ -53,15 +55,15 @@ fn one_parse_wrapper_per_scalar() {
             "ts parse count (lenient + strict)"
         );
 
-        // A representative non-object scalar is present in Go; the object
-        // scalar is absent from Go but present in Python and TS.
+        // A string scalar and a JSON-object scalar carried as text are both
+        // present in all three.
         assert!(
             go.contains("func ParseContactEmail"),
             "go keeps non-object scalars"
         );
         assert!(
-            !go.contains("func ParseGeoLocation"),
-            "go omits object scalars"
+            go.contains("func ParseGeoLocation(value string)"),
+            "go parses a JSON-object scalar from its text"
         );
         assert!(
             py.contains("def parse_geo_location"),
@@ -231,8 +233,14 @@ fn object_scalars_use_their_mapped_types() {
             "ts object scalars must not be string branded"
         );
         assert!(
-            go.contains("type GeoLocation struct{ Lat float64; Lon float64 }"),
-            "go object scalars use the mapped struct"
+            go.contains(
+                "type GeoLocation struct{ Lat float64 `json:\"lat\"`; Lon float64 `json:\"lon\"` }"
+            ),
+            "go object scalars use the mapped struct, tagged so it marshals as lat and lon"
+        );
+        assert!(
+            go.contains("\tcase GeoLocation:\n\t\tencoded, err := json.Marshal(v)"),
+            "GeoLocation.String() writes its JSON text, not a reflect fallback that recurses"
         );
     });
 }
@@ -835,10 +843,10 @@ fn json_value_wrappers_follow_the_any_json_shape() {
     });
 }
 
-/// A string-map scalar's value crosses the core as JSON text. Its def sets
+/// A JSON-object scalar's value crosses the core as JSON text. Its def sets
 /// the `parse` hook and declares an object shape, so the TypeScript converter
-/// decodes the core's canonical output into a native map. The set is derived
-/// from those two traits, not from a scalar name.
+/// decodes the core's canonical output into a native object. The set is
+/// derived from those two traits, not from a scalar name.
 #[test]
 fn typescript_json_parser_decodes_canonical_object_transport() {
     with_context(|ctx| {
@@ -848,16 +856,18 @@ fn typescript_json_parser_decodes_canonical_object_transport() {
             .filter(|entry| entry.has_json_parse)
             .map(|entry| entry.canonical.as_str())
             .collect();
-        assert_eq!(object_parsers, ["Generic.StringMap"]);
+        assert_eq!(object_parsers, ["Generic.StringMap", "Geo.Location"]);
 
         let typescript = rendered(ctx, "typescript");
-        let converter = typescript
-            .split("function convertGenericStringMapValue")
-            .nth(1)
-            .expect("StringMap converter")
-            .split("export function parseGenericStringMap")
-            .next()
-            .expect("converter body");
-        assert!(converter.contains("parseJsonObject(value)"));
+        for symbol in ["GenericStringMap", "GeoLocation"] {
+            let converter = typescript
+                .split(&format!("function convert{symbol}Value"))
+                .nth(1)
+                .expect("converter")
+                .split(&format!("export function parse{symbol}"))
+                .next()
+                .expect("converter body");
+            assert!(converter.contains("parseJsonObject(value)"), "{symbol}");
+        }
     });
 }

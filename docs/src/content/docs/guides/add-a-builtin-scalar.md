@@ -27,8 +27,11 @@ the `make` targets exist today. Steps 1 to 4 do not depend on it.
 ## 1. Decide the kind
 
 Pattern plus bounds: a directive scalar, no module. Parsing or transformation:
-a deep scalar, one module. Object-shaped: a structural scalar, a metadata type
-under `crates/core/src/metadata/`. The
+a deep scalar, one module. A JSON value the core checks, such as
+`Geo.Location`'s object, is a deep scalar too, with the `String` primitive, its
+shape in `json_schema_type` and no `pattern` or length bounds. An
+object-shaped record the bindings carry without a validator: a structural
+scalar, a metadata type under `crates/core/src/metadata/`. The
 [scalar kinds](/superscalar/concepts/deep-directive-structural/) page has the
 criteria.
 

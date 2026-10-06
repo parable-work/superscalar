@@ -120,12 +120,11 @@ order: a scalar is sortable when its `json_schema_type` is `string`,
 It is not a claim that the order means something. `Design.Color`,
 `Identity.UUID` and `Network.IpAddress` are all sortable, and lexicographic
 order over each is equally meaningless. It is a claim that a total order
-exists. `Embedding.Vector`, `Generic.JSON` and `Generic.StringMap` show the
-gap the rule closes: their primitive is `String` but their JSON shape is an
-array, an object or any JSON value (`Generic.JSON` declares `any`), so a
-primitive-only rule would call them sortable. Among
-the 48 built-ins, four are non-sortable: `Geo.Location` (the structural
-scalar) and those three.
+exists. `Embedding.Vector`, `Generic.JSON`, `Generic.StringMap` and
+`Geo.Location` show the gap the rule closes: their primitive is `String` but
+their JSON shape is an array, an object or any JSON value (`Generic.JSON`
+declares `any`), so a primitive-only rule would call them sortable. Among the
+48 built-ins, those four are the non-sortable ones.
 
 The rule is an allowlist and fails closed on purpose. A shape nobody has
 declared, or a mistyped one, answers "not sortable". That direction matters

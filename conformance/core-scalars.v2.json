@@ -779,9 +779,39 @@
           "normalized": "{\"lat\":37.7749,\"lon\":-122.4194}"
         },
         {
-          "input": "37.7749,-122.4194",
-          "normalized": "{\"lat\":37.7749,\"lon\":-122.4194}",
-          "canonical_choice": "Canonical form is the Object {lat,lon} (TS impl + POINT SQL); the legacy 'lat,lon' string is accepted on input and normalized to the object."
+          "input": "{\"lat\":90,\"lon\":180}",
+          "normalized": "{\"lat\":90,\"lon\":180}",
+          "note": "The upper bounds are inclusive."
+        },
+        {
+          "input": "{\"lat\":-90.0,\"lon\":-180.0}",
+          "normalized": "{\"lat\":-90,\"lon\":-180}",
+          "note": "The lower bounds are inclusive; an integral number is written without a fraction, as JSON.stringify and Go's encoding/json write it."
+        },
+        {
+          "input": "{\"lat\":-33,\"lon\":151}",
+          "normalized": "{\"lat\":-33,\"lon\":151}",
+          "note": "Integers and negative values."
+        },
+        {
+          "input": " { \"lon\" : -0.1276 , \"lat\" : 51.5072 } ",
+          "normalized": "{\"lat\":51.5072,\"lon\":-0.1276}",
+          "note": "Member order and whitespace are not significant; the canonical form is lat then lon."
+        },
+        {
+          "input": "{\"lat\":45.50,\"lon\":-7.5E1}",
+          "normalized": "{\"lat\":45.5,\"lon\":-75}",
+          "note": "Numbers are rewritten as the shortest form that reads back to the same double."
+        },
+        {
+          "input": "{\"lat\":-0,\"lon\":0.0}",
+          "normalized": "{\"lat\":0,\"lon\":0}",
+          "note": "Negative zero is written as 0."
+        },
+        {
+          "input": "{\"lat\":0.0000001,\"lon\":0.000001}",
+          "normalized": "{\"lat\":1e-7,\"lon\":0.000001}",
+          "note": "Below 1e-6 a number takes exponent form, as in JSON.stringify."
         }
       ],
       "rejected": [
@@ -792,6 +822,82 @@
         {
           "input": "",
           "validator": "parse"
+        },
+        {
+          "input": "37.7749,-122.4194",
+          "validator": "parse",
+          "note": "The \"lat,lon\" string form is no longer accepted; the JSON object is the only wire form."
+        },
+        {
+          "input": "\"37.7749,-122.4194\"",
+          "validator": "custom",
+          "note": "A JSON string is not an object."
+        },
+        {
+          "input": "null",
+          "validator": "custom"
+        },
+        {
+          "input": "[37.7749,-122.4194]",
+          "validator": "custom"
+        },
+        {
+          "input": "37.7749",
+          "validator": "custom"
+        },
+        {
+          "input": "{}",
+          "validator": "custom"
+        },
+        {
+          "input": "{\"lat\":37.7749}",
+          "validator": "custom",
+          "note": "Missing lon."
+        },
+        {
+          "input": "{\"lon\":-122.4194}",
+          "validator": "custom",
+          "note": "Missing lat."
+        },
+        {
+          "input": "{\"lat\":37.7749,\"lon\":-122.4194,\"alt\":10}",
+          "validator": "custom",
+          "note": "Unknown keys are refused."
+        },
+        {
+          "input": "{\"lat\":37.7749,\"lat\":37.7749,\"lon\":-122.4194}",
+          "validator": "custom",
+          "note": "Duplicate keys are refused."
+        },
+        {
+          "input": "{\"lat\":\"37.7749\",\"lon\":-122.4194}",
+          "validator": "custom",
+          "note": "A number given as a string is refused."
+        },
+        {
+          "input": "{\"lat\":37.7749,\"lon\":null}",
+          "validator": "custom"
+        },
+        {
+          "input": "{\"lat\":90.000001,\"lon\":0}",
+          "validator": "range"
+        },
+        {
+          "input": "{\"lat\":-91,\"lon\":0}",
+          "validator": "range"
+        },
+        {
+          "input": "{\"lat\":0,\"lon\":180.5}",
+          "validator": "range"
+        },
+        {
+          "input": "{\"lat\":0,\"lon\":-180.000001}",
+          "validator": "range"
+        },
+        {
+          "input": "{\"lat\":1e400,\"lon\":0}",
+          "validator": "range",
+          "note": "A magnitude beyond a double is out of range."
         }
       ]
     },

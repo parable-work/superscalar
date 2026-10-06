@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use superscalar::{names, scalar_for, scalars::json_scalar::serde as json_serde, Registry};
+use superscalar::{
+    names, scalar_for, scalars::json_scalar::serde as json_serde, ErrorKind, Registry,
+};
 
 // Local adapter fixtures: a struct shaped like a generated consumer's, with
 // Generic.JSON fields in every standard container.
@@ -154,9 +156,9 @@ fn json_features_do_not_reinterpret_non_json_string_map_keys() {
     }
 }
 
-/// The one built-in object scalar decodes into a typed struct, so the
-/// private marker keys are ordinary unknown fields to it: they neither turn
-/// the object into a number nor reach the canonical output.
+/// Geo.Location reads its members from the raw text, so the private marker
+/// keys are ordinary unknown keys to it and refused as such: they neither turn
+/// the object into a number nor slip past the unknown-key check.
 #[test]
 fn json_features_do_not_reinterpret_object_scalar_keys() {
     let registry = Registry::builtin();
@@ -166,11 +168,13 @@ fn json_features_do_not_reinterpret_object_scalar_keys() {
         "$serde_json::private::RawValue",
     ] {
         let input = json!({"lat": 1.5, "lon": -2.25, key: "literal string"}).to_string();
-        assert_eq!(
-            scalar.parse(registry, &input).unwrap(),
-            r#"{"lat":1.5,"lon":-2.25}"#
+        let error = scalar.parse(registry, &input).unwrap_err();
+        assert_eq!(error.kind, ErrorKind::Custom, "{error}");
+        assert!(
+            error.message.contains(&format!("unknown key {key:?}")),
+            "{error}"
         );
-        scalar.validate(registry, &input).unwrap();
+        assert_eq!(scalar.validate(registry, &input), Err(error));
     }
 }
 

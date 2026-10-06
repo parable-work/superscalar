@@ -97,7 +97,9 @@ primitive_kinds!(
     (Float, "Float", "Float"),
     /// A boolean. Reserved: no built-in scalar is backed by it.
     (Bool, "Boolean", "Bool"),
-    /// An object-shaped value, such as `Geo.Location`.
+    /// An object-shaped value. No built-in is backed by it: the built-ins
+    /// whose value is a JSON object (`Generic.StringMap`, `Geo.Location`) are
+    /// `String`, their canonical JSON text, with `json_schema_type: "object"`.
     (Object, "JSON", "Type"),
 );
 
@@ -197,9 +199,8 @@ pub struct ScalarDef {
     /// When the registry's runtime `primitive` deliberately diverges from the
     /// not-yet-ratified schema declaration, this holds the DSL primitive the
     /// generated schema catalogs must still emit so they match the audited
-    /// baseline. Geo.Location is the only case today: runtime `Object`
-    /// but schema-declared `String`. `None` means emit the
-    /// runtime primitive.
+    /// baseline. No built-in sets it. `None` means emit the runtime
+    /// primitive.
     pub schema_primitive_override: Option<&'static str>,
     /// When true the scalar exists in the registry but is intentionally omitted
     /// from the generated schema catalogs (e.g. the TS runtime's
@@ -288,9 +289,10 @@ impl ScalarDef {
     /// when the declared JSON shape is a JSON scalar: string, integer, number
     /// or boolean. Object- and array-shaped values have no total order, and
     /// neither do the `String`-primitive scalars whose PAYLOAD is JSON or a
-    /// vector -- `Embedding.Vector`, `Generic.JSON` and `Generic.StringMap` are
-    /// all declared `PrimitiveKind::String`, so a primitive-only predicate would
-    /// call them sortable and contradict the data-SDK contract.
+    /// vector -- `Embedding.Vector`, `Generic.JSON`, `Generic.StringMap` and
+    /// `Geo.Location` are all declared `PrimitiveKind::String`, so a
+    /// primitive-only predicate would call them sortable and contradict the
+    /// data-SDK contract.
     ///
     /// Reads `json_schema_type` and nothing else, ALLOWLIST not denylist. A
     /// denylist fails open: a scalar whose shape was mistyped ships sortable and
