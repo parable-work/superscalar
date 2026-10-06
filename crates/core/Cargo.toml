@@ -7,7 +7,7 @@ description = "Scalar types library: one Rust core for every scalar's parse/norm
 # workspace [workspace.package] block.
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.95.0"
+rust-version = "1.99.0"
 authors = ["Parable Work, Inc."]
 license = "Apache-2.0"
 repository = "https://github.com/parable-work/superscalar"

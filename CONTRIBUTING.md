@@ -67,7 +67,7 @@ By making a contribution to this project, I certify that:
 
 | Tool      | Version                | How it is pinned                                  |
 | --------- | ---------------------- | ------------------------------------------------- |
-| Rust      | 1.95.0                 | `rust-toolchain.toml` (rustfmt, clippy, wasm32)   |
+| Rust      | 1.99.0                 | `rust-toolchain.toml` (rustfmt, clippy, wasm32)   |
 | cbindgen  | 0.29.2                 | `tools.env` (`CBINDGEN_VERSION`)                  |
 | wasm-pack | 0.15.0                 | `tools.env` (`WASM_PACK_VERSION`)                 |
 | Go        | 1.26.4                 | `tools.env` (`GO_VERSION`)                        |
