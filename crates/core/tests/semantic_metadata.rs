@@ -171,29 +171,16 @@ fn json_valued_scalars_declare_no_string_rules() {
 /// generated metadata tables and the reference docs, so an example in a form
 /// the scalar refuses (Geo.Location's old `"37.7749,-122.4194"`) documents the
 /// wrong wire form in every binding.
-///
-/// `KNOWN_INVALID` lists the examples that predate this test and are not
-/// values; each must still fail, so a fix has to remove its entry here.
 #[test]
 fn every_example_is_a_canonical_value() {
-    const KNOWN_INVALID: &[(&str, &str)] = &[("Contact.PhoneNumber", "+1234567890")];
     let registry = Registry::builtin();
     let mut checked = 0;
     for def in registry.defs() {
         let scalar = registry.scalar(def.canonical).expect("assembled");
         for example in def.examples {
-            let parsed = scalar.parse(registry, example);
-            if KNOWN_INVALID.contains(&(def.canonical, example)) {
-                assert!(
-                    parsed.is_err(),
-                    "{} example {example:?} now parses",
-                    def.canonical
-                );
-                continue;
-            }
             checked += 1;
             assert_eq!(
-                parsed.as_deref(),
+                scalar.parse(registry, example).as_deref(),
                 Ok(*example),
                 "{} example {example:?}",
                 def.canonical

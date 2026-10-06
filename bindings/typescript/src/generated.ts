@@ -1835,7 +1835,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     minLength: 0,
     pattern: "^\\+[1-9]\\d{1,14}$",
     hasValidator: true,
-    examples: ["+1234567890"],
+    examples: ["+14155552671"],
     comparabilityClass: null,
     isSortable: true,
   },
