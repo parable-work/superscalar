@@ -237,6 +237,11 @@ pub(crate) struct MetadataEntry {
     /// Rust `Option` form: `None` or `Some("...")`.
     pub(crate) comparability_class_literal: String,
     pub(crate) is_sortable: bool,
+    pub(crate) case_insensitive: bool,
+    /// Rust slice form of `ScalarDef::reserved_words`: `&[]` or `&["a", "b"]`.
+    pub(crate) reserved_words_literal: String,
+    pub(crate) reserved_words_case_insensitive: bool,
+    pub(crate) reserved_words_match_partial: bool,
 }
 
 #[derive(Serialize)]
@@ -262,8 +267,18 @@ pub(crate) fn metadata_entries(registry: &Registry) -> Vec<MetadataEntry> {
             pattern_literal: optional_str_literal(def.pattern),
             comparability_class_literal: optional_str_literal(def.comparability_class),
             is_sortable: def.is_sortable(),
+            case_insensitive: def.case_insensitive,
+            reserved_words_literal: str_slice_literal(def.reserved_words),
+            reserved_words_case_insensitive: def.reserved_words_case_insensitive,
+            reserved_words_match_partial: def.reserved_words_match_partial,
         })
         .collect()
+}
+
+/// `&[]` or `&["a", "b"]`.
+fn str_slice_literal(values: &[&str]) -> String {
+    let items: Vec<String> = values.iter().map(|value| format!("{value:?}")).collect();
+    format!("&[{}]", items.join(", "))
 }
 
 pub(crate) const METADATA_TEMPLATE: &str = include_str!("../templates/scalar_metadata.rs.jinja");
@@ -344,6 +359,39 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    /// No built-in reserves a word, so the Rust table never renders a non-empty
+    /// slice from the catalog. Doctor one row, as the class test above does.
+    #[test]
+    fn reserved_words_reach_the_rust_metadata_table() {
+        let mut entries = metadata_entries(Registry::builtin());
+        assert!(entries
+            .iter()
+            .all(|entry| !entry.reserved_words_literal.contains("never_a_real_word")));
+        entries[0].reserved_words_literal =
+            str_slice_literal(&["never_a_real_word", "also_never_real"]);
+        let rendered = render(
+            "scalar_metadata.rs.jinja",
+            METADATA_TEMPLATE,
+            &MetadataView {
+                gen_note: "@generated; do not edit",
+                entries,
+            },
+        )
+        .expect("render");
+        assert_eq!(
+            rendered
+                .matches("        reserved_words: &[\"never_a_real_word\", \"also_never_real\"],")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn str_slice_literal_quotes_each_word() {
+        assert_eq!(str_slice_literal(&[]), "&[]");
+        assert_eq!(str_slice_literal(&["a", "b\"c"]), "&[\"a\", \"b\\\"c\"]");
     }
 
     #[test]

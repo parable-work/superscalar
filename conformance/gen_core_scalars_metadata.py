@@ -36,7 +36,11 @@ ROW = re.compile(
     r"ScalarMetadata \{.*?"
     r'canonical_name: "(?P<canonical>[^"]+)".*?'
     r"comparability_class: (?P<klass>None|Some\(\"[^\"]*\"\)).*?"
-    r"is_sortable: (?P<sortable>true|false)",
+    r"is_sortable: (?P<sortable>true|false),\s*"
+    r"case_insensitive: (?P<case_insensitive>true|false),\s*"
+    r'reserved_words: &\[(?P<words>(?:"(?:[^"\\]|\\.)*"(?:, )?)*)\],\s*'
+    r"reserved_words_case_insensitive: (?P<words_ci>true|false),\s*"
+    r"reserved_words_match_partial: (?P<words_partial>true|false)",
     re.S,
 )
 
@@ -52,6 +56,12 @@ def parse_table(source: str) -> "dict[str, dict]":
         rows[m.group("canonical")] = {
             "comparability_class": value,
             "is_sortable": m.group("sortable") == "true",
+            "case_insensitive": m.group("case_insensitive") == "true",
+            # A Rust `{:?}` string literal is a JSON string literal for the
+            # ASCII words a catalog reserves.
+            "reserved_words": json.loads("[" + m.group("words") + "]"),
+            "reserved_words_case_insensitive": m.group("words_ci") == "true",
+            "reserved_words_match_partial": m.group("words_partial") == "true",
         }
     return rows
 
@@ -60,12 +70,8 @@ def render_metadata(rows: "dict[str, dict]", indent: str = "  ") -> str:
     """Render the metadata value with one scalar per line, matching the file's style."""
     lines = []
     for canonical, row in rows.items():
-        klass = "null" if row["comparability_class"] is None else json.dumps(row["comparability_class"])
-        sortable = "true" if row["is_sortable"] else "false"
-        lines.append(
-            f'{indent}{indent}{json.dumps(canonical)}: '
-            f'{{ "comparability_class": {klass}, "is_sortable": {sortable} }}'
-        )
+        fields = ", ".join(f"{json.dumps(key)}: {json.dumps(value)}" for key, value in row.items())
+        lines.append(f"{indent}{indent}{json.dumps(canonical)}: {{ {fields} }}")
     return "{\n" + ",\n".join(lines) + f"\n{indent}}}"
 
 

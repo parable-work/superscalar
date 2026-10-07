@@ -55,12 +55,37 @@ struct Meta {
     /// rather than a count because a count cannot catch a class attached to the
     /// wrong scalar.
     comparability_classes: std::collections::BTreeMap<String, Vec<String>>,
+    /// Sorted canonical names of the rows with `case_insensitive` set.
+    /// Hand-maintained on the same terms as `comparability_classes`.
+    case_insensitive_scalars: Vec<String>,
+    /// Every row that reserves a word or sets either reserved-word flag, with
+    /// those three fields. Hand-maintained on the same terms.
+    reserved_word_scalars: std::collections::BTreeMap<String, ReservedWordRule>,
 }
 
 #[derive(Deserialize)]
 struct MetadataVector {
     comparability_class: Option<String>,
     is_sortable: bool,
+    case_insensitive: bool,
+    #[serde(flatten)]
+    reserved: ReservedWordRule,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+struct ReservedWordRule {
+    reserved_words: Vec<String>,
+    reserved_words_case_insensitive: bool,
+    reserved_words_match_partial: bool,
+}
+
+impl ReservedWordRule {
+    /// Whether the row belongs in `meta.reserved_word_scalars`.
+    fn is_set(&self) -> bool {
+        !self.reserved_words.is_empty()
+            || self.reserved_words_case_insensitive
+            || self.reserved_words_match_partial
+    }
 }
 
 #[derive(Deserialize)]
@@ -335,6 +360,19 @@ fn v2_metadata_section_matches_the_generated_table() {
             "{canonical}"
         );
         assert_eq!(md.is_sortable, want.is_sortable, "{canonical}");
+        assert_eq!(md.case_insensitive, want.case_insensitive, "{canonical}");
+        assert_eq!(
+            md.reserved_words, want.reserved.reserved_words,
+            "{canonical}"
+        );
+        assert_eq!(
+            md.reserved_words_case_insensitive, want.reserved.reserved_words_case_insensitive,
+            "{canonical}"
+        );
+        assert_eq!(
+            md.reserved_words_match_partial, want.reserved.reserved_words_match_partial,
+            "{canonical}"
+        );
     }
     // One independent invariant at the corpus layer. The section is a
     // TRANSCRIPT of the emitted table, so if the emitter were wrong the
@@ -361,6 +399,32 @@ fn v2_metadata_section_matches_the_generated_table() {
         members.sort();
     }
     assert_eq!(derived, vectors.meta.comparability_classes);
+    // Same independence argument, for the case and reserved-word fields.
+    // `metadata` is a BTreeMap, so the derived names arrive sorted.
+    let case_insensitive: Vec<&String> = vectors
+        .metadata
+        .iter()
+        .filter(|(_, vector)| vector.case_insensitive)
+        .map(|(canonical, _)| canonical)
+        .collect();
+    assert_eq!(
+        case_insensitive,
+        vectors
+            .meta
+            .case_insensitive_scalars
+            .iter()
+            .collect::<Vec<_>>()
+    );
+    let reserved: std::collections::BTreeMap<&String, &ReservedWordRule> = vectors
+        .metadata
+        .iter()
+        .filter(|(_, vector)| vector.reserved.is_set())
+        .map(|(canonical, vector)| (canonical, &vector.reserved))
+        .collect();
+    assert_eq!(
+        reserved,
+        vectors.meta.reserved_word_scalars.iter().collect()
+    );
     // The two sections legitimately differ by one key, and the corpus now says
     // which one rather than leaving each reader to hardcode the name.
     // Both sides sorted, matching the Go and TypeScript readers. `scalars` is a
@@ -395,8 +459,24 @@ fn v2_metadata_section_matches_the_generated_table() {
 #[test]
 fn a_named_class_decodes_from_a_metadata_vector() {
     let v: MetadataVector =
-        serde_json::from_str(r#"{"comparability_class": "temporal_instant", "is_sortable": true}"#)
+        serde_json::from_str(r#"{"comparability_class": "temporal_instant", "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false}"#)
             .expect("vector parses");
     assert_eq!(v.comparability_class.as_deref(), Some("temporal_instant"));
     assert!(v.is_sortable);
+}
+
+/// No built-in reserves a word, so the shipped corpus never decodes a
+/// non-empty `reserved_words`. Feed the branch a literal row, for the same
+/// reason as the class test above.
+#[test]
+fn reserved_words_decode_from_a_metadata_vector() {
+    let v: MetadataVector = serde_json::from_str(
+        r#"{"comparability_class": null, "is_sortable": true, "case_insensitive": true, "reserved_words": ["admin", "root"], "reserved_words_case_insensitive": true, "reserved_words_match_partial": true}"#,
+    )
+    .expect("vector parses");
+    assert!(v.case_insensitive);
+    assert_eq!(v.reserved.reserved_words, ["admin", "root"]);
+    assert!(v.reserved.reserved_words_case_insensitive);
+    assert!(v.reserved.reserved_words_match_partial);
+    assert!(v.reserved.is_set());
 }

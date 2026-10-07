@@ -27,6 +27,14 @@ export interface ScalarMetadata {
    */
   comparabilityClass: string | null;
   isSortable: boolean;
+  /** The def's `case_insensitive` flag. */
+  caseInsensitive: boolean;
+  /** The values the def reserves, empty when it has none. */
+  reservedWords: string[];
+  /** The def's `reserved_words_case_insensitive` flag. */
+  reservedWordsCaseInsensitive: boolean;
+  /** The def's `reserved_words_match_partial` flag. */
+  reservedWordsMatchPartial: boolean;
 }
 
 /**
@@ -1782,6 +1790,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["data-analysis", "careful-refactors"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: true,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: true,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Auth.JWT",
@@ -1796,6 +1808,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: [],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Auth.Password",
@@ -1810,6 +1826,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: [],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Contact.Email",
@@ -1824,6 +1844,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["test@example.com"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: true,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Contact.PhoneNumber",
@@ -1838,6 +1862,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["+14155552671"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Crypto.RSAPrivateKey",
@@ -1852,6 +1880,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["-----BEGIN RSA PRIVATE KEY----------END RSA PRIVATE KEY-----"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Crypto.RSAPublicKey",
@@ -1866,6 +1898,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["-----BEGIN PUBLIC KEY----------END PUBLIC KEY-----"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Crypto.SHA256",
@@ -1880,6 +1916,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Design.Color",
@@ -1894,6 +1934,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["#FF5733FF"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Embedding.Vector",
@@ -1908,6 +1952,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: [],
     comparabilityClass: null,
     isSortable: false,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "File.SizeBytes",
@@ -1922,6 +1970,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["204800"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Finance.Money",
@@ -1936,6 +1988,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["1000"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Generic.Int64",
@@ -1950,6 +2006,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["1000"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Generic.JSON",
@@ -1964,6 +2024,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["{\"k\":1}", "[1,2]", "\"text\"", "42", "true", "null"],
     comparabilityClass: null,
     isSortable: false,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Generic.Probability",
@@ -1978,6 +2042,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["0.75"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Generic.StringMap",
@@ -1992,6 +2060,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: [],
     comparabilityClass: null,
     isSortable: false,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Geo.Location",
@@ -2006,6 +2078,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["{\"lat\":37.7749,\"lon\":-122.4194}"],
     comparabilityClass: null,
     isSortable: false,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Git.PathPattern",
@@ -2020,6 +2096,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["/skills/**", "!/skills/shared/**", "/assets/"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Identity.Name",
@@ -2034,6 +2114,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["A Name"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Identity.Slug",
@@ -2048,6 +2132,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["acme-corp"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: true,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Identity.UUID",
@@ -2062,6 +2150,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["YQJpYwUwvbaLOwTUr4thA"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Identity.UserID",
@@ -2076,6 +2168,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["YQJpYwUwvbaLOwTUr4thA"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Localization.Locale",
@@ -2090,6 +2186,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["en-US"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Network.DnsLabel",
@@ -2104,6 +2204,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["mycompany"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: true,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Network.DomainName",
@@ -2118,6 +2222,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["example.com"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: true,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Network.IpAddress",
@@ -2132,6 +2240,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["192.168.1.1"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Network.Uri",
@@ -2146,6 +2258,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["postgres://user:pass@localhost:5432/dbname"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Network.Url",
@@ -2160,6 +2276,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["https://www.example.com/example/path"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Ordering.Rank",
@@ -2174,6 +2294,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["1", "1000"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.CronExpression",
@@ -2188,6 +2312,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["0 9 * * MON-FRI"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Date",
@@ -2202,6 +2330,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["2025-01-01"],
     comparabilityClass: "temporal_instant",
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.DateTime",
@@ -2216,6 +2348,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["2025-01-01T12:00:00Z"],
     comparabilityClass: "temporal_instant",
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Days",
@@ -2230,6 +2366,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["7"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Duration",
@@ -2244,6 +2384,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["30s"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Hours",
@@ -2258,6 +2402,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["2"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Milliseconds",
@@ -2272,6 +2420,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["1000"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Minutes",
@@ -2286,6 +2438,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["5"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Month",
@@ -2300,6 +2456,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["02"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Quarter",
@@ -2314,6 +2474,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["Q1"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: true,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.QuarterYear",
@@ -2328,6 +2492,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["2025-Q1"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.RecurrenceRule",
@@ -2342,6 +2510,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["FREQ=WEEKLY;BYMINUTE=0;BYHOUR=9;BYDAY=MO,WE,FR"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Seconds",
@@ -2356,6 +2528,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["60"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Time",
@@ -2370,6 +2546,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["12:25"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.TimeZone",
@@ -2384,6 +2564,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["America/New_York", "UTC", "Etc/UTC"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Temporal.Year",
@@ -2398,6 +2582,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["2025"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Text.Markdown",
@@ -2412,6 +2600,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["## Hello, World!"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Text.Sql",
@@ -2426,6 +2618,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["SELECT 1"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
   {
     canonicalName: "Version.SemVer",
@@ -2440,6 +2636,10 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: ["1.0.0", "2.4.1-rc.1+build.9"],
     comparabilityClass: null,
     isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
   },
 ];
 

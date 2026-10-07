@@ -16,6 +16,14 @@ pub struct ScalarMetadata {
     /// scalars. The relation is `ScalarDef::comparable_with`.
     pub comparability_class: Option<&'static str>,
     pub is_sortable: bool,
+    /// `ScalarDef::case_insensitive`.
+    pub case_insensitive: bool,
+    /// `ScalarDef::reserved_words`, empty when the scalar has none.
+    pub reserved_words: &'static [&'static str],
+    /// `ScalarDef::reserved_words_case_insensitive`.
+    pub reserved_words_case_insensitive: bool,
+    /// `ScalarDef::reserved_words_match_partial`.
+    pub reserved_words_match_partial: bool,
 }
 
 pub const SCALAR_METADATA: &[ScalarMetadata] = &[
@@ -30,6 +38,10 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         pattern: {{ e.pattern_literal }},
         comparability_class: {{ e.comparability_class_literal }},
         is_sortable: {% if e.is_sortable %}true{% else %}false{% endif %},
+        case_insensitive: {% if e.case_insensitive %}true{% else %}false{% endif %},
+        reserved_words: {{ e.reserved_words_literal }},
+        reserved_words_case_insensitive: {% if e.reserved_words_case_insensitive %}true{% else %}false{% endif %},
+        reserved_words_match_partial: {% if e.reserved_words_match_partial %}true{% else %}false{% endif %},
     },
 {% endfor %}];
 

@@ -93,10 +93,14 @@ under `scalars`:
 Each accepted vector states the canonical form `parse` must return. Each
 rejected vector names the validator that fires. Cover the boundaries you
 chose in the module: trimming, case, each length bound, each error kind.
-Add the scalar's row to the corpus `metadata` section (its
-`comparability_class` and `is_sortable`), and if it is non-sortable, increase
-`meta.non_sortable_count` by hand; that count is a check on the generated
-section and must not be derived from it.
+The scalar's row in the corpus `metadata` section is generated (step 5).
+Update the hand-maintained expectations in `meta` yourself: if the scalar is
+non-sortable, increase `meta.non_sortable_count`; if it sets
+`case_insensitive`, add its name to `meta.case_insensitive_scalars`; if it
+reserves words or sets `reserved_words_case_insensitive` or
+`reserved_words_match_partial`, add it to `meta.reserved_word_scalars`. Those
+expectations are a check on the generated section and must not be derived from
+it.
 
 Every binding runs these vectors, so this block is what makes the Go, Python,
 TypeScript and WASM behaviour a tested fact rather than an assumption.
@@ -111,8 +115,15 @@ cargo run -p superscalar-codegen
 ```
 
 This rewrites the generated Go, Python and TypeScript wrappers and the Rust
-metadata table. Commit the diff; never edit those files by hand. CI runs the
-same command with `--check` and fails on drift. The C header is separately
+metadata table. Then transcribe the Rust table into the corpus `metadata`
+section:
+
+```
+python3 conformance/gen_core_scalars_metadata.py
+```
+
+Commit the diff; never edit those files by hand. CI runs the code generator
+with `--check` and fails on drift. The C header is separately
 drift-checked (`make header`).
 
 ## 6. Run the docs check and the gates

@@ -44,6 +44,14 @@ type ScalarMetadata struct {
 	// Registry::comparable_with.
 	ComparabilityClass string
 	IsSortable         bool
+	// CaseInsensitive is the def's case_insensitive flag.
+	CaseInsensitive bool
+	// ReservedWords are the values the def reserves, empty when it has none.
+	ReservedWords []string
+	// ReservedWordsCaseInsensitive and ReservedWordsMatchPartial are the def's
+	// reserved_words_case_insensitive and reserved_words_match_partial flags.
+	ReservedWordsCaseInsensitive bool
+	ReservedWordsMatchPartial    bool
 }
 
 func scalarInt64Ptr(value int64) *int64 {
@@ -114,6 +122,10 @@ var validScalarsMap = func() map[{{ go.scalar_list_type }}]struct{} {
 		Examples:       []string{{ "{" }}{% for example in e.examples %}{{ example.literal }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 		ComparabilityClass: {{ e.comparability_class_go }},
 		IsSortable: {% if e.is_sortable %}true{% else %}false{% endif %},
+		CaseInsensitive: {% if e.case_insensitive %}true{% else %}false{% endif %},
+		ReservedWords: []string{{ "{" }}{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
+		ReservedWordsCaseInsensitive: {% if e.reserved_words_case_insensitive %}true{% else %}false{% endif %},
+		ReservedWordsMatchPartial: {% if e.reserved_words_match_partial %}true{% else %}false{% endif %},
 	},
 {% endfor %}}
 

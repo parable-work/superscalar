@@ -91,6 +91,19 @@ bump they require (minor when loosening, major when tightening).
   `Registry` assembles one first and delegates those lookups to it;
   `Registry::definitions()` returns it. `scalar_def` reads
   `Definitions::builtin()`. Additive; no `Registry` behaviour changes.
+- Metadata tables: every generated metadata table carries the def's
+  `case_insensitive`, `reserved_words`, `reserved_words_case_insensitive` and
+  `reserved_words_match_partial`, for built-in and extension scalars alike:
+  the Rust `ScalarMetadata` fields of those names, Go `CaseInsensitive`,
+  `ReservedWords`, `ReservedWordsCaseInsensitive` and
+  `ReservedWordsMatchPartial`, TypeScript `caseInsensitive`, `reservedWords`,
+  `reservedWordsCaseInsensitive` and `reservedWordsMatchPartial`, and four new
+  keys on each Python `SCALAR_METADATA` row. The conformance corpus
+  `metadata` rows record them, and every reader checks them against two new
+  hand-maintained expectations, `meta.case_insensitive_scalars` and
+  `meta.reserved_word_scalars`. No scalar's parse, normalize or validate
+  changes. The Rust struct and the TypeScript interface gain fields, so code
+  that builds a `ScalarMetadata` value by hand must set them.
 
 ### Changed
 

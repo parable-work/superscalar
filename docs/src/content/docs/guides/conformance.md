@@ -21,11 +21,18 @@ corpus against your build is how you know it behaves like the reference.
 scalars. Its top level:
 
 - `meta`: `version` (2), `source_language` (`rust-core`), a description, and
-  `non_sortable_count`, a hand-maintained expectation checked against the
-  `metadata` section.
+  four hand-maintained expectations checked against the `metadata` section:
+  `non_sortable_count`, `comparability_classes` (each class and its sorted
+  members), `case_insensitive_scalars` (the sorted names of the rows with
+  `case_insensitive` set) and `reserved_word_scalars` (each row that reserves a
+  word or sets either reserved-word flag, with those three fields).
 - `scalars`: a map from canonical name to `{ accepted, rejected }`.
 - `metadata`: a map from canonical name to `{ comparability_class,
-  is_sortable }`, a transcript of the generated metadata table.
+  is_sortable, case_insensitive, reserved_words,
+  reserved_words_case_insensitive, reserved_words_match_partial }`, a
+  transcript of the generated metadata table. Regenerate it with
+  `python3 conformance/gen_core_scalars_metadata.py` after running the code
+  generator.
 - `metadata_excluded`: canonical names that appear in `scalars` but have no
   metadata row. Empty for the built-in corpus.
 
@@ -49,9 +56,10 @@ fails the run (`KnownScalar` in Go, `VALID_SCALARS` in TypeScript and Python,
 assembly is caught.
 
 Beyond parse, the runners assert the metadata section: every scalar in
-`scalars` has a row in `metadata` or is listed in `metadata_excluded`, each
-row's `is_sortable` and `comparability_class` match the binding's table, and
-the count of non-sortable rows equals `meta.non_sortable_count`.
+`scalars` has a row in `metadata` or is listed in `metadata_excluded`, every
+field of each row matches the binding's table, and the expectations in `meta`
+agree with what the rows give: the count of non-sortable rows, the class
+members, the case-insensitive scalars and the reserved-word settings.
 
 The TypeScript runner goes through both backends, the napi addon and the
 WASM build, and reports each separately.

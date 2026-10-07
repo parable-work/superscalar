@@ -163,6 +163,25 @@ def test_metadata_parity():
     # a message naming both sides, not as a KeyError that names only the key.
     # This is the guard the Go and TypeScript readers already have.
     assert derived_classes == CORPUS["meta"].get("comparability_classes")
+    # Same independence argument, for the case and reserved-word fields. The
+    # row equality above already compared every field to the corpus.
+    reserved_keys = (
+        "reserved_words",
+        "reserved_words_case_insensitive",
+        "reserved_words_match_partial",
+    )
+    case_insensitive = sorted(
+        canonical for canonical, row in vectors.items() if row["case_insensitive"]
+    )
+    assert case_insensitive == CORPUS["meta"].get("case_insensitive_scalars")
+    derived_reserved = {
+        canonical: {key: row[key] for key in reserved_keys}
+        for canonical, row in vectors.items()
+        if row["reserved_words"]
+        or row["reserved_words_case_insensitive"]
+        or row["reserved_words_match_partial"]
+    }
+    assert derived_reserved == CORPUS["meta"].get("reserved_word_scalars")
     # set(scalars) - set(metadata) == set(metadata_excluded), not the weaker
     # disjointness check: disjointness alone passes if a scalar is missing from
     # `metadata` without being declared excluded, which is the drift that

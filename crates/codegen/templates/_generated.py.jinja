@@ -15,7 +15,10 @@ VALID_SCALARS = (
 # `comparable_with` below, mirroring the Rust core. `is_sortable` is False for the
 # structural, JSON and vector scalars. A scalar with no row here has NO
 # sortability answer in this binding: `SCALAR_METADATA[name]` raises KeyError,
-# which is the intended behaviour, not a gap.
+# which is the intended behaviour, not a gap. `case_insensitive`,
+# `reserved_words`, `reserved_words_case_insensitive` and
+# `reserved_words_match_partial` are the def's fields of the same names;
+# `reserved_words` is an empty list when the scalar reserves none.
 #
 # Deliberately ONE dict of plain dicts and not a NamedTuple and not one dict per
 # field. Not a NamedTuple: this module is imported by six services and
@@ -25,7 +28,14 @@ VALID_SCALARS = (
 # third module-level name in a package that star-imports this module (A26,
 # F11). The row shape matches the parity corpus row shape exactly.
 SCALAR_METADATA = {
-{% for e in metadata_entries %}    {{ e.canonical_literal }}: {"comparability_class": {{ e.comparability_class_py }}, "is_sortable": {% if e.is_sortable %}True{% else %}False{% endif %}},
+{% for e in metadata_entries %}    {{ e.canonical_literal }}: {
+        "comparability_class": {{ e.comparability_class_py }},
+        "is_sortable": {% if e.is_sortable %}True{% else %}False{% endif %},
+        "case_insensitive": {% if e.case_insensitive %}True{% else %}False{% endif %},
+        "reserved_words": [{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}],
+        "reserved_words_case_insensitive": {% if e.reserved_words_case_insensitive %}True{% else %}False{% endif %},
+        "reserved_words_match_partial": {% if e.reserved_words_match_partial %}True{% else %}False{% endif %},
+    },
 {% endfor %}}
 
 # Maps an alias scalar's canonical name to its target's. `alias_of` means one

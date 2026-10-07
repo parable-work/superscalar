@@ -76,7 +76,14 @@ pub struct Entry {
     pub has_custom_parse: bool,
     pub has_custom_validate: bool,
     pub has_validator: bool,
+    /// `ScalarDef::case_insensitive`, carried into every metadata table.
+    pub case_insensitive: bool,
     pub reserved_words: Vec<Literal>,
+    /// `ScalarDef::reserved_words_case_insensitive` and
+    /// `ScalarDef::reserved_words_match_partial`, carried into every metadata
+    /// table beside `reserved_words`.
+    pub reserved_words_case_insensitive: bool,
+    pub reserved_words_match_partial: bool,
     pub examples: Vec<Literal>,
     /// True when this scalar is an `alias_of` another, which the generated
     /// `comparable_with` predicate must resolve before it reads a class off a
@@ -235,11 +242,14 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 has_custom_parse: def.hooks.parse,
                 has_custom_validate: def.hooks.validate,
                 has_validator: has_validator(def),
+                case_insensitive: def.case_insensitive,
                 reserved_words: def
                     .reserved_words
                     .iter()
                     .map(|word| literal(word))
                     .collect(),
+                reserved_words_case_insensitive: def.reserved_words_case_insensitive,
+                reserved_words_match_partial: def.reserved_words_match_partial,
                 examples: def
                     .examples
                     .iter()

@@ -31,6 +31,10 @@ struct Vectors {
 struct MetadataVector {
     comparability_class: Option<String>,
     is_sortable: bool,
+    case_insensitive: bool,
+    reserved_words: Vec<String>,
+    reserved_words_case_insensitive: bool,
+    reserved_words_match_partial: bool,
 }
 
 #[derive(Deserialize, Default)]
@@ -195,6 +199,26 @@ fn metadata_rows_match_the_defs() {
             row.is_sortable,
             def.is_sortable(),
             "{} is_sortable",
+            def.canonical
+        );
+        assert_eq!(
+            row.case_insensitive, def.case_insensitive,
+            "{} case_insensitive",
+            def.canonical
+        );
+        assert_eq!(
+            row.reserved_words, def.reserved_words,
+            "{} reserved_words",
+            def.canonical
+        );
+        assert_eq!(
+            row.reserved_words_case_insensitive, def.reserved_words_case_insensitive,
+            "{} reserved_words_case_insensitive",
+            def.canonical
+        );
+        assert_eq!(
+            row.reserved_words_match_partial, def.reserved_words_match_partial,
+            "{} reserved_words_match_partial",
             def.canonical
         );
     }

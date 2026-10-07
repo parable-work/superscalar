@@ -11,7 +11,7 @@ use common::rendered;
 use std::fs;
 use std::path::Path;
 use superscalar::{scalar_def, PrimitiveKind, Registry};
-use superscalar_codegen::{optional_lang_str_literal, Context};
+use superscalar_codegen::{optional_lang_str_literal, Context, Literal};
 
 fn with_context<T>(f: impl FnOnce(&Context) -> T) -> T {
     let config = common::config();
@@ -483,12 +483,20 @@ fn semantic_metadata_fields_reach_every_generated_table() {
         assert_eq!(ts.matches("    isSortable: true,").count(), sortable);
         assert_eq!(ts.matches("    isSortable: false,").count(), non_sortable);
         // Python: ONE row-shaped dict of dicts, matching the corpus row shape
-        // exactly. Each row is
-        //   "Contact.Email": {"comparability_class": None, "is_sortable": True},
+        // exactly. Each row's keys are indented 8 spaces:
+        //   "Contact.Email": {
+        //       "comparability_class": None,
+        //       "is_sortable": True,
         assert!(py.contains("SCALAR_METADATA = {"));
         assert_eq!(py.matches("\"comparability_class\": ").count(), expected);
-        assert_eq!(py.matches("\"is_sortable\": True},").count(), sortable);
-        assert_eq!(py.matches("\"is_sortable\": False},").count(), non_sortable);
+        assert_eq!(
+            py.matches("        \"is_sortable\": True,").count(),
+            sortable
+        );
+        assert_eq!(
+            py.matches("        \"is_sortable\": False,").count(),
+            non_sortable
+        );
         // Python floor guard: the generated module must evaluate on the declared
         // 3.9 floor, so it imports nothing beyond `_native` and annotates with
         // builtins only. `comparable_with(a: str, b: str) -> bool` annotates with
@@ -592,7 +600,183 @@ fn a_named_comparability_class_reaches_the_go_ts_and_python_templates() {
         1
     );
     assert_eq!(
-        py.matches("\"Contact.Email\": {\"comparability_class\": \"never_a_real_class\",")
+        py.matches(
+            "\"Contact.Email\": {\n        \"comparability_class\": \"never_a_real_class\","
+        )
+        .count(),
+        1
+    );
+}
+
+/// `case_insensitive` and the three reserved-word fields reach every generated
+/// table, one per row. The expected counts come from the registry, so a
+/// template that hardcodes `false` or an empty list fails as long as one def
+/// sets the field. The anchors are row-indented for the reason given on
+/// `semantic_metadata_fields_reach_every_generated_table`, and each is
+/// preceded by its indent, so `case_insensitive` does not also count
+/// `reserved_words_case_insensitive`.
+#[test]
+fn case_and_reserved_word_fields_reach_every_generated_table() {
+    with_context(|ctx| {
+        let defs: Vec<_> = Registry::builtin()
+            .defs()
+            .filter(|def| !def.metadata_omit)
+            .collect();
+        let rows = defs.len();
+        let case_insensitive = defs.iter().filter(|def| def.case_insensitive).count();
+        let words_case_insensitive = defs
+            .iter()
+            .filter(|def| def.reserved_words_case_insensitive)
+            .count();
+        let words_match_partial = defs
+            .iter()
+            .filter(|def| def.reserved_words_match_partial)
+            .count();
+        let no_words = defs
+            .iter()
+            .filter(|def| def.reserved_words.is_empty())
+            .count();
+        assert!(case_insensitive > 0, "a built-in is case-insensitive");
+        assert!(
+            words_case_insensitive > 0,
+            "a built-in sets reserved_words_case_insensitive"
+        );
+
+        let rust = rendered(ctx, "rust_metadata");
+        let go = rendered(ctx, "go");
+        let ts = rendered(ctx, "typescript");
+        let py = rendered(ctx, "python");
+        // (rendered text, row indent, field name, true, false, empty list)
+        let tables = [
+            (
+                &rust,
+                "        ",
+                [
+                    "case_insensitive",
+                    "reserved_words_case_insensitive",
+                    "reserved_words_match_partial",
+                    "reserved_words",
+                ],
+                "true",
+                "false",
+                "&[]",
+            ),
+            (
+                &go,
+                "\t\t",
+                [
+                    "CaseInsensitive",
+                    "ReservedWordsCaseInsensitive",
+                    "ReservedWordsMatchPartial",
+                    "ReservedWords",
+                ],
+                "true",
+                "false",
+                "[]string{}",
+            ),
+            (
+                &ts,
+                "    ",
+                [
+                    "caseInsensitive",
+                    "reservedWordsCaseInsensitive",
+                    "reservedWordsMatchPartial",
+                    "reservedWords",
+                ],
+                "true",
+                "false",
+                "[]",
+            ),
+            (
+                &py,
+                "        ",
+                [
+                    "\"case_insensitive\"",
+                    "\"reserved_words_case_insensitive\"",
+                    "\"reserved_words_match_partial\"",
+                    "\"reserved_words\"",
+                ],
+                "True",
+                "False",
+                "[]",
+            ),
+        ];
+        for (text, indent, [ci, words_ci, words_partial, words], yes, no, empty) in tables {
+            for (field, set) in [
+                (ci, case_insensitive),
+                (words_ci, words_case_insensitive),
+                (words_partial, words_match_partial),
+            ] {
+                assert_eq!(
+                    text.matches(&format!("{indent}{field}: {yes},")).count(),
+                    set,
+                    "{field}: {yes}"
+                );
+                assert_eq!(
+                    text.matches(&format!("{indent}{field}: {no},")).count(),
+                    rows - set,
+                    "{field}: {no}"
+                );
+            }
+            assert_eq!(
+                text.matches(&format!("{indent}{words}: ")).count(),
+                rows,
+                "{words} rows"
+            );
+            assert_eq!(
+                text.matches(&format!("{indent}{words}: {empty},")).count(),
+                no_words,
+                "{words}: {empty}"
+            );
+        }
+    });
+}
+
+/// No built-in reserves a word, so the count test above never renders a
+/// non-empty list. Doctor one entry with words the catalog cannot produce, as
+/// the class test above does, and require each list to render once.
+#[test]
+fn reserved_words_reach_the_go_ts_and_python_metadata() {
+    with_context(|ctx| {
+        for language in ["go", "typescript", "python"] {
+            assert!(
+                !rendered(ctx, language).contains("never_a_real_word"),
+                "the {language} render carries the sentinel without doctoring; \
+                 pick a word the catalog cannot produce"
+            );
+        }
+    });
+
+    let config = common::config();
+    let mut ctx = common::context(&config);
+    let target = ctx
+        .entries
+        .iter_mut()
+        .find(|e| e.canonical == "Contact.Email")
+        .expect("Contact.Email is catalogued and carries a metadata row");
+    target.reserved_words = ["never_a_real_word", "also_never_real"]
+        .into_iter()
+        .map(|word| Literal {
+            value: word.to_string(),
+            literal: format!("{word:?}"),
+        })
+        .collect();
+
+    let go = rendered(&ctx, "go");
+    let ts = rendered(&ctx, "typescript");
+    let py = rendered(&ctx, "python");
+    assert_eq!(
+        go.matches("\t\tReservedWords: []string{\"never_a_real_word\", \"also_never_real\"},")
+            .count(),
+        1
+    );
+    assert_eq!(
+        ts.matches("    reservedWords: [\"never_a_real_word\", \"also_never_real\"],")
+            .count(),
+        1
+    );
+    assert_eq!(
+        py.matches("        \"reserved_words\": [\"never_a_real_word\", \"also_never_real\"],")
             .count(),
         1
     );

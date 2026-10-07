@@ -4,12 +4,12 @@
     "source_language": "rust-core",
     "source_package": "examples/acme-scalars/ext",
     "non_sortable_count": 0,
-    "description": "Conformance vectors for the Acme extension, in the shape of the built-in corpus (parity/core-scalars.v2.json). Keys are canonical names; a binding resolves them to ids through the assembled registry. Acme.ScalarRef accepts a name only if the registry the binding dispatched into knows it, so its Acme.* vectors fail against a binding built over the built-in registry alone. `metadata` transcribes comparability_class and is_sortable from the defs; `non_sortable_count` is hand-maintained beside it."
+    "description": "Conformance vectors for the Acme extension, in the shape of the built-in corpus (parity/core-scalars.v2.json). Keys are canonical names; a binding resolves them to ids through the assembled registry. Acme.ScalarRef accepts a name only if the registry the binding dispatched into knows it, so its Acme.* vectors fail against a binding built over the built-in registry alone. `metadata` transcribes comparability_class, is_sortable, case_insensitive, reserved_words, reserved_words_case_insensitive and reserved_words_match_partial from the defs; `non_sortable_count` is hand-maintained beside it."
   },
   "metadata_excluded": [],
   "metadata": {
-    "Acme.OrderNumber": { "comparability_class": null, "is_sortable": true },
-    "Acme.ScalarRef": { "comparability_class": null, "is_sortable": true }
+    "Acme.OrderNumber": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Acme.ScalarRef": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false }
   },
   "scalars": {
     "Acme.OrderNumber": {

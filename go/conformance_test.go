@@ -31,6 +31,31 @@ type scalarParity struct {
 type metadataVector struct {
 	ComparabilityClass *string `json:"comparability_class"`
 	IsSortable         bool    `json:"is_sortable"`
+	CaseInsensitive    bool    `json:"case_insensitive"`
+	reservedWordRule
+}
+
+// The three reserved-word fields of a metadata row, and the value shape of
+// meta.reserved_word_scalars. ReservedWords is a pointer for the same reason
+// ComparabilityClass is: a row that lost the key must not read as "reserves
+// nothing".
+type reservedWordRule struct {
+	ReservedWords                *[]string `json:"reserved_words"`
+	ReservedWordsCaseInsensitive bool      `json:"reserved_words_case_insensitive"`
+	ReservedWordsMatchPartial    bool      `json:"reserved_words_match_partial"`
+}
+
+// isSet reports whether the row belongs in meta.reserved_word_scalars.
+func (r reservedWordRule) isSet() bool {
+	return (r.ReservedWords != nil && len(*r.ReservedWords) > 0) ||
+		r.ReservedWordsCaseInsensitive || r.ReservedWordsMatchPartial
+}
+
+func (r reservedWordRule) equal(other reservedWordRule) bool {
+	return r.ReservedWords != nil && other.ReservedWords != nil &&
+		slices.Equal(*r.ReservedWords, *other.ReservedWords) &&
+		r.ReservedWordsCaseInsensitive == other.ReservedWordsCaseInsensitive &&
+		r.ReservedWordsMatchPartial == other.ReservedWordsMatchPartial
 }
 
 // meta carries the hand-maintained expectations that must not be derived from
@@ -41,6 +66,10 @@ type parityMeta struct {
 	// rather than a count, because a count cannot catch a class attached to the
 	// wrong scalar.
 	ComparabilityClasses map[string][]string `json:"comparability_classes"`
+	// Sorted canonical names of the rows with case_insensitive set.
+	CaseInsensitiveScalars []string `json:"case_insensitive_scalars"`
+	// Every row that reserves a word or sets either reserved-word flag.
+	ReservedWordScalars map[string]reservedWordRule `json:"reserved_word_scalars"`
 }
 
 type paritySpec struct {
@@ -133,6 +162,20 @@ func TestV2MetadataParity(t *testing.T) {
 		if got.IsSortable != want.IsSortable {
 			t.Errorf("%s IsSortable = %v, want %v", canonical, got.IsSortable, want.IsSortable)
 		}
+		if got.CaseInsensitive != want.CaseInsensitive {
+			t.Errorf("%s CaseInsensitive = %v, want %v", canonical, got.CaseInsensitive, want.CaseInsensitive)
+		}
+		if want.ReservedWords == nil {
+			t.Errorf("%s: corpus row has no reserved_words", canonical)
+		} else if !slices.Equal(got.ReservedWords, *want.ReservedWords) {
+			t.Errorf("%s ReservedWords = %q, want %q", canonical, got.ReservedWords, *want.ReservedWords)
+		}
+		if got.ReservedWordsCaseInsensitive != want.ReservedWordsCaseInsensitive {
+			t.Errorf("%s ReservedWordsCaseInsensitive = %v, want %v", canonical, got.ReservedWordsCaseInsensitive, want.ReservedWordsCaseInsensitive)
+		}
+		if got.ReservedWordsMatchPartial != want.ReservedWordsMatchPartial {
+			t.Errorf("%s ReservedWordsMatchPartial = %v, want %v", canonical, got.ReservedWordsMatchPartial, want.ReservedWordsMatchPartial)
+		}
 		if !want.IsSortable {
 			nonSortable++
 		}
@@ -178,6 +221,29 @@ func TestV2MetadataParity(t *testing.T) {
 			}
 		}
 	}
+	// Same independence argument, for the case and reserved-word fields. Nil
+	// checks first, for the reason given above.
+	var caseInsensitive []string
+	derivedReserved := map[string]reservedWordRule{}
+	for canonical, want := range spec.Metadata {
+		if want.CaseInsensitive {
+			caseInsensitive = append(caseInsensitive, canonical)
+		}
+		if want.isSet() {
+			derivedReserved[canonical] = want.reservedWordRule
+		}
+	}
+	sort.Strings(caseInsensitive)
+	if spec.Meta.CaseInsensitiveScalars == nil {
+		t.Error("corpus meta.case_insensitive_scalars is missing; it is hand-maintained and the generator must never remove it")
+	} else if !slices.Equal(caseInsensitive, spec.Meta.CaseInsensitiveScalars) {
+		t.Errorf("case-insensitive rows = %v, meta declares %v", caseInsensitive, spec.Meta.CaseInsensitiveScalars)
+	}
+	if spec.Meta.ReservedWordScalars == nil {
+		t.Error("corpus meta.reserved_word_scalars is missing; it is hand-maintained and the generator must never remove it")
+	} else if !maps.EqualFunc(derivedReserved, spec.Meta.ReservedWordScalars, reservedWordRule.equal) {
+		t.Errorf("reserved-word rows = %+v, meta declares %+v", derivedReserved, spec.Meta.ReservedWordScalars)
+	}
 	// set(scalars) - set(metadata) == set(metadata_excluded), not the weaker
 	// disjointness check. Disjointness alone passes if a scalar is missing from
 	// `metadata` without being declared excluded, which is the drift that
@@ -202,10 +268,24 @@ func TestV2MetadataParity(t *testing.T) {
 // on a literal row, so it keeps proving the branch when the class table changes.
 func TestMetadataVectorDecodesANamedClass(t *testing.T) {
 	var v metadataVector
-	if err := json.Unmarshal([]byte(`{"comparability_class":"temporal_instant","is_sortable":true}`), &v); err != nil {
+	if err := json.Unmarshal([]byte(`{"comparability_class":"temporal_instant","is_sortable":true,"case_insensitive":false,"reserved_words":[],"reserved_words_case_insensitive":false,"reserved_words_match_partial":false}`), &v); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if v.ComparabilityClass == nil || *v.ComparabilityClass != "temporal_instant" {
 		t.Errorf("ComparabilityClass = %v, want temporal_instant", v.ComparabilityClass)
+	}
+}
+
+// No built-in reserves a word, so the shipped corpus never decodes a non-empty
+// reserved_words. Pin the decode on a literal row, as the class test above does.
+func TestMetadataVectorDecodesReservedWords(t *testing.T) {
+	var v metadataVector
+	row := `{"comparability_class":null,"is_sortable":true,"case_insensitive":true,"reserved_words":["admin","root"],"reserved_words_case_insensitive":true,"reserved_words_match_partial":true}`
+	if err := json.Unmarshal([]byte(row), &v); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !v.CaseInsensitive || v.ReservedWords == nil || !slices.Equal(*v.ReservedWords, []string{"admin", "root"}) ||
+		!v.ReservedWordsCaseInsensitive || !v.ReservedWordsMatchPartial || !v.isSet() {
+		t.Errorf("decoded %+v (reserved words %v)", v, v.ReservedWords)
 	}
 }

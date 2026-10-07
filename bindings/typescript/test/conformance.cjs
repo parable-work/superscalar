@@ -143,6 +143,22 @@ for (const [canonical, want] of Object.entries(metaVectors)) {
     failures++;
     console.error(`${canonical} isSortable = ${got.isSortable}, want ${want.is_sortable}`);
   }
+  if (got.caseInsensitive !== want.case_insensitive) {
+    failures++;
+    console.error(`${canonical} caseInsensitive = ${got.caseInsensitive}, want ${want.case_insensitive}`);
+  }
+  if (JSON.stringify(got.reservedWords) !== JSON.stringify(want.reserved_words)) {
+    failures++;
+    console.error(`${canonical} reservedWords = ${JSON.stringify(got.reservedWords)}, want ${JSON.stringify(want.reserved_words)}`);
+  }
+  if (got.reservedWordsCaseInsensitive !== want.reserved_words_case_insensitive) {
+    failures++;
+    console.error(`${canonical} reservedWordsCaseInsensitive = ${got.reservedWordsCaseInsensitive}, want ${want.reserved_words_case_insensitive}`);
+  }
+  if (got.reservedWordsMatchPartial !== want.reserved_words_match_partial) {
+    failures++;
+    console.error(`${canonical} reservedWordsMatchPartial = ${got.reservedWordsMatchPartial}, want ${want.reserved_words_match_partial}`);
+  }
   if (!want.is_sortable) {
     nonSortable++;
   }
@@ -183,6 +199,47 @@ if (handClasses === undefined || handClasses === null) {
   if (derivedClassesJson !== handClassesJson) {
     failures++;
     console.error(`comparability classes = ${derivedClassesJson}, want ${handClassesJson}`);
+  }
+}
+// Same independence argument, for the case and reserved-word fields, with the
+// same guard against an absent hand-maintained key.
+const caseInsensitive = Object.keys(metaVectors)
+  .filter((canonical) => metaVectors[canonical].case_insensitive === true)
+  .sort();
+const handCaseInsensitive = corpus.meta.case_insensitive_scalars;
+if (!Array.isArray(handCaseInsensitive)) {
+  failures++;
+  console.error("corpus meta.case_insensitive_scalars is missing; it is hand-maintained and the generator must never remove it");
+} else if (JSON.stringify(caseInsensitive) !== JSON.stringify(handCaseInsensitive)) {
+  failures++;
+  console.error(`case-insensitive rows = ${JSON.stringify(caseInsensitive)}, want ${JSON.stringify(handCaseInsensitive)}`);
+}
+const reservedRule = (row) => ({
+  reserved_words: row.reserved_words,
+  reserved_words_case_insensitive: row.reserved_words_case_insensitive,
+  reserved_words_match_partial: row.reserved_words_match_partial,
+});
+const derivedReserved = Object.create(null);
+for (const canonical of Object.keys(metaVectors).sort()) {
+  const row = metaVectors[canonical];
+  if (row.reserved_words.length > 0 || row.reserved_words_case_insensitive || row.reserved_words_match_partial) {
+    derivedReserved[canonical] = reservedRule(row);
+  }
+}
+const handReserved = corpus.meta.reserved_word_scalars;
+if (handReserved === undefined || handReserved === null) {
+  failures++;
+  console.error("corpus meta.reserved_word_scalars is missing; it is hand-maintained and the generator must never remove it");
+} else {
+  const handReservedSorted = Object.create(null);
+  for (const canonical of Object.keys(handReserved).sort()) {
+    handReservedSorted[canonical] = reservedRule(handReserved[canonical]);
+  }
+  const derivedReservedJson = JSON.stringify(derivedReserved);
+  const handReservedJson = JSON.stringify(handReservedSorted);
+  if (derivedReservedJson !== handReservedJson) {
+    failures++;
+    console.error(`reserved-word rows = ${derivedReservedJson}, want ${handReservedJson}`);
   }
 }
 // set(scalars) - set(metadata) === set(metadata_excluded), not the weaker

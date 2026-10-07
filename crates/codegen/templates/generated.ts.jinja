@@ -35,6 +35,14 @@ export interface ScalarMetadata {
    */
   comparabilityClass: string | null;
   isSortable: boolean;
+  /** The def's `case_insensitive` flag. */
+  caseInsensitive: boolean;
+  /** The values the def reserves, empty when it has none. */
+  reservedWords: string[];
+  /** The def's `reserved_words_case_insensitive` flag. */
+  reservedWordsCaseInsensitive: boolean;
+  /** The def's `reserved_words_match_partial` flag. */
+  reservedWordsMatchPartial: boolean;
 }
 
 /**
@@ -256,6 +264,10 @@ export const normalize{{ alias.name }}Strict = normalize{{ alias.target }}Strict
     examples: [{% for example in e.examples %}{{ example.literal }}{% if not loop.last %}, {% endif %}{% endfor %}],
     comparabilityClass: {{ e.comparability_class_ts }},
     isSortable: {% if e.is_sortable %}true{% else %}false{% endif %},
+    caseInsensitive: {% if e.case_insensitive %}true{% else %}false{% endif %},
+    reservedWords: [{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}],
+    reservedWordsCaseInsensitive: {% if e.reserved_words_case_insensitive %}true{% else %}false{% endif %},
+    reservedWordsMatchPartial: {% if e.reserved_words_match_partial %}true{% else %}false{% endif %},
   },
 {% endfor %}];
 
