@@ -105,6 +105,16 @@ bump they require (minor when loosening, major when tightening).
   changes. The Rust struct and the TypeScript interface gain fields, so code
   that builds a `ScalarMetadata` value by hand must set them.
 
+- Core: `Registry::lenient_coercer(name)` resolves a scalar once and returns
+  a `LenientCoercer`, whose `coerce` is `Registry::coerce_lenient` without
+  the per-value name lookup, for a writer that coerces every value of a
+  column. `coerce_lenient` now delegates to it, and a JSON string is parsed
+  in place instead of copied. Carried from parable-platform PR #7862.
+- Conformance: `Temporal.Date` gains two more rejected bare-count vectors,
+  `1747270862000` and `100000000000` (the smallest 12-digit count). The
+  scalar already rejected them; no accept-set change, no bump required.
+  Carried from parable-platform PR #7381.
+
 ### Changed
 
 - `Geo.Location` is a JSON-object scalar, `{"lat": <number>, "lon": <number>}`,
@@ -224,8 +234,29 @@ bump they require (minor when loosening, major when tightening).
   `ScalarDef::format` (`semver` for `Version.SemVer`) instead of an empty
   value. No accept-set change.
 
+- `Embedding.Vector` rejects an element outside the float32 range. serde
+  cast such a number to infinity and the canonical form wrote it as `null`,
+  so `[1e40]` was accepted as `[null]`. Now `parse`, `normalize` and
+  `validate` fail with `parse` and the message
+  `element <i> is outside the float32 range`. New vectors: `[1e40]` and
+  `[-1e40]` rejected, `[3.4028235e38,-3.4028235e38]` accepted and normalized
+  to `[3.4028235e+38,-3.4028235e+38]`. The accept set tightens, a major
+  bump. Carried from parable-platform PR #7636.
+- Lenient coercion of a `metadata_omit` scalar fails with kind `enum` (was
+  `custom`) and a message naming the scalar: it declares no primitive, so it
+  cannot type a column, the same answer as an unknown name. It never
+  panicked here. No scalar's parse, normalize or validate changes. Carried
+  from parable-platform PR #7862.
+
 ### Fixed
 
+- `Temporal.TimeZone` accepts every IANA tz name with a `/`: hyphens
+  (`America/Port-au-Prince`), signs and digits (`Etc/GMT+5`, `Etc/GMT-14`),
+  and bare `GMT`. The pattern is now
+  `^(?:UTC|GMT|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z][A-Za-z0-9_+-]*)+)$`. It
+  checks the name's shape, not membership in one tz release, so names a newer
+  release adds still pass. Single-segment names other than `UTC` and `GMT`
+  (`EST`, `IST`) stay rejected.
 - The build-an-extension guide describes `examples/acme-scalars/` as it
   ships: the extension crate, the four binding crates, the smoke and
   third-scalar scripts. It no longer claims the example
@@ -249,5 +280,15 @@ bump they require (minor when loosening, major when tightening).
   the scalar's own validation, yet the generated Go and TypeScript metadata
   and the reference docs showed it. Metadata only: no vector or accept-set
   change, no bump required.
+
+- TypeScript: the generated wrappers of a scalar typed `number` return a
+  number on every path. The strict wrappers returned the core's canonical
+  text, so `parseOrderingRankStrict("1")` was the string `"1"`. The wrappers
+  of a scalar typed `number[]` (`Embedding.Vector`) decode the canonical JSON
+  text into an array of numbers on the strict and the lenient paths; they
+  returned the text. `test/number-wrappers.cjs` and
+  `test/number-array-wrappers.cjs` run every such scalar's vectors through
+  the wrappers. No accept-set change. Carried from parable-platform PRs
+  #7632 and #7635.
 
 [Unreleased]: https://github.com/parable-work/superscalar/commits/main

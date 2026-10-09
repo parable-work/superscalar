@@ -314,7 +314,7 @@ type TemporalSeconds int64
 // Temporal.Time - "Time of day. 24-hour 'HH:MM' or 'HH:MM:SS' (hours 00-23), or 12-hour 'H:MM'/'HH:MM' with optional ':SS' and required AM/PM suffix (hours 1-12). Seconds and the AM/PM separator space are optional."
 type TemporalTime string
 
-// Temporal.TimeZone - "IANA timezone identifier (e.g., America/New_York, UTC, Etc/UTC)"
+// Temporal.TimeZone - "IANA tz database name: UTC, GMT, or two or more '/'-separated segments of ASCII letters, digits, '_', '-', and '+', each starting with a letter (e.g., America/New_York, America/Port-au-Prince, Etc/GMT+5). Checks the name's shape, not that a tz release lists it."
 type TemporalTimeZone string
 
 // Temporal.Year - "Calendar year as a 4-digit string (e.g., 2025)"
@@ -1581,7 +1581,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		CanonicalName:                "Temporal.TimeZone",
 		Symbol:                       "TemporalTimeZone",
 		Primitive:                    "String",
-		Description:                  "IANA timezone identifier (e.g., America/New_York, UTC, Etc/UTC)",
+		Description:                  "IANA tz database name: UTC, GMT, or two or more '/'-separated segments of ASCII letters, digits, '_', '-', and '+', each starting with a letter (e.g., America/New_York, America/Port-au-Prince, Etc/GMT+5). Checks the name's shape, not that a tz release lists it.",
 		TypeScriptType:               "string",
 		PythonType:                   "str",
 		RustType:                     "String",
@@ -1593,7 +1593,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		MinLength:                    0,
 		Maximum:                      nil,
 		Minimum:                      nil,
-		Pattern:                      "^(?:UTC|[A-Za-z]+/[A-Za-z_/]+)$",
+		Pattern:                      "^(?:UTC|GMT|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z][A-Za-z0-9_+-]*)+)$",
 		HasCustomNormalize:           false,
 		HasCustomParse:               false,
 		HasCustomValidate:            false,

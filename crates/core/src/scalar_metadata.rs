@@ -723,7 +723,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         format: None,
         max_length: Some(100),
         min_length: None,
-        pattern: Some("^(?:UTC|[A-Za-z]+/[A-Za-z_/]+)$"),
+        pattern: Some("^(?:UTC|GMT|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z][A-Za-z0-9_+-]*)+)$"),
         comparability_class: None,
         is_sortable: true,
         case_insensitive: false,

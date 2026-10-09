@@ -426,6 +426,16 @@
           "input": "1736899200",
           "validator": "parse",
           "note": "10-digit epoch-second string; rejected on the same terms as the millisecond forms."
+        },
+        {
+          "input": "1747270862000",
+          "validator": "parse",
+          "note": "A second 13-digit epoch-millisecond string; rejected like every other bare count."
+        },
+        {
+          "input": "100000000000",
+          "validator": "parse",
+          "note": "Smallest 12-digit count; rejected like every other bare count, so no digit-length threshold reads it as epoch milliseconds."
         }
       ]
     },
@@ -984,6 +994,11 @@
         {
           "input": "[0.1,0.2,0.3]",
           "normalized": "[0.1,0.2,0.3]"
+        },
+        {
+          "input": "[3.4028235e38,-3.4028235e38]",
+          "normalized": "[3.4028235e+38,-3.4028235e+38]",
+          "note": "The float32 extremes are kept."
         }
       ],
       "rejected": [
@@ -994,6 +1009,16 @@
         {
           "input": "[1,2,",
           "validator": "parse"
+        },
+        {
+          "input": "[1e40]",
+          "validator": "parse",
+          "note": "Beyond the float32 range. serde casts it to infinity, which would serialize as [null]."
+        },
+        {
+          "input": "[-1e40]",
+          "validator": "parse",
+          "note": "Below the float32 range; rejected like [1e40]."
         }
       ]
     },
@@ -1445,13 +1470,29 @@
         {
           "input": "America/New_York",
           "normalized": "America/New_York"
-        }
+        },
+        { "input": "UTC", "normalized": "UTC" },
+        { "input": "GMT", "normalized": "GMT" },
+        { "input": "Etc/UTC", "normalized": "Etc/UTC" },
+        { "input": "Europe/London", "normalized": "Europe/London" },
+        { "input": "America/Argentina/Buenos_Aires", "normalized": "America/Argentina/Buenos_Aires" },
+        { "input": "America/Port-au-Prince", "normalized": "America/Port-au-Prince" },
+        { "input": "America/Blanc-Sablon", "normalized": "America/Blanc-Sablon" },
+        { "input": "Etc/GMT+5", "normalized": "Etc/GMT+5" },
+        { "input": "Etc/GMT-14", "normalized": "Etc/GMT-14" }
       ],
       "rejected": [
         {
           "input": "notazone",
           "validator": "pattern"
-        }
+        },
+        { "input": "EST", "validator": "pattern", "note": "EST is a legacy tz backward link. Single-segment names other than UTC and GMT are rejected so abbreviations that name several zones, such as IST and CST, never pass." },
+        { "input": "America/", "validator": "pattern" },
+        { "input": "/UTC", "validator": "pattern" },
+        { "input": "America//New_York", "validator": "pattern" },
+        { "input": "America/New York", "validator": "pattern" },
+        { "input": "America/-Foo", "validator": "pattern" },
+        { "input": "Etc/../UTC", "validator": "pattern" }
       ]
     },
     "Temporal.Year": {

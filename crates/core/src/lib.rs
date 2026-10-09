@@ -21,7 +21,9 @@ pub mod scalars;
 pub mod temporal_format;
 
 pub use catalog::names;
-pub use coerce::{coerce_bool, coerce_float, coerce_int, coerce_lenient, LenientCoerceResult};
+pub use coerce::{
+    coerce_bool, coerce_float, coerce_int, coerce_lenient, LenientCoerceResult, LenientCoercer,
+};
 pub use definitions::{DefSource, Definitions};
 pub use error::{ErrorKind, ScalarError};
 pub use extension::{AssemblyError, Extension, LegacyAlias};

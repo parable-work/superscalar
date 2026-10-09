@@ -89,3 +89,8 @@ cycle, a `Set`). The strict forms take JSON text. `JSONValue` and the guard
 Branded types are plain strings at runtime with a phantom `__brand` field, so
 a `ContactEmail` cannot be passed where an `IdentityUUID` is expected without
 going through a parse function.
+
+A scalar whose type is not a string comes back as that type on every path.
+A `number` scalar (`OrderingRank`, `FinanceMoney`) returns a number, and
+`EmbeddingVector` returns a `number[]`, from both the lenient and the strict
+wrappers, though the core hands back canonical text.

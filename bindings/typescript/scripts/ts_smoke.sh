@@ -34,3 +34,5 @@ node test/native-addon.cjs
 node test/conformance.cjs
 node test/comparability.cjs
 node test/backend-fallback.cjs
+node test/number-wrappers.cjs
+node test/number-array-wrappers.cjs

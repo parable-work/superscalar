@@ -68,7 +68,7 @@
     "build:napi": "napi build --platform --release --manifest-path ../../crates/napi/Cargo.toml --output-dir native",
     "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.browser.json && node scripts/fix-esm-extensions.mjs",
     "build": "npm run build:napi && npm run build:ts",
-    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/backend-fallback.cjs"
+    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/number-wrappers.cjs && node test/number-array-wrappers.cjs && node test/backend-fallback.cjs"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.10.5",

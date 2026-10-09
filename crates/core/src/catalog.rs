@@ -1137,7 +1137,11 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         metadata_primitive: "String",
         json_schema_type: "string",
         tag: ScalarTag::PatternOnly,
-        pattern: Some("^(?:UTC|[A-Za-z]+/[A-Za-z_/]+)$"),
+        // The tz database name grammar, not membership in one tz release: a pinned
+        // zone list would refuse names a newer release adds, and a producer sends
+        // whatever its own release holds. A consumer that resolves an offset looks
+        // the name up in a tz database itself.
+        pattern: Some("^(?:UTC|GMT|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z][A-Za-z0-9_+-]*)+)$"),
         min_length: None,
         max_length: Some(100),
         minimum: None,
@@ -1145,7 +1149,7 @@ pub(crate) static CATALOG: [ScalarDef; 48] = [
         case_insensitive: false,
         reserved_words: &[],
         examples: &["America/New_York", "UTC", "Etc/UTC"],
-        description: "IANA timezone identifier (e.g., America/New_York, UTC, Etc/UTC)",
+        description: "IANA tz database name: UTC, GMT, or two or more '/'-separated segments of ASCII letters, digits, '_', '-', and '+', each starting with a letter (e.g., America/New_York, America/Port-au-Prince, Etc/GMT+5). Checks the name's shape, not that a tz release lists it.",
         type_mappings: &[("typescript", "string"), ("python", "str"), ("go", "string"), ("rust", "String"), ("sql", "VARCHAR(100)"), ("json_schema", "string")],
         file_upload: None,
         image_constraints: None,

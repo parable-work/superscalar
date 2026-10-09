@@ -10,10 +10,12 @@
 //! are the trim-and-parse rules shared with the JSON-value coercion path; they
 //! are public because downstream DataFusion UDFs need them directly.
 
+use std::borrow::Cow;
+
 use serde_json::{Number, Value};
 
 use crate::error::{ErrorKind, ScalarError};
-use crate::registry::{Registry, Scalar};
+use crate::registry::{Registry, Scalar, ScalarDef};
 
 /// Coerce a JSON value to an `i64`. With `strict`, only a JSON number is
 /// accepted; otherwise a trimmed numeric string is parsed too (integer first,
@@ -124,30 +126,85 @@ impl Registry {
     /// `scalar_name`, capturing failures instead of returning `Err`.
     ///
     /// - A null input is a passthrough: `{value: None, error: None}`.
-    /// - An unknown scalar name fails with [`ErrorKind::Enum`].
+    /// - An unknown scalar name fails with [`ErrorKind::Enum`], as does a
+    ///   scalar that omits metadata (`metadata_omit`): it declares no
+    ///   primitive to coerce to.
     /// - Otherwise the scalar's `metadata_primitive` selects the coercion:
     ///   `Int` and `Float` parse the numeric value (range-checked by the
     ///   scalar's `validate`), while `String` and `Type` run the scalar's
     ///   `parse` to get the canonical string.
+    ///
+    /// A caller that coerces many values of one scalar resolves it once with
+    /// [`Registry::lenient_coercer`]; this form looks the name up per call.
     pub fn coerce_lenient(&self, value: &Value, scalar_name: &str) -> LenientCoerceResult {
         if value.is_null() {
             return LenientCoerceResult::null();
         }
-
-        let Some(def) = self.def(scalar_name) else {
-            return LenientCoerceResult::failed(ScalarError::new(
+        match self.lenient_coercer(scalar_name) {
+            Some(coercer) => coercer.coerce(value),
+            None => LenientCoerceResult::failed(ScalarError::new(
                 ErrorKind::Enum,
                 format!("unknown scalar: {scalar_name}"),
-            ));
-        };
+            )),
+        }
+    }
+
+    /// The scalar named `scalar_name`, resolved once for
+    /// [`LenientCoercer::coerce`], or `None` for a name no extension declared.
+    /// A writer that types a column with a scalar resolves it here and pays
+    /// no name lookup per value.
+    pub fn lenient_coercer(&self, scalar_name: &str) -> Option<LenientCoercer<'_>> {
+        let def = self.def(scalar_name)?;
         let scalar = self
             .scalar(def.canonical)
             .expect("every assembled def has a scalar slot");
+        Some(LenientCoercer {
+            registry: self,
+            def,
+            scalar,
+        })
+    }
+}
 
-        match def.metadata_primitive {
-            "Int" => coerce_lenient_int(self, scalar, value, scalar_name),
-            "Float" => coerce_lenient_float(self, scalar, value, scalar_name),
-            "String" | "Type" => coerce_lenient_string(self, scalar, value),
+/// A scalar resolved by [`Registry::lenient_coercer`]. [`Self::coerce`] is
+/// [`Registry::coerce_lenient`] without the name lookup.
+#[derive(Clone, Copy)]
+pub struct LenientCoercer<'r> {
+    registry: &'r Registry,
+    def: &'static ScalarDef,
+    scalar: &'r dyn Scalar,
+}
+
+impl std::fmt::Debug for LenientCoercer<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LenientCoercer")
+            .field("scalar", &self.def.canonical)
+            .finish()
+    }
+}
+
+impl LenientCoercer<'_> {
+    /// The canonical name of the resolved scalar.
+    pub fn scalar_name(&self) -> &'static str {
+        self.def.canonical
+    }
+
+    /// Coerce `value` as [`Registry::coerce_lenient`] does for this scalar.
+    pub fn coerce(&self, value: &Value) -> LenientCoerceResult {
+        if value.is_null() {
+            return LenientCoerceResult::null();
+        }
+        let (registry, scalar, scalar_name) = (self.registry, self.scalar, self.def.canonical);
+        match self.def.metadata_primitive {
+            "Int" => coerce_lenient_int(registry, scalar, value, scalar_name),
+            "Float" => coerce_lenient_float(registry, scalar, value, scalar_name),
+            "String" | "Type" => coerce_lenient_string(registry, scalar, value),
+            // A metadata_omit scalar declares no primitive, so it cannot type
+            // a column: each value fails rather than panicking the writer.
+            "" => LenientCoerceResult::failed(ScalarError::new(
+                ErrorKind::Enum,
+                format!("scalar {scalar_name} omits metadata and cannot type a column"),
+            )),
             primitive => LenientCoerceResult::failed(ScalarError::new(
                 ErrorKind::Custom,
                 format!("unsupported scalar primitive {primitive} for {scalar_name}"),
@@ -162,7 +219,7 @@ fn coerce_lenient_int(
     value: &Value,
     scalar_name: &str,
 ) -> LenientCoerceResult {
-    let canonical = match scalar.parse(registry, &value_to_string(value)) {
+    let canonical = match scalar.parse(registry, &value_text(value)) {
         Ok(canonical) => canonical,
         Err(error) => return LenientCoerceResult::failed(error),
     };
@@ -201,18 +258,20 @@ fn coerce_lenient_string(
     scalar: &dyn Scalar,
     value: &Value,
 ) -> LenientCoerceResult {
-    match scalar.parse(registry, &value_to_string(value)) {
+    match scalar.parse(registry, &value_text(value)) {
         Ok(canonical) => LenientCoerceResult::ok(Value::String(canonical)),
         Err(error) => LenientCoerceResult::failed(error),
     }
 }
 
-fn value_to_string(value: &Value) -> String {
+/// The text a scalar parses: a JSON string as it is, borrowed rather than
+/// copied, and any other value in its JSON form.
+fn value_text(value: &Value) -> Cow<'_, str> {
     match value {
-        Value::String(raw) => raw.clone(),
-        Value::Number(raw) => raw.to_string(),
-        Value::Bool(raw) => raw.to_string(),
-        other => other.to_string(),
+        Value::String(raw) => Cow::Borrowed(raw),
+        Value::Number(raw) => Cow::Owned(raw.to_string()),
+        Value::Bool(raw) => Cow::Owned(raw.to_string()),
+        other => Cow::Owned(other.to_string()),
     }
 }
 
@@ -324,16 +383,12 @@ mod tests {
         assert!(json["error"]["message"].is_string());
     }
 
-    /// A metadata_omit def declares no metadata primitive. Before the
-    /// registry, coerce_lenient looked the name up in SCALAR_METADATA and
-    /// panicked on the missing row (which the FFI guard surfaced as a
-    /// panic-category error). Reading the def instead makes it an ordinary
-    /// failed result. No built-in is metadata_omit, so the def comes from an
-    /// inline extension.
-    #[test]
-    fn metadata_omitted_scalar_fails_without_panicking() {
+    /// A registry of the built-ins plus `Acme.SecretRef`, a metadata_omit
+    /// scalar. No built-in is metadata_omit, so the def comes from an inline
+    /// extension.
+    fn registry_with_metadata_omitted_scalar() -> Registry {
         use crate::extension::Extension;
-        use crate::registry::{PrimitiveKind, Scalar, ScalarDef, ScalarHooks, ScalarTag};
+        use crate::registry::{PrimitiveKind, ScalarHooks, ScalarTag};
 
         static DEFS: [ScalarDef; 1] = [ScalarDef {
             namespace: "Acme",
@@ -378,17 +433,96 @@ mod tests {
                 Vec::new()
             }
         }
-        let registry = Registry::assemble(&[&Acme]);
-        let result =
-            registry.coerce_lenient(&json!("projects/p/secrets/s/versions/1"), "Acme.SecretRef");
+        Registry::assemble(&[&Acme])
+    }
 
-        assert_eq!(result.value, None);
-        let error = result.error.expect("no coercion is defined for the scalar");
-        assert_eq!(error.kind, ErrorKind::Custom);
+    /// A metadata_omit def declares no metadata primitive, so it cannot type
+    /// a column. Each value fails with an `Enum` error naming the scalar,
+    /// like an unknown name, instead of panicking the writer (the FFI guard
+    /// would surface a panic as a panic-category error).
+    #[test]
+    fn metadata_omitted_scalar_fails_with_enum_kind() {
+        let registry = registry_with_metadata_omitted_scalar();
+        let value = json!("projects/p/secrets/s/versions/1");
+        let by_name = registry.coerce_lenient(&value, "Acme.SecretRef");
+        let coercer = registry
+            .lenient_coercer("Acme.SecretRef")
+            .expect("the scalar is assembled");
+
+        assert_eq!(coercer.coerce(&value), by_name);
+        assert_eq!(by_name.value, None);
+        let error = by_name
+            .error
+            .expect("no coercion is defined for the scalar");
+        assert_eq!(error.kind, ErrorKind::Enum);
         assert!(
             error.message.contains("Acme.SecretRef"),
             "{}",
             error.message
+        );
+    }
+
+    /// Every assembled scalar coerces every JSON kind to a result, and the
+    /// resolved coercer agrees with the name-keyed path. Each kind reaches a
+    /// different primitive path; objects and arrays are what `Generic.JSON`
+    /// and `Geo.Location` columns carry.
+    #[test]
+    fn no_scalar_panics_on_any_json_kind() {
+        let registry = registry_with_metadata_omitted_scalar();
+        let values = [
+            Value::Null,
+            json!("value"),
+            json!(""),
+            json!(" 12345 "),
+            json!(1),
+            json!(-1),
+            json!(1.5),
+            json!(1e300),
+            json!(true),
+            json!({"key": "value"}),
+            json!({"lat": 1.0, "lon": 2.0}),
+            json!([1, "two"]),
+            json!([0.5, 1.25]),
+        ];
+        let mut count = 0;
+        for name in registry.names() {
+            let coercer = registry.lenient_coercer(name).expect("assembled name");
+            assert_eq!(coercer.scalar_name(), name);
+            for value in &values {
+                assert_eq!(
+                    coercer.coerce(value),
+                    registry.coerce_lenient(value, name),
+                    "{name} {value}"
+                );
+            }
+            count += 1;
+        }
+        assert_eq!(count, registry.len());
+        assert!(registry.lenient_coercer("Not.AScalar").is_none());
+    }
+
+    #[test]
+    fn resolved_coercer_runs_each_primitive_path() {
+        let registry = Registry::builtin();
+        let coercer = |name| registry.lenient_coercer(name).expect(name);
+
+        let money = coercer("Finance.Money").coerce(&json!(" 12345 "));
+        assert_eq!(money, LenientCoerceResult::ok(json!(12345)));
+
+        let probability = coercer("Generic.Probability").coerce(&json!("0.25"));
+        assert_eq!(probability, LenientCoerceResult::ok(json!(0.25)));
+
+        let url = coercer("Network.Url").coerce(&json!("https://example.com/a"));
+        assert_eq!(url.error, None);
+        assert!(url.value.is_some_and(|value| value.is_string()));
+
+        let date = coercer("Temporal.Date").coerce(&json!("not-a-date"));
+        assert_eq!(date.value, None);
+        assert_eq!(date.error.expect("bad date").kind, ErrorKind::Parse);
+
+        assert_eq!(
+            coercer("Contact.Email").coerce(&Value::Null),
+            LenientCoerceResult::null()
         );
     }
 
