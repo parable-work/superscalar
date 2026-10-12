@@ -16,10 +16,13 @@ VALID_SCALARS = (
     "Embedding.Vector",
     "File.SizeBytes",
     "Finance.Money",
+    "Generic.Boolean",
+    "Generic.Float64",
     "Generic.Int64",
     "Generic.JSON",
     "Generic.Probability",
     "Generic.StringMap",
+    "Generic.Text",
     "Geo.Location",
     "Git.PathPattern",
     "Identity.Name",
@@ -171,6 +174,22 @@ SCALAR_METADATA = {
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
     },
+    "Generic.Boolean": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
+    "Generic.Float64": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
     "Generic.Int64": {
         "comparability_class": None,
         "is_sortable": True,
@@ -198,6 +217,14 @@ SCALAR_METADATA = {
     "Generic.StringMap": {
         "comparability_class": None,
         "is_sortable": False,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
+    "Generic.Text": {
+        "comparability_class": None,
+        "is_sortable": True,
         "case_insensitive": False,
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
@@ -616,6 +643,24 @@ def normalize_finance_money(value: str) -> str:
 def validate_finance_money(value: str) -> None:
     _native.validate("Finance.Money", value)
 
+def parse_generic_boolean(value: str) -> str:
+    return _native.parse("Generic.Boolean", value)
+
+def normalize_generic_boolean(value: str) -> str:
+    return _native.normalize("Generic.Boolean", value)
+
+def validate_generic_boolean(value: str) -> None:
+    _native.validate("Generic.Boolean", value)
+
+def parse_generic_float64(value: str) -> str:
+    return _native.parse("Generic.Float64", value)
+
+def normalize_generic_float64(value: str) -> str:
+    return _native.normalize("Generic.Float64", value)
+
+def validate_generic_float64(value: str) -> None:
+    _native.validate("Generic.Float64", value)
+
 def parse_generic_int64(value: str) -> str:
     return _native.parse("Generic.Int64", value)
 
@@ -651,6 +696,15 @@ def normalize_generic_string_map(value: str) -> str:
 
 def validate_generic_string_map(value: str) -> None:
     _native.validate("Generic.StringMap", value)
+
+def parse_generic_text(value: str) -> str:
+    return _native.parse("Generic.Text", value)
+
+def normalize_generic_text(value: str) -> str:
+    return _native.normalize("Generic.Text", value)
+
+def validate_generic_text(value: str) -> None:
+    _native.validate("Generic.Text", value)
 
 def parse_geo_location(value: str) -> str:
     return _native.parse("Geo.Location", value)

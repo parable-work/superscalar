@@ -22,8 +22,8 @@ macro_rules! primitive_kinds {
         ($member:ident, $type_ref_name:literal, $dsl_name:literal)
     ),+ $(,)?) => {
         /// Primitive backing of a scalar's canonical value. The DSL's
-        /// object-shaped `"Type"` maps to `Object`; `Bool` is reserved (no
-        /// current scalar uses it).
+        /// object-shaped `"Type"` maps to `Object`; `Bool` backs
+        /// `Generic.Boolean`.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
         pub enum PrimitiveKind {
             $(
@@ -786,9 +786,9 @@ mod primitive_kind_tests {
     use super::PrimitiveKind;
 
     /// Round trip over EVERY member, driven by `PrimitiveKind::ALL` rather than
-    /// by the catalog: a member no scalar currently uses -- `Bool` is one -- is
-    /// still a spelling an emitted schema can carry, so a list bounded by the
-    /// catalog would leave it unchecked.
+    /// by the catalog: a member no scalar uses is still a spelling an emitted
+    /// schema can carry, so a list bounded by the catalog would leave it
+    /// unchecked.
     #[test]
     fn from_dsl_name_inverts_dsl_name_over_every_primitive() {
         for primitive in PrimitiveKind::ALL {

@@ -113,6 +113,15 @@ impl Scalar for DirectiveScalar {
                 }
                 self.check_range(value)
             }
+            // Generic.Boolean, the one Bool scalar: exactly the JSON literals,
+            // as a value's text form carries them.
+            PrimitiveKind::Bool => match input.trim() {
+                "true" | "false" => Ok(()),
+                _ => Err(ScalarError::new(
+                    ErrorKind::Parse,
+                    format!("not true or false: {input}"),
+                )),
+            },
             _ => self.validate_string(input),
         }
     }
@@ -155,6 +164,10 @@ impl Scalar for DirectiveScalar {
                     ScalarError::new(ErrorKind::Parse, format!("not an integer: {input}"))
                 })?;
                 Ok(value.to_string())
+            }
+            PrimitiveKind::Bool => {
+                self.validate(registry, input)?;
+                Ok(input.trim().to_string())
             }
             // `validate`, not `validate_string`: this arm is a wildcard over every
             // non-Int primitive, and the rule being enforced is "normalize must

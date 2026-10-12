@@ -84,10 +84,13 @@ const (
 	scalarNameEmbeddingVector        = "Embedding.Vector"
 	scalarNameFileSizeBytes          = "File.SizeBytes"
 	scalarNameFinanceMoney           = "Finance.Money"
+	scalarNameGenericBoolean         = "Generic.Boolean"
+	scalarNameGenericFloat64         = "Generic.Float64"
 	scalarNameGenericInt64           = "Generic.Int64"
 	scalarNameGenericJSON            = "Generic.JSON"
 	scalarNameGenericProbability     = "Generic.Probability"
 	scalarNameGenericStringMap       = "Generic.StringMap"
+	scalarNameGenericText            = "Generic.Text"
 	scalarNameGeoLocation            = "Geo.Location"
 	scalarNameGitPathPattern         = "Git.PathPattern"
 	scalarNameIdentityName           = "Identity.Name"
@@ -136,10 +139,13 @@ var VALID_SCALARS = []string{
 	string("Embedding.Vector"),
 	string("File.SizeBytes"),
 	string("Finance.Money"),
+	string("Generic.Boolean"),
+	string("Generic.Float64"),
 	string("Generic.Int64"),
 	string("Generic.JSON"),
 	string("Generic.Probability"),
 	string("Generic.StringMap"),
+	string("Generic.Text"),
 	string("Geo.Location"),
 	string("Git.PathPattern"),
 	string("Identity.Name"),
@@ -218,6 +224,12 @@ type FileSizeBytes int64
 // Finance.Money - "Monetary amount in smallest currency unit (e.g., cents for USD)"
 type FinanceMoney int64
 
+// Generic.Boolean - "True or false"
+type GenericBoolean bool
+
+// Generic.Float64 - "A finite 64-bit floating-point number"
+type GenericFloat64 float64
+
 // Generic.Int64 - "Signed 64-bit integer; range bounded by JavaScript's safe-integer ceiling."
 type GenericInt64 int64
 
@@ -229,6 +241,9 @@ type GenericProbability float64
 
 // Generic.StringMap - "A string-to-string map stored as JSON"
 type GenericStringMap map[string]string
+
+// Generic.Text - "Text with no further shape"
+type GenericText string
 
 // Geo.Location - "Geographic location with latitude and longitude"
 type GeoLocation struct {
@@ -314,7 +329,7 @@ type TemporalSeconds int64
 // Temporal.Time - "Time of day. 24-hour 'HH:MM' or 'HH:MM:SS' (hours 00-23), or 12-hour 'H:MM'/'HH:MM' with optional ':SS' and required AM/PM suffix (hours 1-12). Seconds and the AM/PM separator space are optional."
 type TemporalTime string
 
-// Temporal.TimeZone - "IANA timezone identifier (e.g., America/New_York, UTC, Etc/UTC)"
+// Temporal.TimeZone - "IANA tz database name: UTC, GMT, or two or more '/'-separated segments of ASCII letters, digits, '_', '-', and '+', each starting with a letter (e.g., America/New_York, America/Port-au-Prince, Etc/GMT+5). Checks the name's shape, not that a tz release lists it."
 type TemporalTimeZone string
 
 // Temporal.Year - "Calendar year as a 4-digit string (e.g., 2025)"
@@ -679,6 +694,64 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWordsMatchPartial:    false,
 	},
 	{
+		CanonicalName:                "Generic.Boolean",
+		Symbol:                       "GenericBoolean",
+		Primitive:                    "Bool",
+		Description:                  "True or false",
+		TypeScriptType:               "boolean",
+		PythonType:                   "bool",
+		RustType:                     "bool",
+		GoType:                       "bool",
+		SQLType:                      "BOOLEAN",
+		JSONSchemaType:               "boolean",
+		Format:                       "",
+		MaxLength:                    0,
+		MinLength:                    0,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            false,
+		HasValidator:                 true,
+		Examples:                     []string{"true", "false"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
+		CanonicalName:                "Generic.Float64",
+		Symbol:                       "GenericFloat64",
+		Primitive:                    "Float",
+		Description:                  "A finite 64-bit floating-point number",
+		TypeScriptType:               "number",
+		PythonType:                   "float",
+		RustType:                     "f64",
+		GoType:                       "float64",
+		SQLType:                      "DOUBLE PRECISION",
+		JSONSchemaType:               "number",
+		Format:                       "",
+		MaxLength:                    0,
+		MinLength:                    0,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            false,
+		HasValidator:                 true,
+		Examples:                     []string{"3.5", "-0.25"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
 		CanonicalName:                "Generic.Int64",
 		Symbol:                       "GenericInt64",
 		Primitive:                    "Int",
@@ -789,6 +862,35 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Examples:                     []string{},
 		ComparabilityClass:           "",
 		IsSortable:                   false,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
+		CanonicalName:                "Generic.Text",
+		Symbol:                       "GenericText",
+		Primitive:                    "String",
+		Description:                  "Text with no further shape",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "TEXT",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    0,
+		MinLength:                    0,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            false,
+		HasValidator:                 true,
+		Examples:                     []string{"Platform Engineering", ""},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
 		CaseInsensitive:              false,
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
@@ -1581,7 +1683,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		CanonicalName:                "Temporal.TimeZone",
 		Symbol:                       "TemporalTimeZone",
 		Primitive:                    "String",
-		Description:                  "IANA timezone identifier (e.g., America/New_York, UTC, Etc/UTC)",
+		Description:                  "IANA tz database name: UTC, GMT, or two or more '/'-separated segments of ASCII letters, digits, '_', '-', and '+', each starting with a letter (e.g., America/New_York, America/Port-au-Prince, Etc/GMT+5). Checks the name's shape, not that a tz release lists it.",
 		TypeScriptType:               "string",
 		PythonType:                   "str",
 		RustType:                     "String",
@@ -1593,7 +1695,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		MinLength:                    0,
 		Maximum:                      nil,
 		Minimum:                      nil,
-		Pattern:                      "^(?:UTC|[A-Za-z]+/[A-Za-z_/]+)$",
+		Pattern:                      "^(?:UTC|GMT|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z][A-Za-z0-9_+-]*)+)$",
 		HasCustomNormalize:           false,
 		HasCustomParse:               false,
 		HasCustomValidate:            false,
@@ -1978,6 +2080,10 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameFileSizeBytes, value) }
 	case "Finance.Money":
 		return func(value string) error { return callScalarValidate(scalarNameFinanceMoney, value) }
+	case "Generic.Boolean":
+		return func(value string) error { return callScalarValidate(scalarNameGenericBoolean, value) }
+	case "Generic.Float64":
+		return func(value string) error { return callScalarValidate(scalarNameGenericFloat64, value) }
 	case "Generic.Int64":
 		return func(value string) error { return callScalarValidate(scalarNameGenericInt64, value) }
 	case "Generic.JSON":
@@ -1986,6 +2092,8 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameGenericProbability, value) }
 	case "Generic.StringMap":
 		return func(value string) error { return callScalarValidate(scalarNameGenericStringMap, value) }
+	case "Generic.Text":
+		return func(value string) error { return callScalarValidate(scalarNameGenericText, value) }
 	case "Geo.Location":
 		return func(value string) error { return callScalarValidate(scalarNameGeoLocation, value) }
 	case "Git.PathPattern":
@@ -2541,6 +2649,70 @@ func (v FinanceMoney) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseGenericBoolean validates and returns the canonical form of a Generic.Boolean value.
+func ParseGenericBoolean(value string) (string, error) {
+	return callScalarParse(scalarNameGenericBoolean, value)
+}
+
+// NormalizeGenericBoolean returns the canonical form of a Generic.Boolean value without enforcing shape.
+func NormalizeGenericBoolean(value string) (string, error) {
+	return callScalarNormalize(scalarNameGenericBoolean, value)
+}
+
+// ValidateGenericBoolean enforces the shape of a Generic.Boolean value.
+func ValidateGenericBoolean(value string) error {
+	return callScalarValidate(scalarNameGenericBoolean, value)
+}
+
+func (v GenericBoolean) String() string {
+	return scalarStringValue(v)
+}
+
+// Validate validates GenericBoolean and returns whether validation passed along with any errors.
+func (v GenericBoolean) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameGenericBoolean, scalarStringValue(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GenericBoolean) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseGenericFloat64 validates and returns the canonical form of a Generic.Float64 value.
+func ParseGenericFloat64(value string) (string, error) {
+	return callScalarParse(scalarNameGenericFloat64, value)
+}
+
+// NormalizeGenericFloat64 returns the canonical form of a Generic.Float64 value without enforcing shape.
+func NormalizeGenericFloat64(value string) (string, error) {
+	return callScalarNormalize(scalarNameGenericFloat64, value)
+}
+
+// ValidateGenericFloat64 enforces the shape of a Generic.Float64 value.
+func ValidateGenericFloat64(value string) error {
+	return callScalarValidate(scalarNameGenericFloat64, value)
+}
+
+func (v GenericFloat64) String() string {
+	return scalarStringValue(v)
+}
+
+// Validate validates GenericFloat64 and returns whether validation passed along with any errors.
+func (v GenericFloat64) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameGenericFloat64, scalarStringValue(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GenericFloat64) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseGenericInt64 validates and returns the canonical form of a Generic.Int64 value.
 func ParseGenericInt64(value string) (string, error) {
 	return callScalarParse(scalarNameGenericInt64, value)
@@ -2661,6 +2833,48 @@ func (v GenericStringMap) Validate() (bool, []ValidationError) {
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.
 func (v GenericStringMap) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseGenericText validates and returns the canonical form of a Generic.Text value.
+func ParseGenericText(value string) (string, error) {
+	return callScalarParse(scalarNameGenericText, value)
+}
+
+// NormalizeGenericText returns the canonical form of a Generic.Text value without enforcing shape.
+func NormalizeGenericText(value string) (string, error) {
+	return callScalarNormalize(scalarNameGenericText, value)
+}
+
+// ValidateGenericText enforces the shape of a Generic.Text value.
+func ValidateGenericText(value string) error { return callScalarValidate(scalarNameGenericText, value) }
+
+func (v GenericText) String() string {
+	return string(v)
+}
+
+func (v GenericText) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v GenericText) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v GenericText) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates GenericText and returns whether validation passed along with any errors.
+func (v GenericText) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameGenericText, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GenericText) ValidateRequired() (bool, []ValidationError) {
 	if scalarRequiredValueMissing(v) {
 		return false, []ValidationError{{Validator: "required", Message: "required field"}}
 	}

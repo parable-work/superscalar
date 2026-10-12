@@ -65,10 +65,13 @@ export const VALID_SCALARS: readonly string[] = [
   "Embedding.Vector",
   "File.SizeBytes",
   "Finance.Money",
+  "Generic.Boolean",
+  "Generic.Float64",
   "Generic.Int64",
   "Generic.JSON",
   "Generic.Probability",
   "Generic.StringMap",
+  "Generic.Text",
   "Geo.Location",
   "Git.PathPattern",
   "Identity.Name",
@@ -502,7 +505,17 @@ function convertEmbeddingVectorValue(value: unknown | null): EmbeddingVector | n
     return null;
   }
 
-  return value as EmbeddingVector;
+  // Both paths hand back the core's canonical JSON text: the lenient coerce does
+  // too, because the metadata primitive is a string. Decode it into the array
+  // this type declares.
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = parseJsonObject(value);
+  if (!Array.isArray(parsed) || !parsed.every(item => typeof item === "number")) {
+    return null;
+  }
+  return parsed as EmbeddingVector;
 }
 export function parseEmbeddingVector(value: unknown): EmbeddingVector | null {
   return convertEmbeddingVectorValue(coerceValue("Embedding.Vector", value));
@@ -534,7 +547,19 @@ function convertFileSizeBytesValue(value: unknown | null): FileSizeBytes | null 
     return null;
   }
 
-  return value as FileSizeBytes;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as FileSizeBytes;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as FileSizeBytes;
 }
 export function parseFileSizeBytes(value: unknown): FileSizeBytes | null {
   return convertFileSizeBytesValue(coerceValue("File.SizeBytes", value));
@@ -566,7 +591,19 @@ function convertFinanceMoneyValue(value: unknown | null): FinanceMoney | null {
     return null;
   }
 
-  return value as FinanceMoney;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as FinanceMoney;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as FinanceMoney;
 }
 export function parseFinanceMoney(value: unknown): FinanceMoney | null {
   return convertFinanceMoneyValue(coerceValue("Finance.Money", value));
@@ -592,13 +629,101 @@ export function validateFinanceMoney(value: unknown | null | undefined): ScalarV
   return validateWithBackend("Finance.Money", value);
 }
 
+export type GenericBoolean = boolean;
+function convertGenericBooleanValue(value: unknown | null): GenericBoolean | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as GenericBoolean;
+}
+export function parseGenericBoolean(value: unknown): GenericBoolean | null {
+  return convertGenericBooleanValue(coerceValue("Generic.Boolean", value));
+}
+export function normalizeGenericBoolean(value: unknown): GenericBoolean | null {
+  return convertGenericBooleanValue(coerceValue("Generic.Boolean", value));
+}
+export function parseGenericBooleanStrict(value: string): GenericBoolean {
+  const parsed = convertGenericBooleanValue(backend.parse("Generic.Boolean", value));
+  if (parsed === null) {
+    throw new Error("invalid Generic.Boolean");
+  }
+  return parsed;
+}
+export function normalizeGenericBooleanStrict(value: string): GenericBoolean {
+  const normalized = convertGenericBooleanValue(backend.normalize("Generic.Boolean", value));
+  if (normalized === null) {
+    throw new Error("invalid Generic.Boolean");
+  }
+  return normalized;
+}
+export function validateGenericBoolean(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Generic.Boolean", value);
+}
+
+export type GenericFloat64 = number;
+function convertGenericFloat64Value(value: unknown | null): GenericFloat64 | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as GenericFloat64;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as GenericFloat64;
+}
+export function parseGenericFloat64(value: unknown): GenericFloat64 | null {
+  return convertGenericFloat64Value(coerceValue("Generic.Float64", value));
+}
+export function normalizeGenericFloat64(value: unknown): GenericFloat64 | null {
+  return convertGenericFloat64Value(coerceValue("Generic.Float64", value));
+}
+export function parseGenericFloat64Strict(value: string): GenericFloat64 {
+  const parsed = convertGenericFloat64Value(backend.parse("Generic.Float64", value));
+  if (parsed === null) {
+    throw new Error("invalid Generic.Float64");
+  }
+  return parsed;
+}
+export function normalizeGenericFloat64Strict(value: string): GenericFloat64 {
+  const normalized = convertGenericFloat64Value(backend.normalize("Generic.Float64", value));
+  if (normalized === null) {
+    throw new Error("invalid Generic.Float64");
+  }
+  return normalized;
+}
+export function validateGenericFloat64(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Generic.Float64", value);
+}
+
 export type GenericInt64 = number;
 function convertGenericInt64Value(value: unknown | null): GenericInt64 | null {
   if (value === null || value === undefined) {
     return null;
   }
 
-  return value as GenericInt64;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as GenericInt64;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as GenericInt64;
 }
 export function parseGenericInt64(value: unknown): GenericInt64 | null {
   return convertGenericInt64Value(coerceValue("Generic.Int64", value));
@@ -671,7 +796,19 @@ function convertGenericProbabilityValue(value: unknown | null): GenericProbabili
     return null;
   }
 
-  return value as GenericProbability;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as GenericProbability;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as GenericProbability;
 }
 export function parseGenericProbability(value: unknown): GenericProbability | null {
   return convertGenericProbabilityValue(coerceValue("Generic.Probability", value));
@@ -734,6 +871,38 @@ export function normalizeGenericStringMapStrict(value: string): GenericStringMap
 }
 export function validateGenericStringMap(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend("Generic.StringMap", value);
+}
+
+export type GenericText = string & { readonly __brand: "Generic.Text" };
+function convertGenericTextValue(value: unknown | null): GenericText | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as GenericText;
+}
+export function parseGenericText(value: unknown): GenericText | null {
+  return convertGenericTextValue(coerceValue("Generic.Text", value));
+}
+export function normalizeGenericText(value: unknown): GenericText | null {
+  return convertGenericTextValue(coerceValue("Generic.Text", value));
+}
+export function parseGenericTextStrict(value: string): GenericText {
+  const parsed = convertGenericTextValue(backend.parse("Generic.Text", value));
+  if (parsed === null) {
+    throw new Error("invalid Generic.Text");
+  }
+  return parsed;
+}
+export function normalizeGenericTextStrict(value: string): GenericText {
+  const normalized = convertGenericTextValue(backend.normalize("Generic.Text", value));
+  if (normalized === null) {
+    throw new Error("invalid Generic.Text");
+  }
+  return normalized;
+}
+export function validateGenericText(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Generic.Text", value);
 }
 
 export type GeoLocation = { lat: number; lon: number };
@@ -1133,7 +1302,19 @@ function convertOrderingRankValue(value: unknown | null): OrderingRank | null {
     return null;
   }
 
-  return value as OrderingRank;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as OrderingRank;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as OrderingRank;
 }
 export function parseOrderingRank(value: unknown): OrderingRank | null {
   return convertOrderingRankValue(coerceValue("Ordering.Rank", value));
@@ -1268,7 +1449,19 @@ function convertTemporalDaysValue(value: unknown | null): TemporalDays | null {
     return null;
   }
 
-  return value as TemporalDays;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as TemporalDays;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as TemporalDays;
 }
 export function parseTemporalDays(value: unknown): TemporalDays | null {
   return convertTemporalDaysValue(coerceValue("Temporal.Days", value));
@@ -1332,7 +1525,19 @@ function convertTemporalHoursValue(value: unknown | null): TemporalHours | null 
     return null;
   }
 
-  return value as TemporalHours;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as TemporalHours;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as TemporalHours;
 }
 export function parseTemporalHours(value: unknown): TemporalHours | null {
   return convertTemporalHoursValue(coerceValue("Temporal.Hours", value));
@@ -1364,7 +1569,19 @@ function convertTemporalMillisecondsValue(value: unknown | null): TemporalMillis
     return null;
   }
 
-  return value as TemporalMilliseconds;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as TemporalMilliseconds;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as TemporalMilliseconds;
 }
 export function parseTemporalMilliseconds(value: unknown): TemporalMilliseconds | null {
   return convertTemporalMillisecondsValue(coerceValue("Temporal.Milliseconds", value));
@@ -1396,7 +1613,19 @@ function convertTemporalMinutesValue(value: unknown | null): TemporalMinutes | n
     return null;
   }
 
-  return value as TemporalMinutes;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as TemporalMinutes;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as TemporalMinutes;
 }
 export function parseTemporalMinutes(value: unknown): TemporalMinutes | null {
   return convertTemporalMinutesValue(coerceValue("Temporal.Minutes", value));
@@ -1556,7 +1785,19 @@ function convertTemporalSecondsValue(value: unknown | null): TemporalSeconds | n
     return null;
   }
 
-  return value as TemporalSeconds;
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as TemporalSeconds;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as TemporalSeconds;
 }
 export function parseTemporalSeconds(value: unknown): TemporalSeconds | null {
   return convertTemporalSecondsValue(coerceValue("Temporal.Seconds", value));
@@ -1994,6 +2235,42 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWordsMatchPartial: false,
   },
   {
+    canonicalName: "Generic.Boolean",
+    symbol: "GenericBoolean",
+    primitive: "Bool",
+    tsType: "boolean",
+    format: "",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["true", "false"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
+    canonicalName: "Generic.Float64",
+    symbol: "GenericFloat64",
+    primitive: "Float",
+    tsType: "number",
+    format: "",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["3.5", "-0.25"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
     canonicalName: "Generic.Int64",
     symbol: "GenericInt64",
     primitive: "Int",
@@ -2060,6 +2337,24 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     examples: [],
     comparabilityClass: null,
     isSortable: false,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
+    canonicalName: "Generic.Text",
+    symbol: "GenericText",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["Platform Engineering", ""],
+    comparabilityClass: null,
+    isSortable: true,
     caseInsensitive: false,
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
@@ -2559,7 +2854,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     format: "",
     maxLength: 100,
     minLength: 0,
-    pattern: "^(?:UTC|[A-Za-z]+/[A-Za-z_/]+)$",
+    pattern: "^(?:UTC|GMT|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z][A-Za-z0-9_+-]*)+)$",
     hasValidator: true,
     examples: ["America/New_York", "UTC", "Etc/UTC"],
     comparabilityClass: null,
