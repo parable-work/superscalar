@@ -33,6 +33,18 @@ authors = ["Parable Work, Inc."]
 license = "Apache-2.0"
 repository = "https://github.com/parable-work/superscalar"
 
+# The WebAssembly builds that ship (`wasm-pack build --profile wasm-release`:
+# release.yml and bindings/typescript/scripts/build_wasm_web.sh). Size counts
+# there, since a browser downloads the module and a Worker compiles it at
+# startup: opt-level "s" with fat LTO and one codegen unit makes the module
+# about 14% smaller than `--release` and parses at the same speed; "z" is 3%
+# smaller again and about 60% slower. The host profiles stay as they are.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+
 # Shared lints; member crates opt in with `[lints] workspace = true`.
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }

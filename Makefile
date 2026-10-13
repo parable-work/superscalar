@@ -50,7 +50,7 @@ acme-third-scalar:
 
 #   make setup && make bindings   (make -k bindings to run past failures)
 
-.PHONY: setup go python ts codegen codegen-check dump docs docs-check bindings
+.PHONY: setup go python ts ts-web codegen codegen-check dump docs docs-check bindings
 
 # The Rust pin is rust-toolchain.toml (channel, rustfmt, clippy, wasm32 target);
 # the other tool pins are tools.env. Both are read here and by CI, never inlined.
@@ -68,7 +68,7 @@ setup:
 		cargo install wasm-pack --version "$$WASM_PACK_VERSION" --locked; \
 	fi; \
 	missing=0; \
-	for tool in go node uv cc; do \
+	for tool in go node bun uv cc; do \
 		command -v $$tool >/dev/null 2>&1 || { echo "MISSING: $$tool (host-managed; needed by the binding smokes)"; missing=1; }; \
 	done; \
 	[ $$missing -eq 0 ] || { echo "install the tools above, then re-run: make setup"; exit 1; }; \
@@ -82,6 +82,11 @@ python:
 
 ts:
 	bindings/typescript/scripts/ts_smoke.sh
+
+# After `make ts`: bun bundles the browser and workerd builds; the site bundle
+# runs in Node and the Worker bundle runs the vectors in workerd.
+ts-web:
+	bindings/typescript/scripts/web_smoke.sh
 
 # Codegen reads superscalar.toml (package names, import paths, output paths).
 # `codegen` rewrites the generated files; `codegen-check` is the drift gate.
@@ -105,4 +110,4 @@ docs:
 docs-check:
 	cargo run -p superscalar-codegen -- docs --check
 
-bindings: test lint header codegen-check docs-check c-smoke wasm go python ts acme
+bindings: test lint header codegen-check docs-check c-smoke wasm go python ts ts-web acme

@@ -1,7 +1,7 @@
 {
   "name": "superscalar",
   "version": "0.1.0",
-  "description": "Scalar types library: napi (Node) + WASM (browser) bindings over the Rust core.",
+  "description": "Scalar types library: napi (Node) + WASM (browser, Cloudflare Workers) bindings over the Rust core.",
   "license": "Apache-2.0",
   "author": "Parable Work, Inc.",
   "repository": {
@@ -10,8 +10,7 @@
   },
   "files": [
     "dist",
-    "wasm-node",
-    "wasm-bundler"
+    "wasm-node"
   ],
   "publishConfig": {
     "access": "public"
@@ -21,35 +20,39 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "workerd": "./dist/workerd/index.js",
+      "browser": "./dist/browser/index.js",
       "import": "./dist/esm/index.js",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./backend": {
       "types": "./dist/backend.d.ts",
-      "browser": "./dist/esm/backend.browser.mjs",
-      "edge-light": "./dist/esm/backend.browser.mjs",
-      "workerd": "./dist/esm/backend.browser.mjs",
+      "workerd": "./dist/workerd/backend.js",
+      "browser": "./dist/browser/backend.js",
       "import": "./dist/esm/backend.js",
       "require": "./dist/backend.js",
       "default": "./dist/backend.js"
     },
     "./wasm": {
       "types": "./wasm-node/superscalar_wasm.d.ts",
-      "browser": "./wasm-bundler/superscalar_wasm.js",
-      "edge-light": "./wasm-bundler/superscalar_wasm.js",
-      "workerd": "./wasm-bundler/superscalar_wasm.js",
+      "workerd": "./dist/workerd/backend.js",
+      "browser": "./dist/browser/backend.js",
       "import": "./wasm-node/superscalar_wasm.js",
       "require": "./wasm-node/superscalar_wasm.js",
       "default": "./wasm-node/superscalar_wasm.js"
     },
     "./validation": {
       "types": "./dist/esm/validation.d.ts",
+      "workerd": "./dist/workerd/validation.js",
+      "browser": "./dist/browser/validation.js",
       "import": "./dist/esm/validation.js",
       "require": "./dist/validation.js"
     },
     "./scalars": {
       "types": "./dist/esm/generated.d.ts",
+      "workerd": "./dist/workerd/generated.js",
+      "browser": "./dist/browser/generated.js",
       "import": "./dist/esm/generated.js",
       "require": "./dist/generated.js"
     },
@@ -66,9 +69,11 @@
   },
   "scripts": {
     "build:napi": "napi build --platform --release --manifest-path ../../crates/napi/Cargo.toml --output-dir native",
-    "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.browser.json && node scripts/fix-esm-extensions.mjs",
+    "build:wasm-web": "bash scripts/build_wasm_web.sh",
+    "build:web": "tsc -p tsconfig.browser.json && tsc -p tsconfig.workerd.json && node scripts/build-web.mjs",
+    "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && node scripts/fix-esm-extensions.mjs && npm run build:web",
     "build": "npm run build:napi && npm run build:ts",
-    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/backend-fallback.cjs"
+    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/backend-fallback.cjs && node test/web-conformance.mjs"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.10.5",

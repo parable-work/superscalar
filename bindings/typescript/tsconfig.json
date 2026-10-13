@@ -12,6 +12,12 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "comment": "backend.node.ts is the ESM-only napi backend (uses import.meta + createRequire); it is built by tsconfig.esm.json, not this CJS pass.",
-  "exclude": ["src/backend.node.ts"]
+  "comment": "backend.node.ts is the ESM-only napi backend (uses import.meta + createRequire); it is built by tsconfig.esm.json, not this CJS pass. The browser and workerd backends and what they share are built by tsconfig.browser.json and tsconfig.workerd.json.",
+  "exclude": [
+    "src/backend.node.ts",
+    "src/backend.browser.ts",
+    "src/backend.workerd.ts",
+    "src/web-backend.ts",
+    "src/web-modules.d.ts"
+  ]
 }

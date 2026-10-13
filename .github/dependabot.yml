@@ -15,6 +15,13 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
+  # The workerd runtime the TypeScript web smoke runs (scripts/web_smoke.sh).
+  - package-ecosystem: npm
+    directory: "/bindings/typescript/test/workerd"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+
   - package-ecosystem: npm
     directory: "/docs"
     schedule:

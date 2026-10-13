@@ -3,13 +3,16 @@
     "target": "ES2020",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "outDir": "dist/esm",
+    "moduleSuffixes": [".browser", ""],
+    "outDir": "dist/browser",
     "rootDir": "src",
-    "declaration": true,
+    "declaration": false,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "lib": ["ES2020", "DOM"],
+    "types": []
   },
-  "include": ["src/backend.browser.mts"]
+  "comment": "The browser build (dist/browser): moduleSuffixes makes `./backend` resolve to backend.browser.ts, and types: [] keeps Node's types out, so a Node API anywhere in the tree fails to compile. scripts/build-web.mjs finishes the tree. Declarations come from the CJS pass.",
+  "include": ["src/backend.browser.ts", "src/generated.ts", "src/index.ts", "src/validation.ts", "src/web-modules.d.ts"]
 }
