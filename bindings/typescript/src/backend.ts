@@ -1,5 +1,7 @@
-// Node backend selection: napi addon in Node, wasm in the browser (swapped via
-// the `browser` package.json condition). Both throw on reject.
+// Node backend selection: the napi addon, else the wasm-node build. Browsers
+// and Workers never load this module: the package's `browser` and `workerd`
+// conditions take every entry into dist/browser or dist/workerd, whose
+// backend.js is backend.browser.ts or backend.workerd.ts. All throw on reject.
 import { join } from "node:path";
 import { loadNativeAddon } from "./native-addon";
 

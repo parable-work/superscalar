@@ -1,6 +1,6 @@
 // ESM napi backend: loads the CommonJS napi/wasm bundles via createRequire,
-// since bare `require` is undefined under ESM. The browser swaps this module
-// for backend.browser.mjs.
+// since bare `require` is undefined under ESM. Browsers and Workers take
+// dist/browser or dist/workerd instead (see backend.ts).
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

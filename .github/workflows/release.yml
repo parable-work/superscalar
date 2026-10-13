@@ -264,17 +264,17 @@ jobs:
           maturin-version: v${{ env.MATURIN_VERSION }}
           args: --out ${{ env.DIST_DIR }}/python
 
-      - name: Build wasm bundles for the npm package (linux)
+      - name: Build the wasm-node bundle for the npm package (linux)
         if: matrix.name == 'linux'
-        # nodejs target: the Node fallback backend; bundler target: the browser
-        # backend (bindings/typescript/src/backend.browser.mts). The `web`
-        # bundle attached to the GitHub release is built by the script below.
+        # nodejs target: the Node fallback backend. The `web` target, which the
+        # GitHub release attaches and the npm package's browser and workerd
+        # builds carry, is built by the script below into wasm/. Both use the
+        # size-tuned wasm-release profile (Cargo.toml).
         working-directory: crates/wasm
         run: |
           set -euo pipefail
-          wasm-pack build --target nodejs --out-dir "$DIST_DIR/wasm-node" --release
-          wasm-pack build --target bundler --out-dir "$DIST_DIR/wasm-bundler" --release
-          rm -f "$DIST_DIR"/wasm-node/.gitignore "$DIST_DIR"/wasm-bundler/.gitignore
+          wasm-pack build --target nodejs --out-dir "$DIST_DIR/wasm-node" --profile wasm-release
+          rm -f "$DIST_DIR"/wasm-node/.gitignore
 
       - name: Build staticlibs (+ header and wasm on linux), write the pinned manifest
         # Runs last: gen_manifest.py walks the whole dist dir, so the wheels,
@@ -282,7 +282,7 @@ jobs:
         # archives. STATICLIB_ONLY skips header + wasm on the macOS runner.
         env:
           STATICLIB_ONLY: ${{ matrix.staticlib_only }}
-          WASM_PROFILE: release
+          WASM_PROFILE: wasm-release
           CARGO_BUILD: ${{ matrix.cargo_build }}
           BUILD_TARGETS: ${{ matrix.staticlib_targets }}
         run: |
@@ -365,9 +365,11 @@ jobs:
           set -euo pipefail
           npm ci
           mkdir -p "$ASSETS/npm"
-          rm -rf wasm-node wasm-bundler
+          rm -rf wasm-node wasm-web
           cp -R "$DIST/wasm-node" wasm-node
-          cp -R "$DIST/wasm-bundler" wasm-bundler
+          # build:ts reads wasm-web/ for dist/browser and dist/workerd: the
+          # same web-target module the release attaches.
+          cp -R "$DIST/wasm" wasm-web
           npm run build:ts
           # One npm dir per triple in package.json "napi.targets"; the addons
           # from both runners are sorted into them by their platform suffix,

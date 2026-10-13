@@ -1,6 +1,6 @@
 [package]
 name = "superscalar-wasm"
-description = "wasm-bindgen build of the scalar boundary over superscalar. Browser/edge backend of the superscalar npm package."
+description = "wasm-bindgen build of the scalar boundary over superscalar. Browser and Workers backend of the superscalar npm package, and its Node fallback."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

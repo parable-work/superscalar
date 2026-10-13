@@ -3,8 +3,9 @@ name: ci
 # Gates for the SuperScalar workspace: version-site agreement, Rust
 # fmt/clippy/test, header drift, C consumer smoke, WASM smoke, Miri on the ffi
 # crate, codegen drift, and the conformance corpus against every binding (TS on
-# napi AND wasm). `ci-pass` is the single aggregating job the branch ruleset
-# requires; every other job must be listed in its `needs`.
+# napi, wasm-node, the browser build and the workerd build). `ci-pass` is the
+# single aggregating job the branch ruleset requires; every other job must be
+# listed in its `needs`.
 #
 # Paths below follow the repository layout (crates/*, bindings/*). The smoke
 # scripts they call are owned by the crate or binding they exercise.
@@ -311,7 +312,7 @@ jobs:
           }
 
   ts-binding:
-    name: ts (napi + wasm) conformance
+    name: ts (napi + wasm + browser + workerd) conformance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -333,11 +334,22 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
       - name: Install wasm-pack
         run: cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
 
-      - name: Build napi + wasm, run conformance on both backends
+      - name: Build napi + wasm, run conformance on napi, wasm-node and the browser build
         run: bindings/typescript/scripts/ts_smoke.sh
+
+      # bun bundles a site entry and a Worker entry; the site bundle runs in
+      # Node and the Worker bundle runs the corpus in workerd, which npm ci
+      # installs from test/workerd's lockfile (about 40 MB).
+      - name: Bundle the browser and workerd builds, run the Worker in workerd
+        run: bindings/typescript/scripts/web_smoke.sh
 
   ci-pass:
     # The only required status check on main (repository ruleset "main").

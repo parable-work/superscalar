@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- The site bundle in a browser, checked by hand: run scripts/web_smoke.sh,
+     serve this directory (python3 -m http.server -d test/web) and open
+     index.html. The page reads "ok" once the bundle has validated through the
+     WASM backend, or shows the error. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>superscalar site bundle</title>
+  </head>
+  <body>
+    <pre id="result">loading</pre>
+    <script>
+      window.addEventListener("error", (event) => {
+        document.getElementById("result").textContent = `error: ${event.message}`;
+      });
+    </script>
+    <script type="module">
+      import "./out/site.js";
+      document.getElementById("result").textContent = `ok ${JSON.stringify(globalThis.superscalarSmoke)}`;
+    </script>
+  </body>
+</html>

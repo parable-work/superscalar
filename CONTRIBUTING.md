@@ -72,6 +72,8 @@ By making a contribution to this project, I certify that:
 | wasm-pack | 0.15.0                 | `tools.env` (`WASM_PACK_VERSION`)                 |
 | Go        | 1.26.4                 | `tools.env` (`GO_VERSION`)                        |
 | Node      | 24                     | `tools.env` (`NODE_VERSION`)                      |
+| Bun       | 1.4.2                  | `tools.env` (`BUN_VERSION`)                       |
+| workerd   | 1.20260930.2           | `bindings/typescript/test/workerd/package-lock.json` |
 | Python    | 3.9 or newer, maturin  | floor in `bindings/python/pyproject.toml`; CI tests on `tools.env` (`PYTHON_VERSION`) |
 
 Setup on a fresh machine:
@@ -85,8 +87,9 @@ cargo install wasm-pack --version "$WASM_PACK_VERSION" --locked
 pip install maturin
 ```
 
-Go, Node and a C compiler (`cc`) come from your OS package manager. The Go
-binding needs `CGO_ENABLED=1`. The Miri gate additionally needs a nightly
+Go, Node, Bun and a C compiler (`cc`) come from your OS package manager. The
+Go binding needs `CGO_ENABLED=1`. `make ts-web` installs workerd itself, with
+`npm ci` from its lockfile. The Miri gate additionally needs a nightly
 toolchain with the `miri` component:
 
 ```
@@ -113,7 +116,8 @@ of them; run them locally before pushing.
 | `make docs-check`     | Every scalar has conformance vectors and a description             |
 | `make go`             | Go binding builds and passes the conformance vectors               |
 | `make python`         | Python wheel builds and passes the conformance vectors             |
-| `make ts`             | TypeScript builds against napi and WASM, both pass the vectors     |
+| `make ts`             | TypeScript builds against napi and WASM; napi, wasm-node and the browser build pass the vectors |
+| `make ts-web`         | After `make ts`: bun bundles the browser and workerd builds; the workerd one passes the vectors in workerd |
 | `make acme`           | The `examples/acme-scalars/` extension builds all four bindings and passes both corpora |
 | `make acme-third-scalar` | Adding a scalar to the example changes nothing outside `examples/acme-scalars/` |
 | `make bindings`       | All of the above except `make miri` (needs nightly) and `make acme-third-scalar` |

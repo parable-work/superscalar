@@ -16,7 +16,9 @@ cd "$WORKSPACE" || { echo "error: cannot cd to the superscalar workspace $WORKSP
 OUT="${1:?usage: build_release_artifacts.sh <out_dir> [target ...]}"
 shift || true
 TARGETS=("$@")
-WASM_PROFILE="${WASM_PROFILE:-release}"
+# A cargo profile: dev, release, or a custom one such as the size-tuned
+# wasm-release the release workflow uses (Cargo.toml).
+WASM_PROFILE="${WASM_PROFILE:-wasm-release}"
 CORE_SHA="$(git rev-parse HEAD)"
 
 # Where the build output lands is cargo's answer, not ours: CARGO_TARGET_DIR, --target-dir
@@ -150,7 +152,11 @@ if [[ -z "${STATICLIB_ONLY:-}" ]]; then
   # WASM bundle (browser target). Keep stderr: this is a release build, so a
   # wasm-pack failure must surface its diagnostics, not be swallowed.
   echo "==> wasm ($WASM_PROFILE)"
-  wasm-pack build crates/wasm --target web --out-dir "$(cd "$OUT" && pwd)/wasm" "--$WASM_PROFILE"
+  case "$WASM_PROFILE" in
+    dev | release | profiling) profile_flags=("--$WASM_PROFILE") ;;
+    *) profile_flags=(--profile "$WASM_PROFILE") ;;
+  esac
+  wasm-pack build crates/wasm --target web --out-dir "$(cd "$OUT" && pwd)/wasm" "${profile_flags[@]}"
   # Keep only the portable bits in the manifest set.
   find "$OUT/wasm" -maxdepth 1 -type f ! -name "*.wasm" ! -name "*.js" ! -name "*.d.ts" -delete 2>/dev/null || true
 fi
