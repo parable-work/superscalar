@@ -10,7 +10,7 @@ members = ["ext", "ffi", "napi", "python", "wasm"]
 default-members = ["ext", "ffi"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 authors = ["Parable Work, Inc."]
 license = "Apache-2.0"

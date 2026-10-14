@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "superscalar"
-version = "0.1.0"
+version = "0.0.1"
 description = "Scalar types library: parse/normalize/validate, generated from the Rust core."
 requires-python = ">=3.9"
 license = "Apache-2.0"

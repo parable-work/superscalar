@@ -10,6 +10,8 @@ bump they require (minor when loosening, major when tightening).
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-10-14
+
 ### Added
 
 - Repository bootstrap: license, contribution guide, code of conduct,
@@ -250,4 +252,5 @@ bump they require (minor when loosening, major when tightening).
   and the reference docs showed it. Metadata only: no vector or accept-set
   change, no bump required.
 
-[Unreleased]: https://github.com/parable-work/superscalar/commits/main
+[Unreleased]: https://github.com/parable-work/superscalar/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/parable-work/superscalar/releases/tag/v0.0.1
