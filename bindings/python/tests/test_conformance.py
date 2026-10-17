@@ -5,12 +5,9 @@ input raises ValueError. Routing is by canonical -> id (covers every built-in sc
 a spot check proves the generated per-scalar wrappers route through the core.
 
 Vectors flagged ``"unresolved": true`` are skipped, exactly as the Rust parity
-gate (``crates/core/tests/parity.rs``) and the TS runner do. These pin INTENDED
-behavior that the core does not yet enforce (G2 over-acceptance gaps for
-unconstrained ``String`` scalars: Asset.FilePath "", Embedding.Vector
-"notavector"/"[1,2,", Generic.StringMap "not json"/"[1,2,3]", Text.Markdown
-""). Honoring the flag keeps the three runners in lockstep so the suite is
-green until those scalars tighten.
+gate (``crates/core/tests/parity.rs``) and the TS runner do. Such a vector pins
+INTENDED behavior the core does not yet enforce. The corpus has none today,
+and ``test_unresolved_skip_count_pinned`` keeps it that way.
 """
 
 import json

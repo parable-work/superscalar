@@ -27,10 +27,13 @@
     "Embedding.Vector": { "comparability_class": null, "is_sortable": false, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "File.SizeBytes": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Finance.Money": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Generic.Boolean": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Generic.Float64": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Int64": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.JSON": { "comparability_class": null, "is_sortable": false, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Probability": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.StringMap": { "comparability_class": null, "is_sortable": false, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Generic.Text": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Geo.Location": { "comparability_class": null, "is_sortable": false, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Git.PathPattern": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Identity.Name": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
@@ -426,6 +429,16 @@
           "input": "1736899200",
           "validator": "parse",
           "note": "10-digit epoch-second string; rejected on the same terms as the millisecond forms."
+        },
+        {
+          "input": "1747270862000",
+          "validator": "parse",
+          "note": "A second 13-digit epoch-millisecond string; rejected like every other bare count."
+        },
+        {
+          "input": "100000000000",
+          "validator": "parse",
+          "note": "Smallest 12-digit count; rejected like every other bare count, so no digit-length threshold reads it as epoch milliseconds."
         }
       ]
     },
@@ -712,6 +725,62 @@
         }
       ]
     },
+    "Generic.Boolean": {
+      "accepted": [
+        {
+          "input": "true",
+          "normalized": "true"
+        },
+        {
+          "input": "false",
+          "normalized": "false"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "yes",
+          "validator": "parse"
+        },
+        {
+          "input": "1",
+          "validator": "parse"
+        },
+        {
+          "input": "True",
+          "validator": "parse"
+        }
+      ]
+    },
+    "Generic.Float64": {
+      "accepted": [
+        {
+          "input": "3.5",
+          "normalized": "3.5"
+        },
+        {
+          "input": "-0.25",
+          "normalized": "-0.25"
+        },
+        {
+          "input": "7",
+          "normalized": "7"
+        }
+      ],
+      "rejected": [
+        {
+          "input": "abc",
+          "validator": "parse"
+        },
+        {
+          "input": "NaN",
+          "validator": "parse"
+        },
+        {
+          "input": "inf",
+          "validator": "parse"
+        }
+      ]
+    },
     "Generic.Int64": {
       "accepted": [
         {
@@ -984,6 +1053,11 @@
         {
           "input": "[0.1,0.2,0.3]",
           "normalized": "[0.1,0.2,0.3]"
+        },
+        {
+          "input": "[3.4028235e38,-3.4028235e38]",
+          "normalized": "[3.4028235e+38,-3.4028235e+38]",
+          "note": "The float32 extremes are kept."
         }
       ],
       "rejected": [
@@ -994,6 +1068,16 @@
         {
           "input": "[1,2,",
           "validator": "parse"
+        },
+        {
+          "input": "[1e40]",
+          "validator": "parse",
+          "note": "Beyond the float32 range. serde casts it to infinity, which would serialize as [null]."
+        },
+        {
+          "input": "[-1e40]",
+          "validator": "parse",
+          "note": "Below the float32 range; rejected like [1e40]."
         }
       ]
     },
@@ -1062,6 +1146,23 @@
           "validator": "custom"
         }
       ]
+    },
+    "Generic.Text": {
+      "accepted": [
+        {
+          "input": "Platform Engineering",
+          "normalized": "Platform Engineering"
+        },
+        {
+          "input": "",
+          "normalized": ""
+        },
+        {
+          "input": "  spaced  ",
+          "normalized": "  spaced  "
+        }
+      ],
+      "rejected": []
     },
     "Identity.Name": {
       "accepted": [
@@ -1445,13 +1546,29 @@
         {
           "input": "America/New_York",
           "normalized": "America/New_York"
-        }
+        },
+        { "input": "UTC", "normalized": "UTC" },
+        { "input": "GMT", "normalized": "GMT" },
+        { "input": "Etc/UTC", "normalized": "Etc/UTC" },
+        { "input": "Europe/London", "normalized": "Europe/London" },
+        { "input": "America/Argentina/Buenos_Aires", "normalized": "America/Argentina/Buenos_Aires" },
+        { "input": "America/Port-au-Prince", "normalized": "America/Port-au-Prince" },
+        { "input": "America/Blanc-Sablon", "normalized": "America/Blanc-Sablon" },
+        { "input": "Etc/GMT+5", "normalized": "Etc/GMT+5" },
+        { "input": "Etc/GMT-14", "normalized": "Etc/GMT-14" }
       ],
       "rejected": [
         {
           "input": "notazone",
           "validator": "pattern"
-        }
+        },
+        { "input": "EST", "validator": "pattern", "note": "EST is a legacy tz backward link. Single-segment names other than UTC and GMT are rejected so abbreviations that name several zones, such as IST and CST, never pass." },
+        { "input": "America/", "validator": "pattern" },
+        { "input": "/UTC", "validator": "pattern" },
+        { "input": "America//New_York", "validator": "pattern" },
+        { "input": "America/New York", "validator": "pattern" },
+        { "input": "America/-Foo", "validator": "pattern" },
+        { "input": "Etc/../UTC", "validator": "pattern" }
       ]
     },
     "Temporal.Year": {
