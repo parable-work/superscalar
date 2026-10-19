@@ -73,10 +73,10 @@
     "build:web": "tsc -p tsconfig.browser.json && tsc -p tsconfig.workerd.json && node scripts/build-web.mjs",
     "build:ts": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json && node scripts/fix-esm-extensions.mjs && npm run build:web",
     "build": "npm run build:napi && npm run build:ts",
-    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/backend-fallback.cjs && node test/web-conformance.mjs"
+    "test": "node test/native-addon.cjs && node test/conformance.cjs && node test/comparability.cjs && node test/number-wrappers.cjs && node test/number-array-wrappers.cjs && node test/backend-fallback.cjs && node test/web-conformance.mjs"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.10.5",
+    "@napi-rs/cli": "^3.10.8",
     "@types/node": "^26.6.3",
     "typescript": "^7.0.2"
   }

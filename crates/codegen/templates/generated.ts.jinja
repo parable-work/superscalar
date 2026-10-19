@@ -194,6 +194,30 @@ function convert{{ e.camel }}Value(value: unknown | null): {{ e.camel }} | {% if
     return null;
   }
   return date as unknown as {{ e.camel }};
+{% elif e.ts_type == "number" %}  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as {{ e.camel }};
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as {{ e.camel }};
+{% elif e.ts_type == "number[]" %}  // Both paths hand back the core's canonical JSON text: the lenient coerce does
+  // too, because the metadata primitive is a string. Decode it into the array
+  // this type declares.
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = parseJsonObject(value);
+  if (!Array.isArray(parsed) || !parsed.every(item => typeof item === "number")) {
+    return null;
+  }
+  return parsed as {{ e.camel }};
 {% elif e.is_object or e.has_json_parse %}  if (typeof value === "string") {
     const parsed = parseJsonObject(value);
     if (parsed === null) {
