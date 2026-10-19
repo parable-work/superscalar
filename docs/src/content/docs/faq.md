@@ -28,12 +28,13 @@ v0.1.0.
 
 ## Why is there a WASM build?
 
-Browsers and edge runtimes cannot load a native addon, and the TypeScript
-package is meant to work there with the same import and the same behaviour
-as in Node. `wasm-bindgen` compiles the same core to WebAssembly, the
-package's `exports` map selects it under the `browser`, `edge-light` and
-`workerd` conditions, and the conformance corpus runs against both the napi
-addon and the WASM build in CI to catch native-versus-WASM divergence. The
+Browsers and Cloudflare Workers cannot load a native addon, and the
+TypeScript package is meant to work there with the same import and the same
+behaviour as in Node. `wasm-bindgen` compiles the same core to WebAssembly,
+the package's `exports` map selects it under the `browser` and `workerd`
+conditions, and the conformance corpus runs against the napi addon and the
+WASM builds in CI (the Workers build in workerd) to catch native-versus-WASM
+divergence. The
 WASM build is also the fallback in Node on a platform without a prebuilt
 addon, and the basis for the planned cgo-free Go backend.
 

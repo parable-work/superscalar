@@ -104,6 +104,24 @@ bump they require (minor when loosening, major when tightening).
   `meta.reserved_word_scalars`. No scalar's parse, normalize or validate
   changes. The Rust struct and the TypeScript interface gain fields, so code
   that builds a `ScalarMetadata` value by hand must set them.
+- TypeScript: the package runs in browsers and in Cloudflare Workers. The
+  `workerd` and `browser` export conditions on `.`, `./scalars`,
+  `./validation`, `./backend` and `./wasm` resolve to two ESM builds,
+  `dist/workerd/` and `dist/browser/`, over the wasm-pack `web` target; Node
+  and Bun stay on the napi backend. The browser build inlines the module as
+  base64, so a bundler takes it with no plugin; the workerd build imports it
+  as `./superscalar_wasm_bg.wasm`, which a Worker upload carries as a
+  compiled module (wrangler does this unconfigured; with `bun build`, keep
+  `*.wasm` external and upload the file beside the bundle). Both instantiate
+  synchronously at import, so nothing is awaited. `npm run build:wasm-web`
+  and `npm run build:web` build them; `scripts/web_smoke.sh` (`make ts-web`,
+  in CI) bundles both with bun, runs the site bundle in Node and the full
+  conformance corpus in workerd, and `test/web-conformance.mjs` runs the
+  corpus through the browser build in Node. No scalar's behaviour changes.
+- Rust: the `wasm-release` profile (release with opt-level `"s"`, fat LTO,
+  one codegen unit) builds every shipped WebAssembly module: 2.2 MB, 0.66 MB
+  gzipped, against 2.5 MB and 0.77 MB under `--release`, at the same parse
+  speed.
 
 - Core: `Registry::lenient_coercer(name)` resolves a scalar once and returns
   a `LenientCoercer`, whose `coerce` is `Registry::coerce_lenient` without
@@ -240,6 +258,13 @@ bump they require (minor when loosening, major when tightening).
 - The generated Rust and TypeScript metadata tables carry
   `ScalarDef::format` (`semver` for `Version.SemVer`) instead of an empty
   value. No accept-set change.
+- TypeScript: the npm package ships `wasm-node/` and the two web builds in
+  `dist/`, and no longer `wasm-bundler/`, the wasm-pack `bundler` target,
+  which only a bundler with WebAssembly ESM integration could load. The
+  `edge-light` condition, never tested, is gone with it.
+  `src/backend.browser.mts` is replaced by `backend.browser.ts` and
+  `backend.workerd.ts`. `scripts/fix-esm-extensions.mjs` keeps its command
+  line and moves its logic into `scripts/esm-tree.mjs`.
 
 - `Embedding.Vector` rejects an element outside the float32 range. serde
   cast such a number to infinity and the canonical form wrote it as `null`,

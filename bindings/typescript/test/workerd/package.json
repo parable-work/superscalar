@@ -1,0 +1,8 @@
+{
+  "name": "superscalar-workerd-smoke",
+  "private": true,
+  "description": "The workerd runtime for scripts/web_smoke.sh, kept out of the package's own devDependencies so that installing the package does not fetch it.",
+  "devDependencies": {
+    "workerd": "1.20260930.2"
+  }
+}

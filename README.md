@@ -78,7 +78,7 @@ print(email)
 superscalar.validate_identity_uuid("0f8fad5b-d9cb-469f-a165-70867728950e")
 ```
 
-TypeScript (Node uses the native addon, browsers use the WASM build; same API):
+TypeScript (Node uses the native addon, browsers and Cloudflare Workers use the WASM build; same API):
 
 ```ts
 import {
