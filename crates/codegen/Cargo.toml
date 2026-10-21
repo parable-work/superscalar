@@ -13,7 +13,7 @@ name = "superscalar"
 path = "src/main.rs"
 
 [dependencies]
-minijinja = "2.21.0"
+minijinja = "3.0.1"
 superscalar = { path = "../core", version = "0.1.0" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["preserve_order"] }
