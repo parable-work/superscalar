@@ -26,6 +26,7 @@
     "Design.Color": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Embedding.Vector": { "comparability_class": null, "is_sortable": false, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "File.SizeBytes": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Finance.Currency": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Finance.Money": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Boolean": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Float64": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
@@ -1880,6 +1881,34 @@
         { "input": "data-", "validator": "pattern" },
         { "input": "", "validator": "length" },
         { "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "validator": "length" }
+      ]
+    },
+    "Finance.Currency": {
+      "accepted": [
+        { "input": "USD", "normalized": "USD" },
+        { "input": "EUR", "normalized": "EUR" },
+        { "input": "JPY", "normalized": "JPY", "note": "Minor-unit exponent 0." },
+        { "input": "BHD", "normalized": "BHD", "note": "Minor-unit exponent 3." },
+        { "input": "CLF", "normalized": "CLF", "note": "A fund code; minor-unit exponent 4." },
+        { "input": "XAU", "normalized": "XAU", "note": "Active on List One with no minor unit (N.A.)." },
+        { "input": "XCG", "normalized": "XCG", "note": "Caribbean Guilder, which replaced ANG (withdrawn 2025-03)." }
+      ],
+      "rejected": [
+        { "input": "ABC", "validator": "enum", "note": "Right shape, not on List One." },
+        { "input": "XYZ", "validator": "enum" },
+        { "input": "HRK", "validator": "enum", "note": "Historic: withdrawn 2023-01 (List Three)." },
+        { "input": "BGN", "validator": "enum", "note": "Historic: withdrawn 2026-01 (List Three)." },
+        { "input": "DEM", "validator": "enum", "note": "Historic: withdrawn 2002-03 (List Three)." },
+        { "input": "usd", "validator": "pattern", "note": "Lowercase is refused, not canonicalized." },
+        { "input": "Usd", "validator": "pattern" },
+        { "input": "U5D", "validator": "pattern" },
+        { "input": "US$", "validator": "pattern" },
+        { "input": "840", "validator": "pattern", "note": "The ISO 4217 numeric code is not accepted." },
+        { "input": "\u00dcSD", "validator": "pattern" },
+        { "input": "US", "validator": "length" },
+        { "input": "USDT", "validator": "length" },
+        { "input": " USD", "validator": "length", "note": "Whitespace is not trimmed." },
+        { "input": "", "validator": "length" }
       ]
     }
   }

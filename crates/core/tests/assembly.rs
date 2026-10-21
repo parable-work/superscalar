@@ -316,7 +316,7 @@ fn earlier_check_wins_when_two_violations_hold() {
 /// from the catalog.
 #[test]
 fn builtin_registry_is_frozen() {
-    const TABLE: [&str; 51] = [
+    const TABLE: [&str; 52] = [
         "AgentSkill.Name",
         "Auth.JWT",
         "Auth.Password",
@@ -328,6 +328,7 @@ fn builtin_registry_is_frozen() {
         "Design.Color",
         "Embedding.Vector",
         "File.SizeBytes",
+        "Finance.Currency",
         "Finance.Money",
         "Generic.Boolean",
         "Generic.Float64",
@@ -491,7 +492,7 @@ fn dump_has_the_documented_shape() {
     assert_eq!(dump["dump_version"], 2);
     assert_eq!(dump["extensions"], serde_json::json!(["builtin"]));
     let scalars = dump["scalars"].as_array().expect("array");
-    assert_eq!(scalars.len(), 51);
+    assert_eq!(scalars.len(), 52);
     let email = scalars
         .iter()
         .find(|scalar| scalar["canonical"] == "Contact.Email")

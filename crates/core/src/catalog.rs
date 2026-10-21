@@ -41,6 +41,8 @@ builtin_names! {
     DESIGN_COLOR = "Design.Color",
     EMBEDDING_VECTOR = "Embedding.Vector",
     FILE_SIZE_BYTES = "File.SizeBytes",
+    /// ISO 4217 alphabetic code active on the maintenance agency's List One.
+    FINANCE_CURRENCY = "Finance.Currency",
     FINANCE_MONEY = "Finance.Money",
     /// True or false; the one built-in backed by the `Bool` primitive.
     GENERIC_BOOLEAN = "Generic.Boolean",
@@ -100,7 +102,7 @@ builtin_names! {
 /// above and its `ScalarDef` here; order carries no meaning, since every
 /// lookup and every generated file goes by name.
 /// Reached only through `Registry::builtin()`.
-pub(crate) static CATALOG: [ScalarDef; 51] = [
+pub(crate) static CATALOG: [ScalarDef; 52] = [
     ScalarDef {
         namespace: "Auth",
         canonical: names::AUTH_JWT,
@@ -378,6 +380,47 @@ pub(crate) static CATALOG: [ScalarDef; 51] = [
         reserved_words_match_partial: false,
         comparability_class: None,
         hooks: ScalarHooks::NONE,
+        metadata_omit: false,
+    },
+    ScalarDef {
+        namespace: "Finance",
+        canonical: names::FINANCE_CURRENCY,
+        primitive: PrimitiveKind::String,
+        sql_type: "VARCHAR(3)",
+        metadata_primitive: "String",
+        json_schema_type: "string",
+        // The pattern and length bounds state the shape; membership in List
+        // One is more than a pattern should carry, so the module in
+        // scalars/finance_currency.rs checks it against its embedded table.
+        tag: ScalarTag::CustomLogic,
+        pattern: Some("^[A-Z]{3}$"),
+        min_length: Some(3),
+        max_length: Some(3),
+        minimum: None,
+        maximum: None,
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &["USD", "EUR", "JPY"],
+        description: "ISO 4217 alphabetic currency code active on List One (e.g., USD, EUR, JPY)",
+        type_mappings: &[
+            ("typescript", "string"),
+            ("python", "str"),
+            ("go", "string"),
+            ("rust", "String"),
+            ("sql", "VARCHAR(3)"),
+            ("json_schema", "string"),
+        ],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "Three uppercase ASCII letters naming a currency the ISO 4217 maintenance\nagency lists as active, from List One as published 2026-09-17. Input is\nalready canonical: lowercase and surrounding whitespace are refused, not\nrewritten. Withdrawn codes (List Three, such as `HRK`) are refused. A list\nthat adds a code is a minor bump; one that withdraws a code is a major bump.\nPair it with `Finance.Money` for an amount in minor units. The minor-unit\nexponent is 2 except: 0 for BIF CLP DJF GNF ISK JPY KMF KRW PYG RWF UGX\nUYI VND VUV XAF XOF XPF; 3 for BHD IQD JOD KWD LYD OMR TND; 4 for CLF UYW;\nnone (N.A.) for XAG XAU XBA XBB XBC XBD XDR XPD XPT XSU XTS XUA XXX. Rust\nreads it from `scalars::finance_currency::minor_units`.",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: None,
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
     },
     ScalarDef {

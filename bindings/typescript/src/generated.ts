@@ -64,6 +64,7 @@ export const VALID_SCALARS: readonly string[] = [
   "Design.Color",
   "Embedding.Vector",
   "File.SizeBytes",
+  "Finance.Currency",
   "Finance.Money",
   "Generic.Boolean",
   "Generic.Float64",
@@ -583,6 +584,38 @@ export function normalizeFileSizeBytesStrict(value: string): FileSizeBytes {
 }
 export function validateFileSizeBytes(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend("File.SizeBytes", value);
+}
+
+export type FinanceCurrency = string & { readonly __brand: "Finance.Currency" };
+function convertFinanceCurrencyValue(value: unknown | null): FinanceCurrency | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as FinanceCurrency;
+}
+export function parseFinanceCurrency(value: unknown): FinanceCurrency | null {
+  return convertFinanceCurrencyValue(coerceValue("Finance.Currency", value));
+}
+export function normalizeFinanceCurrency(value: unknown): FinanceCurrency | null {
+  return convertFinanceCurrencyValue(coerceValue("Finance.Currency", value));
+}
+export function parseFinanceCurrencyStrict(value: string): FinanceCurrency {
+  const parsed = convertFinanceCurrencyValue(backend.parse("Finance.Currency", value));
+  if (parsed === null) {
+    throw new Error("invalid Finance.Currency");
+  }
+  return parsed;
+}
+export function normalizeFinanceCurrencyStrict(value: string): FinanceCurrency {
+  const normalized = convertFinanceCurrencyValue(backend.normalize("Finance.Currency", value));
+  if (normalized === null) {
+    throw new Error("invalid Finance.Currency");
+  }
+  return normalized;
+}
+export function validateFinanceCurrency(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Finance.Currency", value);
 }
 
 export type FinanceMoney = number;
@@ -2209,6 +2242,24 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     pattern: "",
     hasValidator: true,
     examples: ["204800"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
+    canonicalName: "Finance.Currency",
+    symbol: "FinanceCurrency",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 3,
+    minLength: 3,
+    pattern: "^[A-Z]{3}$",
+    hasValidator: true,
+    examples: ["USD", "EUR", "JPY"],
     comparabilityClass: null,
     isSortable: true,
     caseInsensitive: false,
