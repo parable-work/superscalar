@@ -26,7 +26,7 @@ so `Identity.Slug` normalizes `ACME` to `acme` while `parse("ACME")` still
 fails. An input that is already valid is returned unchanged, which is why
 `Temporal.Quarter` keeps `Q1`.
 
-30 of the 48 built-ins are directive scalars, including `Auth.JWT`,
+33 of the 52 built-ins are directive scalars, including `Auth.JWT`,
 `Identity.Slug`, `Network.IpAddress`, `Ordering.Rank`, `Temporal.Time`,
 `Text.Markdown` and `Version.SemVer`.
 
@@ -43,10 +43,10 @@ base62 forms and canonicalises to base62, `Temporal.RecurrenceRule` parses
 recurrence rules. The rule lives in one Rust module under
 `crates/core/src/scalars/`, implemented once and called by every binding.
 
-18 of the 48 built-ins are deep scalars: `Contact.Email`,
-`Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Generic.JSON`,
-`Generic.StringMap`, `Geo.Location`, `Git.PathPattern`, `Identity.UUID`,
-`Identity.UserID` (an alias of `Identity.UUID`), `Network.Url`,
+19 of the 52 built-ins are deep scalars: `Contact.Email`,
+`Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Finance.Currency`,
+`Generic.JSON`, `Generic.StringMap`, `Geo.Location`, `Git.PathPattern`,
+`Identity.UUID`, `Identity.UserID` (an alias of `Identity.UUID`), `Network.Url`,
 `Network.DnsLabel`, `Temporal.Date`, `Temporal.DateTime`, `Temporal.Duration`,
 `Temporal.Month`, `Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
 

@@ -139,6 +139,16 @@ bump they require (minor when loosening, major when tightening).
   `normalize` trims, and lenient coercion keeps a JSON bool and reads a
   trimmed, case-insensitive `"true"`/`"false"` string. New scalars only, so
   a minor bump. Carried from parable-platform PR #8155 (PARABLE-5698).
+- Scalar: `Finance.Currency`, an ISO 4217 alphabetic currency code that the
+  maintenance agency's List One (published 2026-09-17, 178 codes) carries.
+  Exactly three uppercase ASCII letters; lowercase and whitespace are refused,
+  not canonicalized, and withdrawn codes (List Three, such as `HRK` and
+  `BGN`) are refused with `enum`. SQL `VARCHAR(3)`. Rust gets each code's
+  minor-unit exponent from `scalars::finance_currency::{lookup, minor_units}`
+  (USD 2, JPY 0, BHD 3, CLF 4, `None` for N.A. codes such as XAU); the
+  scalar's docstring and reference page list the exceptions to 2. A new
+  scalar, so a minor bump. A later list that adds a code is a minor bump;
+  one that withdraws a code is a major bump.
 
 ### Changed
 

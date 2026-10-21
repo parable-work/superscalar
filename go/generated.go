@@ -83,6 +83,7 @@ const (
 	scalarNameDesignColor            = "Design.Color"
 	scalarNameEmbeddingVector        = "Embedding.Vector"
 	scalarNameFileSizeBytes          = "File.SizeBytes"
+	scalarNameFinanceCurrency        = "Finance.Currency"
 	scalarNameFinanceMoney           = "Finance.Money"
 	scalarNameGenericBoolean         = "Generic.Boolean"
 	scalarNameGenericFloat64         = "Generic.Float64"
@@ -138,6 +139,7 @@ var VALID_SCALARS = []string{
 	string("Design.Color"),
 	string("Embedding.Vector"),
 	string("File.SizeBytes"),
+	string("Finance.Currency"),
 	string("Finance.Money"),
 	string("Generic.Boolean"),
 	string("Generic.Float64"),
@@ -220,6 +222,9 @@ type EmbeddingVector []float32
 
 // File.SizeBytes - "File size in bytes (non-negative, BIGINT-backed)"
 type FileSizeBytes int64
+
+// Finance.Currency - "ISO 4217 alphabetic currency code active on List One (e.g., USD, EUR, JPY)"
+type FinanceCurrency string
 
 // Finance.Money - "Monetary amount in smallest currency unit (e.g., cents for USD)"
 type FinanceMoney int64
@@ -657,6 +662,35 @@ var SCALAR_METADATA = []ScalarMetadata{
 		HasCustomValidate:            false,
 		HasValidator:                 true,
 		Examples:                     []string{"204800"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
+		CanonicalName:                "Finance.Currency",
+		Symbol:                       "FinanceCurrency",
+		Primitive:                    "String",
+		Description:                  "ISO 4217 alphabetic currency code active on List One (e.g., USD, EUR, JPY)",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "VARCHAR(3)",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    3,
+		MinLength:                    3,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "^[A-Z]{3}$",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            true,
+		HasValidator:                 true,
+		Examples:                     []string{"USD", "EUR", "JPY"},
 		ComparabilityClass:           "",
 		IsSortable:                   true,
 		CaseInsensitive:              false,
@@ -1933,6 +1967,7 @@ var CryptoRSAPrivateKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPr
 var CryptoRSAPublicKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPublicKey"))
 var CryptoSHA256Pattern = ScalarPattern(patternForCanonical("Crypto.SHA256"))
 var DesignColorPattern = ScalarPattern(patternForCanonical("Design.Color"))
+var FinanceCurrencyPattern = ScalarPattern(patternForCanonical("Finance.Currency"))
 var GitPathPatternPattern = ScalarPattern(patternForCanonical("Git.PathPattern"))
 var IdentitySlugPattern = ScalarPattern(patternForCanonical("Identity.Slug"))
 var IdentityUUIDPattern = ScalarPattern(patternForCanonical("Identity.UUID"))
@@ -2078,6 +2113,8 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameEmbeddingVector, value) }
 	case "File.SizeBytes":
 		return func(value string) error { return callScalarValidate(scalarNameFileSizeBytes, value) }
+	case "Finance.Currency":
+		return func(value string) error { return callScalarValidate(scalarNameFinanceCurrency, value) }
 	case "Finance.Money":
 		return func(value string) error { return callScalarValidate(scalarNameFinanceMoney, value) }
 	case "Generic.Boolean":
@@ -2611,6 +2648,50 @@ func (v FileSizeBytes) Validate() (bool, []ValidationError) {
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.
 func (v FileSizeBytes) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseFinanceCurrency validates and returns the canonical form of a Finance.Currency value.
+func ParseFinanceCurrency(value string) (string, error) {
+	return callScalarParse(scalarNameFinanceCurrency, value)
+}
+
+// NormalizeFinanceCurrency returns the canonical form of a Finance.Currency value without enforcing shape.
+func NormalizeFinanceCurrency(value string) (string, error) {
+	return callScalarNormalize(scalarNameFinanceCurrency, value)
+}
+
+// ValidateFinanceCurrency enforces the shape of a Finance.Currency value.
+func ValidateFinanceCurrency(value string) error {
+	return callScalarValidate(scalarNameFinanceCurrency, value)
+}
+
+func (v FinanceCurrency) String() string {
+	return string(v)
+}
+
+func (v FinanceCurrency) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v FinanceCurrency) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v FinanceCurrency) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates FinanceCurrency and returns whether validation passed along with any errors.
+func (v FinanceCurrency) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameFinanceCurrency, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v FinanceCurrency) ValidateRequired() (bool, []ValidationError) {
 	if scalarRequiredValueMissing(v) {
 		return false, []ValidationError{{Validator: "required", Message: "required field"}}
 	}

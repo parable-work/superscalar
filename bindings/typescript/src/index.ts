@@ -41,6 +41,7 @@ export namespace File {
 }
 
 export namespace Finance {
+  export type Currency = Brand<string, 'Finance.Currency'>;
   export type Money = Brand<number, 'Finance.Money'>;
 }
 

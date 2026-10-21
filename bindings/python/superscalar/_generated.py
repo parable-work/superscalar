@@ -15,6 +15,7 @@ VALID_SCALARS = (
     "Design.Color",
     "Embedding.Vector",
     "File.SizeBytes",
+    "Finance.Currency",
     "Finance.Money",
     "Generic.Boolean",
     "Generic.Float64",
@@ -159,6 +160,14 @@ SCALAR_METADATA = {
         "reserved_words_match_partial": False,
     },
     "File.SizeBytes": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
+    "Finance.Currency": {
         "comparability_class": None,
         "is_sortable": True,
         "case_insensitive": False,
@@ -633,6 +642,15 @@ def normalize_file_size_bytes(value: str) -> str:
 
 def validate_file_size_bytes(value: str) -> None:
     _native.validate("File.SizeBytes", value)
+
+def parse_finance_currency(value: str) -> str:
+    return _native.parse("Finance.Currency", value)
+
+def normalize_finance_currency(value: str) -> str:
+    return _native.normalize("Finance.Currency", value)
+
+def validate_finance_currency(value: str) -> None:
+    _native.validate("Finance.Currency", value)
 
 def parse_finance_money(value: str) -> str:
     return _native.parse("Finance.Money", value)
