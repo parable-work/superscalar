@@ -149,6 +149,26 @@ bump they require (minor when loosening, major when tightening).
   scalar's docstring and reference page list the exceptions to 2. A new
   scalar, so a minor bump. A later list that adds a code is a minor bump;
   one that withdraws a code is a major bump.
+- Scalar: `Finance.SignedMoney`, `Finance.Money` with a sign, for ledger
+  lines whose debits are negative. An integer in the smallest currency unit
+  from -(2^53 - 1) to 2^53 - 1, SQL `BIGINT`, a directive scalar like
+  `Finance.Money` (whitespace trimmed, leading zeros and a `+` dropped,
+  `-0` is `0`). A new scalar, so a minor bump.
+- Scalar: `Generic.Decimal`, an exact decimal number carried as a string,
+  SQL `NUMERIC` (a schema toolchain narrows it per column to
+  `NUMERIC(p,s)`). Accepts an optional sign, ASCII digits and an optional
+  fraction, trimming surrounding whitespace; the canonical form drops a `+`,
+  leading zeros and trailing fraction zeros, and writes zero as `0` (`1.50`
+  is `1.5`, `-0.00` is `0`). Refuses exponents, `NaN` and `Infinity`, a bare
+  point (`.5`, `5.`), digit grouping and non-ASCII digits, with `pattern`;
+  empty input fails with `empty`. Format hint `decimal`. Type mappings: TS
+  `string`, Go `string`, Python `decimal.Decimal`, Rust
+  `superscalar::Decimal`, a new canonical-text newtype with string serde. The
+  Go `GenericDecimal` implements `sql.Scanner` and `driver.Valuer` through
+  the core, so a `NUMERIC(5,2)` read of `1.50` scans as `1.5`. The Python
+  `generic_decimal` functions take text or a `decimal.Decimal`, and
+  `parse_generic_decimal_to_decimal` returns one. A new scalar, so a minor
+  bump.
 
 ### Changed
 

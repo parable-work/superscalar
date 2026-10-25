@@ -44,8 +44,12 @@ builtin_names! {
     /// ISO 4217 alphabetic code active on the maintenance agency's List One.
     FINANCE_CURRENCY = "Finance.Currency",
     FINANCE_MONEY = "Finance.Money",
+    /// `Finance.Money` with a sign: a ledger amount whose debits are negative.
+    FINANCE_SIGNED_MONEY = "Finance.SignedMoney",
     /// True or false; the one built-in backed by the `Bool` primitive.
     GENERIC_BOOLEAN = "Generic.Boolean",
+    /// An exact decimal number, carried as text so no digit is lost to a float.
+    GENERIC_DECIMAL = "Generic.Decimal",
     /// A finite 64-bit floating-point number with no further shape.
     GENERIC_FLOAT64 = "Generic.Float64",
     GENERIC_INT64 = "Generic.Int64",
@@ -102,7 +106,7 @@ builtin_names! {
 /// above and its `ScalarDef` here; order carries no meaning, since every
 /// lookup and every generated file goes by name.
 /// Reached only through `Registry::builtin()`.
-pub(crate) static CATALOG: [ScalarDef; 52] = [
+pub(crate) static CATALOG: [ScalarDef; 54] = [
     ScalarDef {
         namespace: "Auth",
         canonical: names::AUTH_JWT,
@@ -444,6 +448,38 @@ pub(crate) static CATALOG: [ScalarDef; 52] = [
         file_upload: None,
         image_constraints: None,
         docstring: "",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: None,
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks { parse: true, normalize: false, validate: false },
+        metadata_omit: false,
+    },
+    ScalarDef {
+        namespace: "Finance",
+        canonical: names::FINANCE_SIGNED_MONEY,
+        primitive: PrimitiveKind::Int,
+        sql_type: "BIGINT",
+        metadata_primitive: "Int",
+        json_schema_type: "integer",
+        tag: ScalarTag::PatternOnly,
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        // The symmetric JavaScript safe-integer range, as Generic.Int64.
+        minimum: Some(-9007199254740991.0_f64),
+        maximum: Some(9007199254740991.0_f64),
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &["-1250", "1000"],
+        description: "Signed monetary amount in smallest currency unit (e.g., cents for USD)",
+        type_mappings: &[("typescript", "number"), ("python", "int"), ("go", "int64"), ("rust", "i64"), ("sql", "BIGINT"), ("json_schema", "integer")],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "A signed amount in the smallest currency unit (cents for USD), for ledger\nlines where a debit is negative: -1250 is a debit of 12.50 USD. The same unit\nas `Finance.Money`, which is non-negative. The range is -(2^53 - 1) to\n2^53 - 1, the JavaScript safe-integer bounds, so a value crosses every\nlanguage exactly. Pair it with `Finance.Currency` for the currency the amount\nis in; that code's minor-unit exponent says where the decimal point goes.",
         alias_of: None,
         schema_primitive_override: None,
         schema_omit: false,
@@ -1815,6 +1851,48 @@ pub(crate) static CATALOG: [ScalarDef; 52] = [
         reserved_words_match_partial: false,
         comparability_class: None,
         hooks: ScalarHooks::NONE,
+        metadata_omit: false,
+    },
+    ScalarDef {
+        namespace: "Generic",
+        canonical: names::GENERIC_DECIMAL,
+        primitive: PrimitiveKind::String,
+        sql_type: "NUMERIC",
+        metadata_primitive: "String",
+        json_schema_type: "string",
+        // The pattern is the accepted shape once surrounding whitespace is
+        // trimmed, so it admits every canonical form too. The module in
+        // scalars/generic_decimal.rs checks it, then rewrites the value to its
+        // canonical form.
+        tag: ScalarTag::CustomLogic,
+        pattern: Some(r"^[+-]?[0-9]+(\.[0-9]+)?$"),
+        min_length: None,
+        max_length: None,
+        minimum: None,
+        maximum: None,
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &["19.99", "-0.0425", "1000"],
+        description: "Exact decimal number in plain notation, carried as a string",
+        type_mappings: &[
+            ("typescript", "string"),
+            ("python", "decimal.Decimal"),
+            ("go", "string"),
+            ("rust", "superscalar::Decimal"),
+            ("sql", "NUMERIC"),
+            ("json_schema", "string"),
+        ],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "An exact decimal number, carried as text so no digit is lost to a float.\nInput is an optional sign, ASCII digits and an optional fraction (`-12.50`,\n`+3`, `007.5`); surrounding whitespace is trimmed. The canonical form drops\na `+`, leading zeros and trailing fraction zeros, and writes zero as `0`:\n`1.50` becomes `1.5` and `-0.00` becomes `0`. Refused: exponents (`1e3`),\n`NaN` and `Infinity`, a bare point (`.5`, `5.`), digit grouping (`1,000`) and\nnon-ASCII digits. Precision and scale belong to the field, not the scalar:\nthe SQL type is `NUMERIC`, which a schema toolchain narrows per column to\n`NUMERIC(p,s)`. Compare values as numbers, never as text.",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: Some("decimal"),
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
     },
 ];
