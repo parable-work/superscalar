@@ -33,6 +33,10 @@ pub(crate) fn impls() -> Vec<(&'static str, Box<dyn Scalar>)> {
             names::FINANCE_CURRENCY,
             Box::new(scalars::finance_currency::FinanceCurrency),
         ),
+        (
+            names::GENERIC_DECIMAL,
+            Box::new(scalars::generic_decimal::GenericDecimal),
+        ),
         (names::GENERIC_JSON, Box::new(scalars::json_scalar::Json)),
         (
             names::GENERIC_STRING_MAP,

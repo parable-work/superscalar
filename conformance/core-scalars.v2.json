@@ -28,7 +28,9 @@
     "File.SizeBytes": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Finance.Currency": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Finance.Money": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Finance.SignedMoney": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Boolean": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
+    "Generic.Decimal": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Float64": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.Int64": { "comparability_class": null, "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
     "Generic.JSON": { "comparability_class": null, "is_sortable": false, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false },
@@ -1909,6 +1911,70 @@
         { "input": "USDT", "validator": "length" },
         { "input": " USD", "validator": "length", "note": "Whitespace is not trimmed." },
         { "input": "", "validator": "length" }
+      ]
+    },
+    "Finance.SignedMoney": {
+      "accepted": [
+        { "input": "-1250", "normalized": "-1250", "note": "A debit of 12.50 in a two-decimal currency." },
+        { "input": "1000", "normalized": "1000" },
+        { "input": "0", "normalized": "0" },
+        { "input": "-0", "normalized": "0", "note": "Zero has no sign." },
+        { "input": "+42", "normalized": "42" },
+        { "input": "007", "normalized": "7" },
+        { "input": " -100 ", "normalized": "-100", "note": "Surrounding whitespace is trimmed, as for Finance.Money." },
+        { "input": "9007199254740991", "normalized": "9007199254740991", "note": "2^53 - 1, the maximum." },
+        { "input": "-9007199254740991", "normalized": "-9007199254740991", "note": "-(2^53 - 1), the minimum." }
+      ],
+      "rejected": [
+        { "input": "9007199254740992", "validator": "range" },
+        { "input": "-9007199254740992", "validator": "range", "note": "Below the JavaScript safe-integer minimum." },
+        { "input": "12.50", "validator": "parse", "note": "Minor units are whole: 12.50 USD is 1250." },
+        { "input": "1e3", "validator": "parse" },
+        { "input": "- 5", "validator": "parse" },
+        { "input": "abc", "validator": "parse" },
+        { "input": "", "validator": "parse" }
+      ]
+    },
+    "Generic.Decimal": {
+      "accepted": [
+        { "input": "19.99", "normalized": "19.99" },
+        { "input": "-0.0425", "normalized": "-0.0425" },
+        { "input": "1000", "normalized": "1000", "note": "An integer is a decimal with no fraction." },
+        { "input": "0", "normalized": "0" },
+        { "input": "0.001", "normalized": "0.001" },
+        { "input": "1.50", "normalized": "1.5", "note": "Trailing fraction zeros are dropped: scale belongs to the column (NUMERIC(p,s)), not the value." },
+        { "input": "2.000", "normalized": "2", "note": "An all-zero fraction is dropped." },
+        { "input": "007.50", "normalized": "7.5", "note": "Leading integer zeros are dropped." },
+        { "input": "+3.25", "normalized": "3.25", "note": "A plus sign is dropped." },
+        { "input": "-0", "normalized": "0", "note": "Zero has no sign." },
+        { "input": "-0.000", "normalized": "0" },
+        { "input": " 42.10 ", "normalized": "42.1", "note": "Surrounding whitespace is trimmed." },
+        { "input": "9007199254740993", "normalized": "9007199254740993", "note": "2^53 + 1, which a float64 rounds to 2^53." },
+        { "input": "-12345678901234567890.000000000000000000010", "normalized": "-12345678901234567890.00000000000000000001", "note": "Past 64-bit integer and float precision; every digit is kept." }
+      ],
+      "rejected": [
+        { "input": "", "validator": "empty" },
+        { "input": "   ", "validator": "empty" },
+        { "input": "abc", "validator": "pattern" },
+        { "input": "NaN", "validator": "pattern", "note": "Postgres NUMERIC holds NaN; this scalar does not." },
+        { "input": "Infinity", "validator": "pattern" },
+        { "input": "-Infinity", "validator": "pattern" },
+        { "input": "1e3", "validator": "pattern", "note": "Exponent forms are refused; write 1000." },
+        { "input": "1.5E-7", "validator": "pattern" },
+        { "input": ".5", "validator": "pattern", "note": "A digit is required before the point." },
+        { "input": "5.", "validator": "pattern", "note": "A digit is required after the point." },
+        { "input": "-", "validator": "pattern" },
+        { "input": "--1", "validator": "pattern" },
+        { "input": "+-1", "validator": "pattern" },
+        { "input": "1,000.00", "validator": "pattern", "note": "Digit grouping is refused." },
+        { "input": "1_000", "validator": "pattern" },
+        { "input": "1 000", "validator": "pattern" },
+        { "input": "1,5", "validator": "pattern", "note": "The decimal separator is a point." },
+        { "input": "1.2.3", "validator": "pattern" },
+        { "input": "0x1F", "validator": "pattern" },
+        { "input": "$1.00", "validator": "pattern" },
+        { "input": "\u0661", "validator": "pattern", "note": "ARABIC-INDIC DIGIT ONE: digits are ASCII only." },
+        { "input": "\uff11", "validator": "pattern", "note": "FULLWIDTH DIGIT ONE." }
       ]
     }
   }

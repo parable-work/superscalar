@@ -43,9 +43,11 @@ export namespace File {
 export namespace Finance {
   export type Currency = Brand<string, 'Finance.Currency'>;
   export type Money = Brand<number, 'Finance.Money'>;
+  export type SignedMoney = Brand<number, 'Finance.SignedMoney'>;
 }
 
 export namespace Generic {
+  export type Decimal = Brand<string, 'Generic.Decimal'>;
   export type Int64 = Brand<number, 'Generic.Int64'>;
   export type JSON = Brand<JSONValue, 'Generic.JSON'>;
   export type Probability = Brand<number, 'Generic.Probability'>;
