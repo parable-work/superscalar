@@ -35,6 +35,7 @@ pub use scalar_metadata::{
     flat_scalar_name, scalar_metadata_by_canonical_name, ScalarMetadata, SCALAR_METADATA,
 };
 pub use scalars::datetime::DateTime;
+pub use scalars::generic_decimal::Decimal;
 pub use scalars::uuid_scalar::Uuid;
 pub use temporal_format::{
     epoch_timestamp_micros, normalize_epoch, TemporalFormat, TemporalMicrosScale,

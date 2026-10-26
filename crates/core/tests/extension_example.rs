@@ -117,7 +117,7 @@ fn builtin_scalars_behave_the_same_through_the_assembly() {
 fn the_builtin_registry_is_untouched_by_an_assembly() {
     let _registry = assembled();
     let builtin = Registry::builtin();
-    assert_eq!(builtin.len(), 51);
+    assert_eq!(builtin.len(), 54);
     assert!(builtin.def(ORDER_NUMBER).is_none());
     assert!(builtin.scalar(ORDER_NUMBER).is_none());
 }
@@ -126,7 +126,7 @@ fn the_builtin_registry_is_untouched_by_an_assembly() {
 fn dump_attributes_extension_scalars_to_their_owner() {
     let dump = assembled().dump();
     let scalars = dump["scalars"].as_array().expect("array");
-    assert_eq!(scalars.len(), 53);
+    assert_eq!(scalars.len(), 56);
     let by_name = |name: &str| {
         scalars
             .iter()
