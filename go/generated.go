@@ -83,8 +83,11 @@ const (
 	scalarNameDesignColor            = "Design.Color"
 	scalarNameEmbeddingVector        = "Embedding.Vector"
 	scalarNameFileSizeBytes          = "File.SizeBytes"
+	scalarNameFinanceCurrency        = "Finance.Currency"
 	scalarNameFinanceMoney           = "Finance.Money"
+	scalarNameFinanceSignedMoney     = "Finance.SignedMoney"
 	scalarNameGenericBoolean         = "Generic.Boolean"
+	scalarNameGenericDecimal         = "Generic.Decimal"
 	scalarNameGenericFloat64         = "Generic.Float64"
 	scalarNameGenericInt64           = "Generic.Int64"
 	scalarNameGenericJSON            = "Generic.JSON"
@@ -138,8 +141,11 @@ var VALID_SCALARS = []string{
 	string("Design.Color"),
 	string("Embedding.Vector"),
 	string("File.SizeBytes"),
+	string("Finance.Currency"),
 	string("Finance.Money"),
+	string("Finance.SignedMoney"),
 	string("Generic.Boolean"),
+	string("Generic.Decimal"),
 	string("Generic.Float64"),
 	string("Generic.Int64"),
 	string("Generic.JSON"),
@@ -221,11 +227,20 @@ type EmbeddingVector []float32
 // File.SizeBytes - "File size in bytes (non-negative, BIGINT-backed)"
 type FileSizeBytes int64
 
+// Finance.Currency - "ISO 4217 alphabetic currency code active on List One (e.g., USD, EUR, JPY)"
+type FinanceCurrency string
+
 // Finance.Money - "Monetary amount in smallest currency unit (e.g., cents for USD)"
 type FinanceMoney int64
 
+// Finance.SignedMoney - "Signed monetary amount in smallest currency unit (e.g., cents for USD)"
+type FinanceSignedMoney int64
+
 // Generic.Boolean - "True or false"
 type GenericBoolean bool
+
+// Generic.Decimal - "Exact decimal number in plain notation, carried as a string"
+type GenericDecimal string
 
 // Generic.Float64 - "A finite 64-bit floating-point number"
 type GenericFloat64 float64
@@ -665,6 +680,35 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWordsMatchPartial:    false,
 	},
 	{
+		CanonicalName:                "Finance.Currency",
+		Symbol:                       "FinanceCurrency",
+		Primitive:                    "String",
+		Description:                  "ISO 4217 alphabetic currency code active on List One (e.g., USD, EUR, JPY)",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "VARCHAR(3)",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    3,
+		MinLength:                    3,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "^[A-Z]{3}$",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            true,
+		HasValidator:                 true,
+		Examples:                     []string{"USD", "EUR", "JPY"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
 		CanonicalName:                "Finance.Money",
 		Symbol:                       "FinanceMoney",
 		Primitive:                    "Int",
@@ -694,6 +738,35 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWordsMatchPartial:    false,
 	},
 	{
+		CanonicalName:                "Finance.SignedMoney",
+		Symbol:                       "FinanceSignedMoney",
+		Primitive:                    "Int",
+		Description:                  "Signed monetary amount in smallest currency unit (e.g., cents for USD)",
+		TypeScriptType:               "number",
+		PythonType:                   "int",
+		RustType:                     "i64",
+		GoType:                       "int64",
+		SQLType:                      "BIGINT",
+		JSONSchemaType:               "integer",
+		Format:                       "",
+		MaxLength:                    0,
+		MinLength:                    0,
+		Maximum:                      scalarInt64Ptr(9007199254740991),
+		Minimum:                      scalarInt64Ptr(-9007199254740991),
+		Pattern:                      "",
+		HasCustomNormalize:           false,
+		HasCustomParse:               true,
+		HasCustomValidate:            false,
+		HasValidator:                 true,
+		Examples:                     []string{"-1250", "1000"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
 		CanonicalName:                "Generic.Boolean",
 		Symbol:                       "GenericBoolean",
 		Primitive:                    "Bool",
@@ -715,6 +788,35 @@ var SCALAR_METADATA = []ScalarMetadata{
 		HasCustomValidate:            false,
 		HasValidator:                 true,
 		Examples:                     []string{"true", "false"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+	},
+	{
+		CanonicalName:                "Generic.Decimal",
+		Symbol:                       "GenericDecimal",
+		Primitive:                    "String",
+		Description:                  "Exact decimal number in plain notation, carried as a string",
+		TypeScriptType:               "string",
+		PythonType:                   "decimal.Decimal",
+		RustType:                     "superscalar::Decimal",
+		GoType:                       "string",
+		SQLType:                      "NUMERIC",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    0,
+		MinLength:                    0,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "^[+-]?[0-9]+(\\.[0-9]+)?$",
+		HasCustomNormalize:           false,
+		HasCustomParse:               true,
+		HasCustomValidate:            false,
+		HasValidator:                 true,
+		Examples:                     []string{"19.99", "-0.0425", "1000"},
 		ComparabilityClass:           "",
 		IsSortable:                   true,
 		CaseInsensitive:              false,
@@ -1933,6 +2035,8 @@ var CryptoRSAPrivateKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPr
 var CryptoRSAPublicKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPublicKey"))
 var CryptoSHA256Pattern = ScalarPattern(patternForCanonical("Crypto.SHA256"))
 var DesignColorPattern = ScalarPattern(patternForCanonical("Design.Color"))
+var FinanceCurrencyPattern = ScalarPattern(patternForCanonical("Finance.Currency"))
+var GenericDecimalPattern = ScalarPattern(patternForCanonical("Generic.Decimal"))
 var GitPathPatternPattern = ScalarPattern(patternForCanonical("Git.PathPattern"))
 var IdentitySlugPattern = ScalarPattern(patternForCanonical("Identity.Slug"))
 var IdentityUUIDPattern = ScalarPattern(patternForCanonical("Identity.UUID"))
@@ -2078,10 +2182,16 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameEmbeddingVector, value) }
 	case "File.SizeBytes":
 		return func(value string) error { return callScalarValidate(scalarNameFileSizeBytes, value) }
+	case "Finance.Currency":
+		return func(value string) error { return callScalarValidate(scalarNameFinanceCurrency, value) }
 	case "Finance.Money":
 		return func(value string) error { return callScalarValidate(scalarNameFinanceMoney, value) }
+	case "Finance.SignedMoney":
+		return func(value string) error { return callScalarValidate(scalarNameFinanceSignedMoney, value) }
 	case "Generic.Boolean":
 		return func(value string) error { return callScalarValidate(scalarNameGenericBoolean, value) }
+	case "Generic.Decimal":
+		return func(value string) error { return callScalarValidate(scalarNameGenericDecimal, value) }
 	case "Generic.Float64":
 		return func(value string) error { return callScalarValidate(scalarNameGenericFloat64, value) }
 	case "Generic.Int64":
@@ -2617,6 +2727,50 @@ func (v FileSizeBytes) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseFinanceCurrency validates and returns the canonical form of a Finance.Currency value.
+func ParseFinanceCurrency(value string) (string, error) {
+	return callScalarParse(scalarNameFinanceCurrency, value)
+}
+
+// NormalizeFinanceCurrency returns the canonical form of a Finance.Currency value without enforcing shape.
+func NormalizeFinanceCurrency(value string) (string, error) {
+	return callScalarNormalize(scalarNameFinanceCurrency, value)
+}
+
+// ValidateFinanceCurrency enforces the shape of a Finance.Currency value.
+func ValidateFinanceCurrency(value string) error {
+	return callScalarValidate(scalarNameFinanceCurrency, value)
+}
+
+func (v FinanceCurrency) String() string {
+	return string(v)
+}
+
+func (v FinanceCurrency) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v FinanceCurrency) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v FinanceCurrency) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates FinanceCurrency and returns whether validation passed along with any errors.
+func (v FinanceCurrency) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameFinanceCurrency, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v FinanceCurrency) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseFinanceMoney validates and returns the canonical form of a Finance.Money value.
 func ParseFinanceMoney(value string) (string, error) {
 	return callScalarParse(scalarNameFinanceMoney, value)
@@ -2649,6 +2803,38 @@ func (v FinanceMoney) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseFinanceSignedMoney validates and returns the canonical form of a Finance.SignedMoney value.
+func ParseFinanceSignedMoney(value string) (string, error) {
+	return callScalarParse(scalarNameFinanceSignedMoney, value)
+}
+
+// NormalizeFinanceSignedMoney returns the canonical form of a Finance.SignedMoney value without enforcing shape.
+func NormalizeFinanceSignedMoney(value string) (string, error) {
+	return callScalarNormalize(scalarNameFinanceSignedMoney, value)
+}
+
+// ValidateFinanceSignedMoney enforces the shape of a Finance.SignedMoney value.
+func ValidateFinanceSignedMoney(value string) error {
+	return callScalarValidate(scalarNameFinanceSignedMoney, value)
+}
+
+func (v FinanceSignedMoney) String() string {
+	return scalarStringValue(v)
+}
+
+// Validate validates FinanceSignedMoney and returns whether validation passed along with any errors.
+func (v FinanceSignedMoney) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameFinanceSignedMoney, scalarStringValue(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v FinanceSignedMoney) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseGenericBoolean validates and returns the canonical form of a Generic.Boolean value.
 func ParseGenericBoolean(value string) (string, error) {
 	return callScalarParse(scalarNameGenericBoolean, value)
@@ -2675,6 +2861,50 @@ func (v GenericBoolean) Validate() (bool, []ValidationError) {
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.
 func (v GenericBoolean) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseGenericDecimal validates and returns the canonical form of a Generic.Decimal value.
+func ParseGenericDecimal(value string) (string, error) {
+	return callScalarParse(scalarNameGenericDecimal, value)
+}
+
+// NormalizeGenericDecimal returns the canonical form of a Generic.Decimal value without enforcing shape.
+func NormalizeGenericDecimal(value string) (string, error) {
+	return callScalarNormalize(scalarNameGenericDecimal, value)
+}
+
+// ValidateGenericDecimal enforces the shape of a Generic.Decimal value.
+func ValidateGenericDecimal(value string) error {
+	return callScalarValidate(scalarNameGenericDecimal, value)
+}
+
+func (v GenericDecimal) String() string {
+	return string(v)
+}
+
+func (v GenericDecimal) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v GenericDecimal) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v GenericDecimal) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates GenericDecimal and returns whether validation passed along with any errors.
+func (v GenericDecimal) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameGenericDecimal, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GenericDecimal) ValidateRequired() (bool, []ValidationError) {
 	if scalarRequiredValueMissing(v) {
 		return false, []ValidationError{{Validator: "required", Message: "required field"}}
 	}

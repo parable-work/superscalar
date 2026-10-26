@@ -56,7 +56,7 @@ fn assert_agree(registry: &Registry, definitions: &Definitions) {
 fn builtin_definitions_agree_with_the_builtin_registry() {
     assert_agree(Registry::builtin(), Definitions::builtin());
     assert_agree(Registry::builtin(), Registry::builtin().definitions());
-    assert_eq!(Definitions::builtin().len(), 51);
+    assert_eq!(Definitions::builtin().len(), 54);
 }
 
 /// An extension set that exercises every arm of the lookups: a directive def,

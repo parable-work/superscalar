@@ -42,6 +42,12 @@ from .design_color import (  # noqa: E402,F401
     parse_design_color,
     validate_design_color,
 )
+from .generic_decimal import (  # noqa: E402,F401
+    normalize_generic_decimal,
+    parse_generic_decimal,
+    parse_generic_decimal_to_decimal,
+    validate_generic_decimal,
+)
 from .generic_json import (  # noqa: E402,F401
     normalize_generic_json,
     parse_generic_json,

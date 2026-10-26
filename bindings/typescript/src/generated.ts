@@ -64,8 +64,11 @@ export const VALID_SCALARS: readonly string[] = [
   "Design.Color",
   "Embedding.Vector",
   "File.SizeBytes",
+  "Finance.Currency",
   "Finance.Money",
+  "Finance.SignedMoney",
   "Generic.Boolean",
+  "Generic.Decimal",
   "Generic.Float64",
   "Generic.Int64",
   "Generic.JSON",
@@ -585,6 +588,38 @@ export function validateFileSizeBytes(value: unknown | null | undefined): Scalar
   return validateWithBackend("File.SizeBytes", value);
 }
 
+export type FinanceCurrency = string & { readonly __brand: "Finance.Currency" };
+function convertFinanceCurrencyValue(value: unknown | null): FinanceCurrency | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as FinanceCurrency;
+}
+export function parseFinanceCurrency(value: unknown): FinanceCurrency | null {
+  return convertFinanceCurrencyValue(coerceValue("Finance.Currency", value));
+}
+export function normalizeFinanceCurrency(value: unknown): FinanceCurrency | null {
+  return convertFinanceCurrencyValue(coerceValue("Finance.Currency", value));
+}
+export function parseFinanceCurrencyStrict(value: string): FinanceCurrency {
+  const parsed = convertFinanceCurrencyValue(backend.parse("Finance.Currency", value));
+  if (parsed === null) {
+    throw new Error("invalid Finance.Currency");
+  }
+  return parsed;
+}
+export function normalizeFinanceCurrencyStrict(value: string): FinanceCurrency {
+  const normalized = convertFinanceCurrencyValue(backend.normalize("Finance.Currency", value));
+  if (normalized === null) {
+    throw new Error("invalid Finance.Currency");
+  }
+  return normalized;
+}
+export function validateFinanceCurrency(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Finance.Currency", value);
+}
+
 export type FinanceMoney = number;
 function convertFinanceMoneyValue(value: unknown | null): FinanceMoney | null {
   if (value === null || value === undefined) {
@@ -629,6 +664,50 @@ export function validateFinanceMoney(value: unknown | null | undefined): ScalarV
   return validateWithBackend("Finance.Money", value);
 }
 
+export type FinanceSignedMoney = number;
+function convertFinanceSignedMoneyValue(value: unknown | null): FinanceSignedMoney | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as FinanceSignedMoney;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as FinanceSignedMoney;
+}
+export function parseFinanceSignedMoney(value: unknown): FinanceSignedMoney | null {
+  return convertFinanceSignedMoneyValue(coerceValue("Finance.SignedMoney", value));
+}
+export function normalizeFinanceSignedMoney(value: unknown): FinanceSignedMoney | null {
+  return convertFinanceSignedMoneyValue(coerceValue("Finance.SignedMoney", value));
+}
+export function parseFinanceSignedMoneyStrict(value: string): FinanceSignedMoney {
+  const parsed = convertFinanceSignedMoneyValue(backend.parse("Finance.SignedMoney", value));
+  if (parsed === null) {
+    throw new Error("invalid Finance.SignedMoney");
+  }
+  return parsed;
+}
+export function normalizeFinanceSignedMoneyStrict(value: string): FinanceSignedMoney {
+  const normalized = convertFinanceSignedMoneyValue(backend.normalize("Finance.SignedMoney", value));
+  if (normalized === null) {
+    throw new Error("invalid Finance.SignedMoney");
+  }
+  return normalized;
+}
+export function validateFinanceSignedMoney(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Finance.SignedMoney", value);
+}
+
 export type GenericBoolean = boolean;
 function convertGenericBooleanValue(value: unknown | null): GenericBoolean | null {
   if (value === null || value === undefined) {
@@ -659,6 +738,38 @@ export function normalizeGenericBooleanStrict(value: string): GenericBoolean {
 }
 export function validateGenericBoolean(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend("Generic.Boolean", value);
+}
+
+export type GenericDecimal = string & { readonly __brand: "Generic.Decimal" };
+function convertGenericDecimalValue(value: unknown | null): GenericDecimal | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as GenericDecimal;
+}
+export function parseGenericDecimal(value: unknown): GenericDecimal | null {
+  return convertGenericDecimalValue(coerceValue("Generic.Decimal", value));
+}
+export function normalizeGenericDecimal(value: unknown): GenericDecimal | null {
+  return convertGenericDecimalValue(coerceValue("Generic.Decimal", value));
+}
+export function parseGenericDecimalStrict(value: string): GenericDecimal {
+  const parsed = convertGenericDecimalValue(backend.parse("Generic.Decimal", value));
+  if (parsed === null) {
+    throw new Error("invalid Generic.Decimal");
+  }
+  return parsed;
+}
+export function normalizeGenericDecimalStrict(value: string): GenericDecimal {
+  const normalized = convertGenericDecimalValue(backend.normalize("Generic.Decimal", value));
+  if (normalized === null) {
+    throw new Error("invalid Generic.Decimal");
+  }
+  return normalized;
+}
+export function validateGenericDecimal(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Generic.Decimal", value);
 }
 
 export type GenericFloat64 = number;
@@ -2217,6 +2328,24 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWordsMatchPartial: false,
   },
   {
+    canonicalName: "Finance.Currency",
+    symbol: "FinanceCurrency",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 3,
+    minLength: 3,
+    pattern: "^[A-Z]{3}$",
+    hasValidator: true,
+    examples: ["USD", "EUR", "JPY"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
     canonicalName: "Finance.Money",
     symbol: "FinanceMoney",
     primitive: "Int",
@@ -2235,6 +2364,24 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWordsMatchPartial: false,
   },
   {
+    canonicalName: "Finance.SignedMoney",
+    symbol: "FinanceSignedMoney",
+    primitive: "Int",
+    tsType: "number",
+    format: "",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["-1250", "1000"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
     canonicalName: "Generic.Boolean",
     symbol: "GenericBoolean",
     primitive: "Bool",
@@ -2245,6 +2392,24 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     pattern: "",
     hasValidator: true,
     examples: ["true", "false"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+  },
+  {
+    canonicalName: "Generic.Decimal",
+    symbol: "GenericDecimal",
+    primitive: "String",
+    tsType: "string",
+    format: "decimal",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "^[+-]?[0-9]+(\\.[0-9]+)?$",
+    hasValidator: true,
+    examples: ["19.99", "-0.0425", "1000"],
     comparabilityClass: null,
     isSortable: true,
     caseInsensitive: false,

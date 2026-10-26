@@ -26,9 +26,9 @@ so `Identity.Slug` normalizes `ACME` to `acme` while `parse("ACME")` still
 fails. An input that is already valid is returned unchanged, which is why
 `Temporal.Quarter` keeps `Q1`.
 
-30 of the 48 built-ins are directive scalars, including `Auth.JWT`,
-`Identity.Slug`, `Network.IpAddress`, `Ordering.Rank`, `Temporal.Time`,
-`Text.Markdown` and `Version.SemVer`.
+34 of the 54 built-ins are directive scalars, including `Auth.JWT`,
+`Finance.SignedMoney`, `Identity.Slug`, `Network.IpAddress`, `Ordering.Rank`,
+`Temporal.Time`, `Text.Markdown` and `Version.SemVer`.
 
 Adding one is a registry entry plus conformance vectors; there is no module
 to write.
@@ -39,16 +39,18 @@ Tag `CustomLogic`. A deep scalar needs code beyond a pattern: `Design.Color`
 converts CSS colour syntax to RGBA, `Contact.PhoneNumber` parses phone
 numbers with a phone-number library, `Temporal.Duration` and
 `Temporal.DateTime` parse grammars, `Identity.UUID` accepts hyphenated and
-base62 forms and canonicalises to base62, `Temporal.RecurrenceRule` parses
-recurrence rules. The rule lives in one Rust module under
+base62 forms and canonicalises to base62, `Generic.Decimal` rewrites a decimal
+number to its one canonical text, `Temporal.RecurrenceRule` parses recurrence
+rules. The rule lives in one Rust module under
 `crates/core/src/scalars/`, implemented once and called by every binding.
 
-18 of the 48 built-ins are deep scalars: `Contact.Email`,
-`Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Generic.JSON`,
-`Generic.StringMap`, `Geo.Location`, `Git.PathPattern`, `Identity.UUID`,
-`Identity.UserID` (an alias of `Identity.UUID`), `Network.Url`,
-`Network.DnsLabel`, `Temporal.Date`, `Temporal.DateTime`, `Temporal.Duration`,
-`Temporal.Month`, `Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
+20 of the 54 built-ins are deep scalars: `Contact.Email`,
+`Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Finance.Currency`,
+`Generic.Decimal`, `Generic.JSON`, `Generic.StringMap`, `Geo.Location`,
+`Git.PathPattern`, `Identity.UUID`, `Identity.UserID` (an alias of
+`Identity.UUID`), `Network.Url`, `Network.DnsLabel`, `Temporal.Date`,
+`Temporal.DateTime`, `Temporal.Duration`, `Temporal.Month`,
+`Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
 
 A deep scalar whose value is JSON keeps the `String` primitive, because its
 input and canonical form are JSON text, and declares the value's shape in

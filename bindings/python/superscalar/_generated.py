@@ -15,8 +15,11 @@ VALID_SCALARS = (
     "Design.Color",
     "Embedding.Vector",
     "File.SizeBytes",
+    "Finance.Currency",
     "Finance.Money",
+    "Finance.SignedMoney",
     "Generic.Boolean",
+    "Generic.Decimal",
     "Generic.Float64",
     "Generic.Int64",
     "Generic.JSON",
@@ -166,6 +169,14 @@ SCALAR_METADATA = {
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
     },
+    "Finance.Currency": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
     "Finance.Money": {
         "comparability_class": None,
         "is_sortable": True,
@@ -174,7 +185,23 @@ SCALAR_METADATA = {
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
     },
+    "Finance.SignedMoney": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
     "Generic.Boolean": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+    },
+    "Generic.Decimal": {
         "comparability_class": None,
         "is_sortable": True,
         "case_insensitive": False,
@@ -634,6 +661,15 @@ def normalize_file_size_bytes(value: str) -> str:
 def validate_file_size_bytes(value: str) -> None:
     _native.validate("File.SizeBytes", value)
 
+def parse_finance_currency(value: str) -> str:
+    return _native.parse("Finance.Currency", value)
+
+def normalize_finance_currency(value: str) -> str:
+    return _native.normalize("Finance.Currency", value)
+
+def validate_finance_currency(value: str) -> None:
+    _native.validate("Finance.Currency", value)
+
 def parse_finance_money(value: str) -> str:
     return _native.parse("Finance.Money", value)
 
@@ -643,6 +679,15 @@ def normalize_finance_money(value: str) -> str:
 def validate_finance_money(value: str) -> None:
     _native.validate("Finance.Money", value)
 
+def parse_finance_signed_money(value: str) -> str:
+    return _native.parse("Finance.SignedMoney", value)
+
+def normalize_finance_signed_money(value: str) -> str:
+    return _native.normalize("Finance.SignedMoney", value)
+
+def validate_finance_signed_money(value: str) -> None:
+    _native.validate("Finance.SignedMoney", value)
+
 def parse_generic_boolean(value: str) -> str:
     return _native.parse("Generic.Boolean", value)
 
@@ -651,6 +696,15 @@ def normalize_generic_boolean(value: str) -> str:
 
 def validate_generic_boolean(value: str) -> None:
     _native.validate("Generic.Boolean", value)
+
+def parse_generic_decimal(value: str) -> str:
+    return _native.parse("Generic.Decimal", value)
+
+def normalize_generic_decimal(value: str) -> str:
+    return _native.normalize("Generic.Decimal", value)
+
+def validate_generic_decimal(value: str) -> None:
+    _native.validate("Generic.Decimal", value)
 
 def parse_generic_float64(value: str) -> str:
     return _native.parse("Generic.Float64", value)

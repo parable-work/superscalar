@@ -139,6 +139,36 @@ bump they require (minor when loosening, major when tightening).
   `normalize` trims, and lenient coercion keeps a JSON bool and reads a
   trimmed, case-insensitive `"true"`/`"false"` string. New scalars only, so
   a minor bump. Carried from parable-platform PR #8155 (PARABLE-5698).
+- Scalar: `Finance.Currency`, an ISO 4217 alphabetic currency code that the
+  maintenance agency's List One (published 2026-09-17, 178 codes) carries.
+  Exactly three uppercase ASCII letters; lowercase and whitespace are refused,
+  not canonicalized, and withdrawn codes (List Three, such as `HRK` and
+  `BGN`) are refused with `enum`. SQL `VARCHAR(3)`. Rust gets each code's
+  minor-unit exponent from `scalars::finance_currency::{lookup, minor_units}`
+  (USD 2, JPY 0, BHD 3, CLF 4, `None` for N.A. codes such as XAU); the
+  scalar's docstring and reference page list the exceptions to 2. A new
+  scalar, so a minor bump. A later list that adds a code is a minor bump;
+  one that withdraws a code is a major bump.
+- Scalar: `Finance.SignedMoney`, `Finance.Money` with a sign, for ledger
+  lines whose debits are negative. An integer in the smallest currency unit
+  from -(2^53 - 1) to 2^53 - 1, SQL `BIGINT`, a directive scalar like
+  `Finance.Money` (whitespace trimmed, leading zeros and a `+` dropped,
+  `-0` is `0`). A new scalar, so a minor bump.
+- Scalar: `Generic.Decimal`, an exact decimal number carried as a string,
+  SQL `NUMERIC` (a schema toolchain narrows it per column to
+  `NUMERIC(p,s)`). Accepts an optional sign, ASCII digits and an optional
+  fraction, trimming surrounding whitespace; the canonical form drops a `+`,
+  leading zeros and trailing fraction zeros, and writes zero as `0` (`1.50`
+  is `1.5`, `-0.00` is `0`). Refuses exponents, `NaN` and `Infinity`, a bare
+  point (`.5`, `5.`), digit grouping and non-ASCII digits, with `pattern`;
+  empty input fails with `empty`. Format hint `decimal`. Type mappings: TS
+  `string`, Go `string`, Python `decimal.Decimal`, Rust
+  `superscalar::Decimal`, a new canonical-text newtype with string serde. The
+  Go `GenericDecimal` implements `sql.Scanner` and `driver.Valuer` through
+  the core, so a `NUMERIC(5,2)` read of `1.50` scans as `1.5`. The Python
+  `generic_decimal` functions take text or a `decimal.Decimal`, and
+  `parse_generic_decimal_to_decimal` returns one. A new scalar, so a minor
+  bump.
 
 ### Changed
 
