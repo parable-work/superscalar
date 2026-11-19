@@ -141,6 +141,11 @@ pub struct ImageConstraints {
 /// Which hooks generated schema runtimes must delegate to the core instead of
 /// running primitive-only behaviour. Data on the def, read by codegen; it does
 /// not change how the core dispatches.
+///
+/// A scalar whose hand-written impl refuses a value its directives accept
+/// sets `validate`. `tests/generated_validator_delegation.rs` fails for a
+/// custom built-in that neither sets it nor is in that test's exemption
+/// table.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct ScalarHooks {
     pub parse: bool,

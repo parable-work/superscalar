@@ -401,6 +401,15 @@ bump they require (minor when loosening, major when tightening).
   cycle, a `Set`) as `undefined`; `validateGenericJSON` rejects such inputs.
   A breaking change for TypeScript callers of those wrappers. `Generic.JSON`
   and `Git.PathPattern` set the `validate` hook.
+- `Temporal.Date`, `Temporal.Month`, `Temporal.QuarterYear` and
+  `Temporal.RecurrenceRule` set the `validate` hook. Each has a hand-written
+  validator and declares no pattern or bound, so its declarative rules accept
+  any string (`2026-02-30`, month `13`), and a schema runtime generated from
+  the defs must call the core validator for them. The Go metadata rows have
+  `HasCustomValidate` true and the registry dump shows the hook. A new core
+  test, `generated_validator_delegation`, holds every built-in to the rule: a
+  custom scalar sets the hook or is listed there with the reason it does not
+  need it. No accept-set change and no vector change.
 - `Generic.StringMap` sets the `parse` hook, so a generated schema runtime
   hands its value to the core parser. The TypeScript strict wrappers decode
   the core's canonical JSON into a `Record<string, string>` instead of

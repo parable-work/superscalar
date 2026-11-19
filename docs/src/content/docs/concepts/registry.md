@@ -51,6 +51,13 @@ Each `ScalarDef` records, among other fields:
   [comparability and sortability](/superscalar/concepts/comparability-and-sortability/).
 - `file_upload` and `image_constraints`, optional limits a structural scalar
   may declare. No built-in sets them; the fields exist so an extension can.
+- `hooks`, three flags (`parse`, `normalize`, `validate`) for a schema
+  runtime that is generated from the definitions. A set flag tells that
+  runtime to call the core for the step instead of applying the declarative
+  rules alone. A hand-written scalar that refuses a value its declarative
+  rules accept sets `validate`; a core test holds every built-in to that.
+  The flags do not change how the core or the bindings in this repository
+  dispatch.
 - `large_text`, true when a value of the scalar is likely large, the way SQL
   `TEXT` differs from `VARCHAR(n)`. It states size, not prose: the built-in
   members are `Text.Markdown` and `Text.Sql`. A member declares no
