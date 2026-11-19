@@ -332,6 +332,27 @@ fn coerce_lenient_trims_a_money_string_and_frees() {
 }
 
 #[test]
+fn coerce_lenient_keeps_a_generic_json_string_and_reads_object_text() {
+    // The value comes back as Generic.JSON's canonical text, encoded as a
+    // JSON document. A plain string stays a quoted JSON string; a string
+    // holding an object's JSON text is that object.
+    let id = cstr(names::GENERIC_JSON);
+    for (input, expected) in [
+        (r#""Draft""#, r#""\"Draft\"""#),
+        (r#""{\"a\": 1}""#, r#""{\"a\":1}""#),
+    ] {
+        let result = unsafe { scalar_coerce_lenient(id.as_ptr(), cstr(input).as_ptr()) };
+        assert!(result.ok, "{input} should coerce");
+        let got = unsafe { CStr::from_ptr(result.value.str_ptr) }
+            .to_str()
+            .unwrap()
+            .to_string();
+        unsafe { scalar_result_free(result) };
+        assert_eq!(got, expected, "{input}");
+    }
+}
+
+#[test]
 fn coerce_lenient_reports_a_bad_date_as_error() {
     let id = cstr(names::TEMPORAL_DATE);
     let input = cstr("\"not-a-date\"");

@@ -312,6 +312,15 @@ impl ScalarDef {
         json_shape_is_sortable(self.json_schema_type)
     }
 
+    /// Whether a value of this scalar may be any JSON value, a JSON string
+    /// included (`Generic.JSON`). Its text is a value's JSON encoding, so
+    /// lenient coercion keeps a string value quoted, unless the string holds
+    /// an object's or array's JSON text. Reads `json_schema_type` and nothing
+    /// else: `"any"` is the declared shape of such a scalar.
+    pub fn holds_any_json(&self) -> bool {
+        self.json_schema_type == "any"
+    }
+
     /// The generated-binding symbol for this scalar (`symbol_from_canonical`).
     pub fn symbol(&self) -> String {
         symbol_from_canonical(self.canonical)

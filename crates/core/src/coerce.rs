@@ -133,7 +133,11 @@ impl Registry {
     ///   `Int` and `Float` parse the numeric value (range-checked by the
     ///   scalar's `validate`), `Bool` reads a JSON bool or a
     ///   `"true"`/`"false"` string, while `String` and `Type` run the
-    ///   scalar's `parse` to get the canonical string.
+    ///   scalar's `parse` to get the canonical string. The scalar parses a
+    ///   JSON string's contents, except for a scalar whose value may be any
+    ///   JSON value ([`ScalarDef::holds_any_json`], `Generic.JSON`): there a
+    ///   string stays a JSON string unless it holds an object's or array's
+    ///   JSON text.
     ///
     /// A caller that coerces many values of one scalar resolves it once with
     /// [`Registry::lenient_coercer`]; this form looks the name up per call.
@@ -195,11 +199,12 @@ impl LenientCoercer<'_> {
         if value.is_null() {
             return LenientCoerceResult::null();
         }
-        let (registry, scalar, scalar_name) = (self.registry, self.scalar, self.def.canonical);
+        let (registry, scalar, def) = (self.registry, self.scalar, self.def);
+        let scalar_name = def.canonical;
         match self.def.metadata_primitive {
             "Int" => coerce_lenient_int(registry, scalar, value, scalar_name),
             "Float" => coerce_lenient_float(registry, scalar, value, scalar_name),
-            "String" | "Type" => coerce_lenient_string(registry, scalar, value),
+            "String" | "Type" => coerce_lenient_string(registry, scalar, def, value),
             "Bool" => match coerce_bool(value, false) {
                 Some(flag) => LenientCoerceResult::ok(Value::Bool(flag)),
                 None => LenientCoerceResult::failed(ScalarError::new(
@@ -264,16 +269,44 @@ fn coerce_lenient_float(
 fn coerce_lenient_string(
     registry: &Registry,
     scalar: &dyn Scalar,
+    def: &ScalarDef,
     value: &Value,
 ) -> LenientCoerceResult {
-    match scalar.parse(registry, &value_text(value)) {
+    let parsed = if def.holds_any_json() {
+        parse_any_json(registry, scalar, value)
+    } else {
+        scalar.parse(registry, &value_text(value))
+    };
+    match parsed {
         Ok(canonical) => LenientCoerceResult::ok(Value::String(canonical)),
         Err(error) => LenientCoerceResult::failed(error),
     }
 }
 
+/// The canonical text of a scalar whose value may be any JSON value
+/// (`Generic.JSON`), so a JSON string is a value of its own. A string that
+/// holds the JSON text of an object or array is read as that text: some SQL
+/// APIs deliver a structured cell as a string of its JSON. Any other string,
+/// or one whose text does not parse, keeps its quotes, so `"Draft"` and `"17"`
+/// stay strings instead of failing the parser or becoming a number.
+fn parse_any_json(
+    registry: &Registry,
+    scalar: &dyn Scalar,
+    value: &Value,
+) -> Result<String, ScalarError> {
+    if let Value::String(raw) = value {
+        if raw.trim_start().starts_with(['{', '[']) {
+            if let Ok(canonical) = scalar.parse(registry, raw) {
+                return Ok(canonical);
+            }
+        }
+    }
+    scalar.parse(registry, &value.to_string())
+}
+
 /// The text a scalar parses: a JSON string as it is, borrowed rather than
-/// copied, and any other value in its JSON form.
+/// copied, and any other value in its JSON form. A scalar whose value may be
+/// any JSON value reads a string through [`parse_any_json`] instead.
 fn value_text(value: &Value) -> Cow<'_, str> {
     match value {
         Value::String(raw) => Cow::Borrowed(raw),
@@ -358,6 +391,70 @@ mod tests {
         assert!(coerce_lenient(&json!("abc"), "Generic.Float64")
             .error
             .is_some());
+    }
+
+    // A Generic.JSON value is any JSON value, and its canonical form is that
+    // value's JSON text. A string stays a quoted JSON string, even one that
+    // reads as a number, a boolean, null or a quoted string, unless it holds
+    // an object's or array's JSON text, which some SQL APIs deliver for a
+    // structured cell.
+    #[test]
+    fn generic_json_keeps_strings_and_reads_container_text() {
+        let coercer = Registry::builtin()
+            .lenient_coercer("Generic.JSON")
+            .expect("built-in");
+        for (value, canonical) in [
+            (json!("Draft"), r#""Draft""#),
+            (json!("2026-08-15"), r#""2026-08-15""#),
+            (json!("007AbCd000012XyZ"), r#""007AbCd000012XyZ""#),
+            (json!("0042"), r#""0042""#),
+            (json!("123"), r#""123""#),
+            (json!("true"), r#""true""#),
+            (json!("null"), r#""null""#),
+            (json!(r#""Draft""#), r#""\"Draft\"""#),
+            (json!(""), r#""""#),
+            (
+                json!("line\nbreak \"q\" caf\u{e9}"),
+                "\"line\\nbreak \\\"q\\\" caf\u{e9}\"",
+            ),
+            (json!("[Draft]"), r#""[Draft]""#),
+            (json!("{not json"), r#""{not json""#),
+            (json!(r#"{"email":"a@b.com"}"#), r#"{"email":"a@b.com"}"#),
+            (json!(r#"{"b":2,"a":1}"#), r#"{"b":2,"a":1}"#),
+            (json!(r#" [1, "two"] "#), r#"[1,"two"]"#),
+            (json!(42), "42"),
+            (json!(1.5), "1.5"),
+            (json!(false), "false"),
+            (
+                json!({"b": [1, "two"], "a": null}),
+                r#"{"b":[1,"two"],"a":null}"#,
+            ),
+            (json!([1, "two"]), r#"[1,"two"]"#),
+        ] {
+            let expected = LenientCoerceResult::ok(json!(canonical));
+            assert_eq!(coercer.coerce(&value), expected, "{value}");
+            assert_eq!(coerce_lenient(&value, "Generic.JSON"), expected, "{value}");
+        }
+        assert_eq!(coercer.coerce(&Value::Null), LenientCoerceResult::null());
+        assert!(crate::registry::scalar_def("Generic.JSON").holds_any_json());
+    }
+
+    // An object-shaped scalar has no string values, so it still reads a
+    // string as its JSON text and refuses one that is not. Only a scalar
+    // whose value may be any JSON value keeps a string.
+    #[test]
+    fn object_shaped_scalar_reads_a_string_as_json_text() {
+        assert!(!crate::registry::scalar_def("Generic.StringMap").holds_any_json());
+        assert_eq!(
+            coerce_lenient(&json!(r#"{"a": "b"}"#), "Generic.StringMap"),
+            LenientCoerceResult::ok(json!(r#"{"a":"b"}"#))
+        );
+        let refused = coerce_lenient(&json!("Draft"), "Generic.StringMap");
+        assert_eq!(refused.value, None);
+        assert_eq!(
+            refused.error.map(|error| error.kind),
+            Some(ErrorKind::Parse)
+        );
     }
 
     #[test]
@@ -509,7 +606,8 @@ mod tests {
     /// Every assembled scalar coerces every JSON kind to a result, and the
     /// resolved coercer agrees with the name-keyed path. Each kind reaches a
     /// different primitive path; objects and arrays are what `Generic.JSON`
-    /// and `Geo.Location` columns carry.
+    /// and `Geo.Location` columns carry. A null input yields neither a value
+    /// nor an error; any other input yields exactly one of the two.
     #[test]
     fn no_scalar_panics_on_any_json_kind() {
         let registry = registry_with_metadata_omitted_scalar();
@@ -533,9 +631,18 @@ mod tests {
             let coercer = registry.lenient_coercer(name).expect("assembled name");
             assert_eq!(coercer.scalar_name(), name);
             for value in &values {
+                let coerced = coercer.coerce(value);
+                if value.is_null() {
+                    assert_eq!(coerced, LenientCoerceResult::null(), "{name}");
+                } else {
+                    assert!(
+                        coerced.value.is_some() != coerced.error.is_some(),
+                        "{name} on {value}: {coerced:?}"
+                    );
+                }
                 assert_eq!(
-                    coercer.coerce(value),
                     registry.coerce_lenient(value, name),
+                    coerced,
                     "{name} {value}"
                 );
             }

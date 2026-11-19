@@ -246,6 +246,25 @@ bump they require (minor when loosening, major when tightening).
   - Conformance: 14 accepted and 20 rejected vectors are added
     (`user@example.c` moves from rejected to accepted), and the three other
     `pattern` rejections become `parse`.
+- Lenient coercion of `Generic.JSON` keeps a JSON string as a string. The
+  coerced value is the canonical JSON text of the input, so the string
+  `Draft` gives `"Draft"` (it failed with `parse`) and the string `123` gives
+  `"123"` (it gave the number `123`); `true`, `null` and an already quoted
+  string stay strings the same way. One exception stays: a string that holds
+  the JSON text of an object or array is read as that object or array, since
+  some SQL APIs deliver a structured cell that way, and a string that starts
+  like one but does not parse (`{not json`) stays a string. The rule applies
+  to every scalar whose def declares `json_schema_type: "any"`, which the new
+  `ScalarDef::holds_any_json()` reports; `Generic.JSON` is the only built-in.
+  `Generic.StringMap` and the other object-shaped scalars still read a string
+  as JSON text. A caller that relied on a numeric string becoming a JSON
+  number sees a different value, so this is a breaking change to
+  `coerce_lenient`. No scalar's parse, normalize or validate changes and no
+  vector changes.
+- Go: `GenericJSON.UnmarshalJSON` stores the compact form of the token, as
+  `Scan` already did, so a value holds the same bytes whether it was decoded
+  from a JSON document or scanned from a column. It kept the token's
+  whitespace before.
 - A scalar's canonical name is its only identity; numeric scalar ids are
   gone. Every C ABI entry point takes the name where it took a `uint32_t`
   (`scalar_parse(const char *scalar, const char *input)` and the other eight),

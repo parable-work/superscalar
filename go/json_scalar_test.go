@@ -101,6 +101,21 @@ func TestGenericJSON_AllRootsAndPresence(t *testing.T) {
 	assert.Equal(t, "required", errors[0].Validator)
 }
 
+func TestGenericJSON_DecodeHoldsTheBytesAScanHolds(t *testing.T) {
+	// Postgres prints a jsonb value with a space after each colon and comma.
+	stored := `{"$defs": {}, "allOf": [{"type": "null"}], "note": "a < b & c", "n": 1.50}`
+	var scanned GenericJSON
+	require.NoError(t, scanned.Scan([]byte(stored)))
+
+	var decoded struct {
+		Schema GenericJSON `json:"schema"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(`{"schema": `+stored+`}`), &decoded))
+
+	assert.Equal(t, string(scanned), string(decoded.Schema))
+	assert.Equal(t, `{"$defs":{},"allOf":[{"type":"null"}],"note":"a < b & c","n":1.50}`, string(decoded.Schema))
+}
+
 func TestGenericJSON_SQLScanAndValuePreserveNull(t *testing.T) {
 	for _, root := range []string{`{"k":1}`, `[1,2]`, `"text"`, `42`, `true`, `null`} {
 		var value GenericJSON

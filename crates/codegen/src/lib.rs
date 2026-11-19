@@ -212,7 +212,7 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 canonical_literal: canonical_literal.clone(),
                 is_object,
                 has_json_parse: def.hooks.parse && def.json_schema_type == "object",
-                allows_json_null: def.json_schema_type == "any",
+                allows_json_null: def.holds_any_json(),
                 is_metadata_alias: is_object && !go_type.starts_with("struct{"),
                 is_alias_member,
                 include_metadata: !def.metadata_omit,

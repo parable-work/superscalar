@@ -16,18 +16,22 @@ func (v GenericJSON) MarshalJSON() ([]byte, error) {
 	return []byte(v), nil
 }
 
-// UnmarshalJSON accepts any valid JSON token (object, array, string, etc.).
+// UnmarshalJSON accepts any valid JSON token (object, array, string, etc.)
+// and keeps it compact, as Scan does. A value then holds the same bytes
+// whether it came from a column or from a JSON document, such as a jsonb
+// column that holds it, so a digest or a compare of its bytes cannot depend on
+// the path that read it.
 func (v *GenericJSON) UnmarshalJSON(data []byte) error {
 	if v == nil {
 		return nil
 	}
 
-	var raw json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, data); err != nil {
 		return err
 	}
 
-	*v = GenericJSON(append([]byte(nil), raw...))
+	*v = GenericJSON(append([]byte(nil), compact.Bytes()...))
 	return nil
 }
 
