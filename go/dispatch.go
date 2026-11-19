@@ -24,7 +24,7 @@ func KnownScalar(canonical string) bool {
 
 // Validate runs the core validator for the named canonical scalar over value. It
 // returns nil when value is a valid instance of the scalar, a validation error
-// (the core's message, e.g. "pattern: invalid email format") when it is not, and
+// (the core's message, e.g. "parse: invalid email address") when it is not, and
 // an error wrapping [ErrUnknownScalar] when canonical is not a known scalar.
 //
 // This is the generic, name-keyed entry point onto the same FFI surface the

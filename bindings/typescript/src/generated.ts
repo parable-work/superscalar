@@ -2191,7 +2191,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     format: "",
     maxLength: 255,
     minLength: 0,
-    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+    pattern: "",
     hasValidator: true,
     examples: ["test@example.com"],
     comparabilityClass: null,

@@ -62,9 +62,11 @@ toolchain that sees one treats the value as a string. `Generic.StringMap` and
 value to the core and decodes the canonical JSON it returns into a native
 object.
 
-A deep scalar may still declare a `pattern` in its definition. `Contact.Email`
+A deep scalar may still declare a `pattern` in its definition. `Identity.UUID`
 does; the pattern documents the shape and feeds the generated reference,
-while the module decides acceptance.
+while the module decides acceptance. A deep scalar whose grammar no regex
+states declares none: `Contact.Email` is parsed by the `email_address` crate
+(RFC 5321, RFC 5322 and RFC 6531), so its definition has no `pattern`.
 
 Assembly enforces the tag: a `CustomLogic` definition with no registered
 implementation fails, and a `PatternOnly` definition with one also fails.

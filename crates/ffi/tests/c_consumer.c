@@ -21,7 +21,7 @@ int main(void) {
 
   ScalarResult bad = scalar_parse(SCALAR_CONTACT_EMAIL, "not-an-email");
   assert(!bad.ok);
-  assert(bad.error_category == ErrorCategory_Pattern);
+  assert(bad.error_category == ErrorCategory_Parse);
   assert(bad.error != NULL);
   scalar_result_free(bad);
 

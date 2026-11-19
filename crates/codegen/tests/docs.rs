@@ -55,7 +55,10 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
     assert!(email.contains("| SQL type | `CITEXT` |"));
     assert!(email.contains("| JSON Schema type | `string` |"));
     assert!(email.contains("| Max length | 255 |"));
-    assert!(email.contains("| Pattern | `"));
+    assert!(
+        !email.contains("| Pattern |"),
+        "the parser decides the shape, so the def declares no pattern"
+    );
     assert!(
         email.contains("- `test@example.com`"),
         "examples from the def"
@@ -65,7 +68,7 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
         "accepted vectors from the corpus"
     );
     assert!(
-        email.contains("| `not-an-email` | pattern |"),
+        email.contains("| `not-an-email` | parse |"),
         "rejected vectors from the corpus"
     );
     assert!(email.contains("`ParseContactEmail`, `NormalizeContactEmail`, `ValidateContactEmail`"));

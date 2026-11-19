@@ -177,7 +177,10 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         metadata_primitive: "String",
         json_schema_type: "string",
         tag: ScalarTag::CustomLogic,
-        pattern: Some("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"),
+        // The `email_address` crate parses the address by RFC 5321, RFC 5322
+        // and RFC 6531 (see crates/core/src/scalars/email.rs). No regex states
+        // that grammar, so the def declares no pattern.
+        pattern: None,
         min_length: None,
         max_length: Some(255),
         minimum: None,

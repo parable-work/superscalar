@@ -217,6 +217,35 @@ bump they require (minor when loosening, major when tightening).
     order, number spelling, negative zero, and the refusals above. Two new
     core tests keep definitions honest: a JSON-valued scalar declares no
     `pattern` or length bounds, and every example parses to itself.
+- `Contact.Email` is parsed by the `email_address` crate (pinned `=0.2.9`,
+  RFC 5321, RFC 5322 and RFC 6531) instead of matched against a regex.
+  Breaking: the accept set loosens and tightens, the canonical form of some
+  inputs changes, and the error kind changes, a major bump.
+  - Newly accepted: every RFC 5322 atom character in the local part
+    (`o'brien@example.com`, `!#$%&'*+/=?^_`{|}~-@example.com`), letters
+    outside ASCII in either part, a punycode or one-letter top-level domain
+    (`user@example.xn--p1ai`, `user@example.c`) and an underscore in the
+    domain (`user@exam_ple.com`).
+  - Newly refused: a dot at the start or end of the local part or twice in a
+    row, a local part over 64 characters, a domain label that is empty or
+    that starts or ends with a hyphen, a trailing dot. A quoted local part,
+    display text (`Ana <ana@example.com>`), a comment and an address literal
+    (`ana@[192.0.2.1]`) stay refused; a domain still needs a top-level
+    domain.
+  - Canonical form: trimmed, lowercased, then Unicode NFC, so a letter
+    written as a base letter and a combining mark has one stored form. An
+    ASCII address is unchanged.
+  - Errors: a malformed address fails with `parse` (was `pattern`) and the
+    message `invalid email address: <reason>`, which never repeats the
+    input. The length check (255 characters) now runs first and fails with
+    `length`; an empty input still fails with `empty`.
+  - Definition: `pattern` is `None`, so the generated metadata tables carry
+    no pattern for the scalar and the Go binding no longer emits
+    `ContactEmailPattern`. The core gains the dependencies `email_address`
+    and `unicode-normalization`.
+  - Conformance: 14 accepted and 20 rejected vectors are added
+    (`user@example.c` moves from rejected to accepted), and the three other
+    `pattern` rejections become `parse`.
 - A scalar's canonical name is its only identity; numeric scalar ids are
   gone. Every C ABI entry point takes the name where it took a `uint32_t`
   (`scalar_parse(const char *scalar, const char *input)` and the other eight),

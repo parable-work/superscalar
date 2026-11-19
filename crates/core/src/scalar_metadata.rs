@@ -83,7 +83,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         format: None,
         max_length: Some(255),
         min_length: None,
-        pattern: Some("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"),
+        pattern: None,
         comparability_class: None,
         is_sortable: true,
         case_insensitive: true,

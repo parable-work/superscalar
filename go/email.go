@@ -31,7 +31,7 @@ func NormalizeAndValidateEmail(input string) (string, error) {
 	return callScalarParse(scalarNameContactEmail, input)
 }
 
-// Intentionally a no-op: the @scalarPattern directive on Contact_Email already runs the regex earlier, so duplicating it here would surface the same failure twice.
+// Intentionally a no-op. The schema runtime validates Contact.Email with the core parser and does not call this hook for a scalar that the core knows. A check here would report the same failure twice.
 func ValidateEmail(input string) []ValidationError {
 	return nil
 }

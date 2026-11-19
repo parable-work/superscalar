@@ -41,7 +41,7 @@ fn error_message(result: &ScalarResult) -> String {
 }
 
 #[test]
-fn parse_invalid_email_reports_pattern_error() {
+fn parse_invalid_email_reports_the_scalar_error() {
     let result = unsafe {
         scalar_parse(
             cstr(names::CONTACT_EMAIL).as_ptr(),
@@ -49,9 +49,9 @@ fn parse_invalid_email_reports_pattern_error() {
         )
     };
     assert!(!result.ok);
-    assert_eq!(result.error_category, ErrorCategory::Pattern);
+    assert_eq!(result.error_category, ErrorCategory::Parse);
     assert!(result.value.str_ptr.is_null());
-    assert!(error_message(&result).starts_with("pattern:"));
+    assert!(error_message(&result).starts_with("parse: invalid email address"));
     unsafe { scalar_result_free(result) };
 }
 

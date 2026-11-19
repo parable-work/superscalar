@@ -84,7 +84,7 @@ under `scalars`:
     { "input": " User@Example.COM ", "normalized": "user@example.com" }
   ],
   "rejected": [
-    { "input": "user@example", "validator": "pattern" },
+    { "input": "user@example", "validator": "parse" },
     { "input": "", "validator": "empty" }
   ]
 }

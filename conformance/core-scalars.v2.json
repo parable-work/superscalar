@@ -92,24 +92,156 @@
         {
           "input": "first.last@mail.example.com",
           "normalized": "first.last@mail.example.com"
+        },
+        {
+          "input": "o'brien@example.com",
+          "normalized": "o'brien@example.com"
+        },
+        {
+          "input": "D'Angelo@Example.com",
+          "normalized": "d'angelo@example.com"
+        },
+        {
+          "input": "ana+tag@example.co.uk",
+          "normalized": "ana+tag@example.co.uk"
+        },
+        {
+          "input": "!#$%&'*+/=?^_`{|}~-@example.com",
+          "normalized": "!#$%&'*+/=?^_`{|}~-@example.com"
+        },
+        {
+          "input": "a.b-c_d@sub-domain.example.com",
+          "normalized": "a.b-c_d@sub-domain.example.com"
+        },
+        {
+          "input": "User@Example.XN--P1AI",
+          "normalized": "user@example.xn--p1ai"
+        },
+        {
+          "input": "user@xn--80ak6aa92e.xn--p1ai",
+          "normalized": "user@xn--80ak6aa92e.xn--p1ai"
+        },
+        {
+          "input": "jos\u00e9@example.com",
+          "normalized": "jos\u00e9@example.com"
+        },
+        {
+          "input": "JOSE\u0301@example.com",
+          "normalized": "jos\u00e9@example.com"
+        },
+        {
+          "input": "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c@\u041f\u0440\u0438\u043c\u0435\u0440.\u0420\u0424",
+          "normalized": "\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c@\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444"
+        },
+        {
+          "input": "user@m\u00fcnchen.de",
+          "normalized": "user@m\u00fcnchen.de"
+        },
+        {
+          "input": "user@example.c",
+          "normalized": "user@example.c"
+        },
+        {
+          "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+          "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com"
+        },
+        {
+          "input": "user@exam_ple.com",
+          "normalized": "user@exam_ple.com"
         }
       ],
       "rejected": [
         {
+          "input": ".ana@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana.@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana..lopez@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@.example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@example..com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@example.com.",
+          "validator": "parse"
+        },
+        {
+          "input": "\"ana lopez\"@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "\"a@b\"@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@[192.0.2.1]",
+          "validator": "parse"
+        },
+        {
+          "input": "ana(comment)@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@@example.com",
+          "validator": "parse"
+        },
+        {
           "input": "not-an-email",
-          "validator": "pattern"
+          "validator": "parse"
         },
         {
           "input": "user@",
-          "validator": "pattern"
+          "validator": "parse"
         },
         {
           "input": "user@example",
-          "validator": "pattern"
+          "validator": "parse"
         },
         {
-          "input": "user@example.c",
-          "validator": "pattern"
+          "input": "Ana Lopez <ana@example.com>",
+          "validator": "parse"
+        },
+        {
+          "input": "<ana@example.com>",
+          "validator": "parse"
+        },
+        {
+          "input": "ana lopez@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "user@localhost",
+          "validator": "parse"
+        },
+        {
+          "input": "user@-example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "user@example-.com",
+          "validator": "parse"
+        },
+        {
+          "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@example.com\r\nBcc: ana@example.org",
+          "validator": "parse"
+        },
+        {
+          "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.example.com",
+          "validator": "length"
         },
         {
           "input": "",

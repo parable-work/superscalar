@@ -61,8 +61,8 @@ function and throws from the `Strict` one, and Rust returns
 spelling is pinned by a conformance vector. Two examples from the built-in corpus:
 
 - `Contact.Email`: `" User@Example.COM "` parses to `user@example.com`. The
-  input is trimmed and lower-cased; `user@example` and `user@example.c` are
-  rejected by the pattern.
+  input is trimmed and lower-cased; `user@example` is rejected, because the
+  domain needs a top-level domain.
 - `Identity.UUID`: `123e4567-e89b-12d3-a456-426614174000` parses to
   `YQJpYwUwvbaLOwTUr4thA`. The canonical form is a base62 encoding of the 128
   bits; the hyphenated form is accepted as input, and the nil UUID parses to

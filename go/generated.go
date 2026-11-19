@@ -463,7 +463,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		MinLength:                    0,
 		Maximum:                      nil,
 		Minimum:                      nil,
-		Pattern:                      "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+		Pattern:                      "",
 		HasCustomNormalize:           true,
 		HasCustomParse:               false,
 		HasCustomValidate:            true,
@@ -2029,7 +2029,6 @@ func patternForCanonical(canonical string) string {
 
 var AgentSkillNamePattern = ScalarPattern(patternForCanonical("AgentSkill.Name"))
 var AuthJWTPattern = ScalarPattern(patternForCanonical("Auth.JWT"))
-var ContactEmailPattern = ScalarPattern(patternForCanonical("Contact.Email"))
 var ContactPhoneNumberPattern = ScalarPattern(patternForCanonical("Contact.PhoneNumber"))
 var CryptoRSAPrivateKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPrivateKey"))
 var CryptoRSAPublicKeyPattern = ScalarPattern(patternForCanonical("Crypto.RSAPublicKey"))
