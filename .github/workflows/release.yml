@@ -379,8 +379,9 @@ jobs:
           cp "$DIST"/napi/*.node artifacts/
           npx napi artifacts -d artifacts
           # The napi CLI names the platform packages superscalar-<triple>; the
-          # published names are @superscalar/<triple> (the scope Clinton owns on
-          # npmjs.com), which is what src/native-addon.ts requires at runtime.
+          # published names are @superscalar/<triple> (the project's organization
+          # scope on npmjs.com), which is what src/native-addon.ts requires at
+          # runtime.
           # Rename them here, then make the main package depend on them at
           # exactly this version. Written at pack time, not committed, so a
           # checkout never asks npm for a platform package that is not
@@ -582,6 +583,10 @@ jobs:
     #   actions: npm publish as well as npm stage publish).
     # The @superscalar scope is an organization on npmjs.com that must exist
     # and be owned by the publisher before RELEASE_PUBLISH_ENABLED is set.
+    # npm only accepts a trusted publisher for a package that already exists,
+    # so the first version of each of the five is published by hand, and a
+    # new entry expires unless it publishes within two days: register the
+    # five no more than two days before the first tag that publishes.
     # npm generates provenance on its own for trusted publishing. Pre-releases
     # go to the `next` dist-tag, releases to `latest`.
     needs: [preflight, github-release]
@@ -644,7 +649,9 @@ jobs:
     #   owner: parable-work, repository name: superscalar,
     #   workflow name: release.yml, environment name: pypi
     # PyPI accepts a pending publisher for a project that does not exist yet;
-    # the first publish creates it. Pre-release versions (0.1.0a1 and the
+    # the first publish creates it. A pending publisher does not hold the
+    # name: if someone else registers the project first, the entry is void.
+    # Pre-release versions (0.1.0a1 and the
     # like) are ordinary uploads that pip skips unless asked for --pre.
     needs: [preflight, github-release]
     if: needs.preflight.outputs.dry_run == 'false' && vars.RELEASE_PUBLISH_ENABLED == 'true'
