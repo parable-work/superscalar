@@ -535,8 +535,15 @@ fn registry_with_a_mass_scalar() -> Registry {
 }
 
 // The two hooks carry a scalar's own answer and its own error across the
-// boundary, over the registry a downstream assembles.
+// boundary, over the registry a downstream assembles. Not run under miri: a
+// second registry assembly compiles every declared pattern again, which
+// doubles the interpreter's run, and the unsafe path here (`run`, the string
+// result, `free_result`) is the one the parse tests already prove.
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "assembles a second registry; the unsafe path is covered by the parse tests"
+)]
 fn magnitude_and_parts_return_an_extension_scalars_answer() {
     let registry = registry_with_a_mass_scalar();
     let mass = cstr("Acme.Mass");
