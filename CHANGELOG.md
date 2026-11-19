@@ -160,6 +160,10 @@ bump they require (minor when loosening, major when tightening).
   - Conformance: an accepted vector may state `magnitude` and `parts`. The
     acme example gives `Acme.ScalarRef` parts and checks them through C,
     napi, WASM and Python.
+- Core: `scalars::duration::Duration::nanos(input)` returns the signed length
+  of a `Temporal.Duration` value in nanoseconds, as an `i128`, from the same
+  parse the scalar normalizes with. It is for a caller that compares a length
+  instead of storing the text. No accept-set change.
 - Three built-in scalars for plain fields: `Generic.Text` (any string),
   `Generic.Float64` (any finite number) and `Generic.Boolean` (`true` or
   `false`). `Generic.Boolean` is the first scalar backed by the `Bool`
