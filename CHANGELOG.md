@@ -341,6 +341,12 @@ bump they require (minor when loosening, major when tightening).
   The accept set loosens, a minor bump. `Text.Sql` keeps `min_length` 1.
   `Text.Markdown` and `Text.Sql` each gain an accepted vector of over
   100,000 characters, which grows the corpus file to about 280 KB.
+- The shipped WebAssembly module is 2.3 MB, 0.73 MB gzipped (was 2.2 MB and
+  0.66 MB), and the browser bundle of a small site is 3.2 MB, 1.1 MB gzipped
+  (was 3.0 MB and 1.0 MB). The growth comes with the `Contact.Email`,
+  `Contact.PhoneNumber` and `Temporal.Time` changes in this section: the
+  email parser and the Unicode normalization tables are new code in the
+  core.
 - Lenient coercion of `Generic.JSON` keeps a JSON string as a string. The
   coerced value is the canonical JSON text of the input, so the string
   `Draft` gives `"Draft"` (it failed with `parse`) and the string `123` gives

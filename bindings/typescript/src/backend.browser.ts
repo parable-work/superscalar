@@ -5,7 +5,7 @@
 // synchronously at import, so every export works as soon as the import
 // resolves, as it does on the Node backend. Chrome allows synchronous
 // compilation on the main thread for modules up to 8 MB (since 2023; this one
-// is about 2.2 MB). A Content-Security-Policy must allow 'wasm-unsafe-eval'.
+// is about 2.3 MB). A Content-Security-Policy must allow 'wasm-unsafe-eval'.
 //
 // The package's `browser` condition resolves `.`, `./scalars`, `./validation`,
 // `./backend` and `./wasm` into dist/browser/, where scripts/build-web.mjs has
