@@ -3053,7 +3053,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     minLength: 0,
     pattern: "^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?|(?:0?[1-9]|1[0-2]):[0-5][0-9](?::[0-5][0-9])?\\s?[AaPp][Mm])$",
     hasValidator: true,
-    examples: ["12:25"],
+    examples: ["12:25:00"],
     comparabilityClass: null,
     isSortable: true,
     caseInsensitive: false,

@@ -82,5 +82,9 @@ pub(crate) fn impls() -> Vec<(&'static str, Box<dyn Scalar>)> {
             names::TEMPORAL_QUARTER_YEAR,
             Box::new(scalars::temporal_quarter_year::TemporalQuarterYear),
         ),
+        (
+            names::TEMPORAL_TIME,
+            Box::new(scalars::temporal_time::TemporalTime),
+        ),
     ]
 }

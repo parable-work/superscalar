@@ -26,9 +26,9 @@ so `Identity.Slug` normalizes `ACME` to `acme` while `parse("ACME")` still
 fails. An input that is already valid is returned unchanged, which is why
 `Temporal.Quarter` keeps `Q1`.
 
-34 of the 54 built-ins are directive scalars, including `Auth.JWT`,
+33 of the 54 built-ins are directive scalars, including `Auth.JWT`,
 `Finance.SignedMoney`, `Identity.Slug`, `Network.IpAddress`, `Ordering.Rank`,
-`Temporal.Time`, `Text.Markdown` and `Version.SemVer`.
+`Text.Markdown` and `Version.SemVer`.
 
 Adding one is a registry entry plus conformance vectors; there is no module
 to write.
@@ -44,13 +44,18 @@ number to its one canonical text, `Temporal.RecurrenceRule` parses recurrence
 rules. The rule lives in one Rust module under
 `crates/core/src/scalars/`, implemented once and called by every binding.
 
-20 of the 54 built-ins are deep scalars: `Contact.Email`,
+21 of the 54 built-ins are deep scalars: `Contact.Email`,
 `Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Finance.Currency`,
 `Generic.Decimal`, `Generic.JSON`, `Generic.StringMap`, `Geo.Location`,
 `Git.PathPattern`, `Identity.UUID`, `Identity.UserID` (an alias of
 `Identity.UUID`), `Network.Url`, `Network.DnsLabel`, `Temporal.Date`,
 `Temporal.DateTime`, `Temporal.Duration`, `Temporal.Month`,
-`Temporal.QuarterYear` and `Temporal.RecurrenceRule`.
+`Temporal.QuarterYear`, `Temporal.RecurrenceRule` and `Temporal.Time`.
+
+A deep scalar may borrow the generic validator and add only a canonical form.
+`Temporal.Time` does: its pattern decides which values are accepted, and its
+module rewrites an accepted value to 24-hour `HH:MM:SS`, so `1:05pm` and
+`1:05 PM` both parse to `13:05:00`.
 
 A deep scalar whose value is JSON keeps the `String` primitive, because its
 input and canonical form are JSON text, and declares the value's shape in

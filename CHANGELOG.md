@@ -292,6 +292,21 @@ bump they require (minor when loosening, major when tightening).
     reader checks it against a new hand-maintained expectation,
     `meta.large_text_scalars`. An extension corpus that carries `metadata`
     rows adds the field to each row.
+- `Temporal.Time` has one canonical form, 24-hour `HH:MM:SS`. Breaking: the
+  canonical form changes, a major bump.
+  - Canonical form: `parse` and `normalize` rewrite an accepted value to
+    `HH:MM:SS`: `12:25` is `12:25:00`, `1:05pm` and `1:05 PM` are `13:05:00`,
+    `12:00 AM` is `00:00:00` and `12:00 PM` is `12:00:00`. Before, the value
+    was returned as written, so one time of day had many stored forms, and a
+    strict time decoder refused some of them.
+  - Accept set: unchanged. The def keeps its pattern, and the scalar accepts
+    exactly the values the pattern accepts; a refused value still fails with
+    `pattern`, and `normalize` returns it as written.
+  - Definition: tag `CustomLogic` (was `PatternOnly`), served by
+    `scalars::temporal_time::TemporalTime`; the example is `12:25:00` and the
+    description states the canonical form. No hook is set.
+  - Conformance: the `12:25` vector now normalizes to `12:25:00`, and 17
+    accepted and 6 rejected vectors are added.
 - `Text.Markdown` accepts the empty string: its `min_length` is `None` (was
   1), as a large-text member declares no bound that refuses a value a source
   may hold. The vector for `""` moves from rejected (`length`) to accepted.

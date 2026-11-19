@@ -15,4 +15,5 @@ pub mod recurrence_rule;
 pub mod temporal_date;
 pub mod temporal_month;
 pub mod temporal_quarter_year;
+pub mod temporal_time;
 pub mod uuid_scalar;

@@ -1661,20 +1661,34 @@
     },
     "Temporal.Time": {
       "accepted": [
-        {
-          "input": "12:25",
-          "normalized": "12:25"
-        },
-        {
-          "input": "09:30:00",
-          "normalized": "09:30:00"
-        }
+        { "input": "12:25", "normalized": "12:25:00" },
+        { "input": "09:30:00", "normalized": "09:30:00" },
+        { "input": "00:00", "normalized": "00:00:00" },
+        { "input": "23:59:59", "normalized": "23:59:59" },
+        { "input": "1:05 PM", "normalized": "13:05:00" },
+        { "input": "1:05PM", "normalized": "13:05:00" },
+        { "input": "1:05 pm", "normalized": "13:05:00" },
+        { "input": "1:05pm", "normalized": "13:05:00", "note": "Some time decoders refuse 12-hour text with no space before AM/PM (Arrow's Time64 JSON decoder is one), so a consumer that reads the value with one needs this canonical form." },
+        { "input": "1:05 Pm", "normalized": "13:05:00" },
+        { "input": "01:05 AM", "normalized": "01:05:00" },
+        { "input": "01:05am", "normalized": "01:05:00" },
+        { "input": "1:05:30 PM", "normalized": "13:05:30" },
+        { "input": "1:05:30pm", "normalized": "13:05:30" },
+        { "input": "01:05:30am", "normalized": "01:05:30" },
+        { "input": "12:00 AM", "normalized": "00:00:00" },
+        { "input": "12:30:15am", "normalized": "00:30:15" },
+        { "input": "12:00 PM", "normalized": "12:00:00" },
+        { "input": "12:00pm", "normalized": "12:00:00" },
+        { "input": "11:59:59 PM", "normalized": "23:59:59" }
       ],
       "rejected": [
-        {
-          "input": "25:00",
-          "validator": "pattern"
-        }
+        { "input": "25:00", "validator": "pattern" },
+        { "input": "9:30", "validator": "pattern" },
+        { "input": "1:05", "validator": "pattern" },
+        { "input": "13:05 PM", "validator": "pattern" },
+        { "input": "0:30 AM", "validator": "pattern" },
+        { "input": "12:25:30.5", "validator": "pattern" },
+        { "input": " 12:25", "validator": "pattern" }
       ]
     },
     "Temporal.TimeZone": {
