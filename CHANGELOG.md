@@ -264,11 +264,11 @@ bump they require (minor when loosening, major when tightening).
     (`user@example.xn--p1ai`, `user@example.c`) and an underscore in the
     domain (`user@exam_ple.com`).
   - Newly refused: a dot at the start or end of the local part or twice in a
-    row, a local part over 64 characters, a domain label that is empty or
-    that starts or ends with a hyphen, a trailing dot. A quoted local part,
-    display text (`Ana <ana@example.com>`), a comment and an address literal
-    (`ana@[192.0.2.1]`) stay refused; a domain still needs a top-level
-    domain.
+    row, a local part over 64 characters, and a domain label that is empty or
+    that starts or ends with a hyphen. A quoted local part, display text
+    (`Ana <ana@example.com>`), a comment, an address literal
+    (`ana@[192.0.2.1]`) and a trailing dot stay refused; a domain still needs
+    a top-level domain.
   - Canonical form: trimmed, lowercased, then Unicode NFC, so a letter
     written as a base letter and a combining mark has one stored form. An
     ASCII address is unchanged.
@@ -336,9 +336,9 @@ bump they require (minor when loosening, major when tightening).
   - Conformance: the `12:25` vector now normalizes to `12:25:00`, and 17
     accepted and 6 rejected vectors are added.
 - `Text.Markdown` accepts the empty string: its `min_length` is `None` (was
-  1), as a large-text member declares no bound that refuses a value a source
-  may hold. The vector for `""` moves from rejected (`length`) to accepted.
-  The accept set loosens, a minor bump. `Text.Sql` keeps `min_length` 1.
+  1), so an empty Markdown value is valid. The vector for `""` moves from
+  rejected (`length`) to accepted. The accept set loosens, a minor bump.
+  `Text.Sql` keeps `min_length` 1.
   `Text.Markdown` and `Text.Sql` each gain an accepted vector of over
   100,000 characters, which grows the corpus file to about 280 KB.
 - The shipped WebAssembly module is 2.3 MB, 0.73 MB gzipped (was 2.2 MB and
