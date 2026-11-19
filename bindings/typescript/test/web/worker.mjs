@@ -7,7 +7,7 @@ import corpus from "../../../../conformance/core-scalars.v2.json";
 import * as api from "superscalar";
 import { backend } from "superscalar/backend";
 import { scalar_parse } from "superscalar/wasm";
-import { checkUnknownName, checkWrappers, runCorpus } from "../corpus-runner.cjs";
+import { checkMagnitudeAndParts, checkUnknownName, checkWrappers, runCorpus } from "../corpus-runner.cjs";
 
 export default {
   async test() {
@@ -30,6 +30,7 @@ export default {
       console.error("superscalar/wasm did not route through the core");
     }
     failures += checkUnknownName("workerd", backend);
+    failures += checkMagnitudeAndParts("workerd", backend);
     failures += runCorpus("workerd", backend, corpus);
     failures += checkWrappers(api);
     if (failures > 0) {

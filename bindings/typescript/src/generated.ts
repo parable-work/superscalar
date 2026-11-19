@@ -35,6 +35,8 @@ export interface ScalarMetadata {
   reservedWordsCaseInsensitive: boolean;
   /** The def's `reserved_words_match_partial` flag. */
   reservedWordsMatchPartial: boolean;
+  /** The def's `large_text` flag: a value of this scalar is likely large. */
+  largeText: boolean;
 }
 
 /**
@@ -2146,6 +2148,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: true,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Auth.JWT",
@@ -2164,6 +2167,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Auth.Password",
@@ -2182,6 +2186,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Contact.Email",
@@ -2191,7 +2196,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     format: "",
     maxLength: 255,
     minLength: 0,
-    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+    pattern: "",
     hasValidator: true,
     examples: ["test@example.com"],
     comparabilityClass: null,
@@ -2200,6 +2205,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Contact.PhoneNumber",
@@ -2218,6 +2224,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Crypto.RSAPrivateKey",
@@ -2236,6 +2243,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Crypto.RSAPublicKey",
@@ -2254,6 +2262,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Crypto.SHA256",
@@ -2272,6 +2281,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Design.Color",
@@ -2290,6 +2300,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Embedding.Vector",
@@ -2308,6 +2319,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "File.SizeBytes",
@@ -2326,6 +2338,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Finance.Currency",
@@ -2344,6 +2357,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Finance.Money",
@@ -2362,6 +2376,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Finance.SignedMoney",
@@ -2380,6 +2395,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.Boolean",
@@ -2398,6 +2414,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.Decimal",
@@ -2416,6 +2433,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.Float64",
@@ -2434,6 +2452,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.Int64",
@@ -2452,6 +2471,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.JSON",
@@ -2470,6 +2490,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.Probability",
@@ -2488,6 +2509,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.StringMap",
@@ -2506,6 +2528,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Generic.Text",
@@ -2524,6 +2547,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Geo.Location",
@@ -2542,6 +2566,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Git.PathPattern",
@@ -2560,6 +2585,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Identity.Name",
@@ -2578,6 +2604,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Identity.Slug",
@@ -2596,6 +2623,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Identity.UUID",
@@ -2614,6 +2642,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Identity.UserID",
@@ -2632,6 +2661,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Localization.Locale",
@@ -2650,6 +2680,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Network.DnsLabel",
@@ -2668,6 +2699,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Network.DomainName",
@@ -2686,6 +2718,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Network.IpAddress",
@@ -2704,6 +2737,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Network.Uri",
@@ -2722,6 +2756,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Network.Url",
@@ -2740,6 +2775,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Ordering.Rank",
@@ -2758,6 +2794,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.CronExpression",
@@ -2776,6 +2813,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Date",
@@ -2794,6 +2832,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.DateTime",
@@ -2812,6 +2851,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Days",
@@ -2830,6 +2870,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Duration",
@@ -2848,6 +2889,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Hours",
@@ -2866,6 +2908,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Milliseconds",
@@ -2884,6 +2927,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Minutes",
@@ -2902,6 +2946,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Month",
@@ -2920,6 +2965,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Quarter",
@@ -2938,6 +2984,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.QuarterYear",
@@ -2956,6 +3003,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.RecurrenceRule",
@@ -2974,6 +3022,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Seconds",
@@ -2992,6 +3041,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Time",
@@ -3003,13 +3053,14 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     minLength: 0,
     pattern: "^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?|(?:0?[1-9]|1[0-2]):[0-5][0-9](?::[0-5][0-9])?\\s?[AaPp][Mm])$",
     hasValidator: true,
-    examples: ["12:25"],
+    examples: ["12:25:00"],
     comparabilityClass: null,
     isSortable: true,
     caseInsensitive: false,
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.TimeZone",
@@ -3028,6 +3079,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Temporal.Year",
@@ -3046,6 +3098,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
   {
     canonicalName: "Text.Markdown",
@@ -3054,7 +3107,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     tsType: "string",
     format: "",
     maxLength: 0,
-    minLength: 1,
+    minLength: 0,
     pattern: "^[\\s\\S]*$",
     hasValidator: true,
     examples: ["## Hello, World!"],
@@ -3064,6 +3117,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: true,
   },
   {
     canonicalName: "Text.Sql",
@@ -3082,6 +3136,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: true,
   },
   {
     canonicalName: "Version.SemVer",
@@ -3100,6 +3155,7 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     reservedWords: [],
     reservedWordsCaseInsensitive: false,
     reservedWordsMatchPartial: false,
+    largeText: false,
   },
 ];
 

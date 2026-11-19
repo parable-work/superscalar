@@ -5,7 +5,8 @@ import (
 	"fmt"
 )
 
-// ErrUnknownScalar is returned by [Validate], [Parse], and [Normalize] when the
+// ErrUnknownScalar is returned by [Validate], [Parse], [Normalize], [Magnitude]
+// and [Parts] when the
 // canonical scalar name is not present in [VALID_SCALARS]. Callers that want
 // to branch on "is this scalar handled by the core" should prefer [KnownScalar]
 // over inspecting this error, but it is exported so the unknown case can be told
@@ -24,7 +25,7 @@ func KnownScalar(canonical string) bool {
 
 // Validate runs the core validator for the named canonical scalar over value. It
 // returns nil when value is a valid instance of the scalar, a validation error
-// (the core's message, e.g. "pattern: invalid email format") when it is not, and
+// (the core's message, e.g. "parse: invalid email address") when it is not, and
 // an error wrapping [ErrUnknownScalar] when canonical is not a known scalar.
 //
 // This is the generic, name-keyed entry point onto the same FFI surface the
@@ -57,6 +58,31 @@ func Normalize(canonical string, value string) (string, error) {
 		return "", fmt.Errorf("%w: %q", ErrUnknownScalar, canonical)
 	}
 	return callScalarNormalize(canonical, value)
+}
+
+// Magnitude returns the amount value states, in the named scalar's base unit,
+// as a decimal integer string: millicores for a CPU quantity, bytes for a
+// size. It is text so that an amount beyond 64 bits survives. It returns an
+// error wrapping [ErrUnknownScalar] when canonical is not a known scalar, and
+// the core's error for a value the scalar refuses or for a scalar that has no
+// magnitude. No built-in scalar has one; an extension's scalar may.
+func Magnitude(canonical string, value string) (string, error) {
+	if !KnownScalar(canonical) {
+		return "", fmt.Errorf("%w: %q", ErrUnknownScalar, canonical)
+	}
+	return callScalarMagnitude(canonical, value)
+}
+
+// Parts returns the parts of value for the named scalar as a JSON object
+// string, such as a machine tier's CPU count and memory. It returns an error
+// wrapping [ErrUnknownScalar] when canonical is not a known scalar, and the
+// core's error for a value the scalar refuses or for a scalar that has no
+// parts. No built-in scalar has parts; an extension's scalar may.
+func Parts(canonical string, value string) (string, error) {
+	if !KnownScalar(canonical) {
+		return "", fmt.Errorf("%w: %q", ErrUnknownScalar, canonical)
+	}
+	return callScalarParts(canonical, value)
 }
 
 // CoerceJSON validates one JSON value against the named scalar and returns the

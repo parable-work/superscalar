@@ -8,12 +8,16 @@
 the part of the generated scalar list a real binding ships. Every
 vector key must resolve in it, and every non-built-in scalar in it must have
 vectors, so a scalar added without vectors fails here. Vectors flagged
-`unresolved` are skipped, as the built-in runners skip them.
+`unresolved` are skipped, as the built-in runners skip them. An accepted
+vector may also state the value's `magnitude` (a decimal integer string) and
+its `parts` (a JSON object); each is checked through the binding's own entry
+point.
 
-The C backend spawns the consumer once per vector (`c_consumer <name> <input>`,
-exit 0 with the value on stdout, exit 1 on reject). The Python backend imports
-`_native` from `--module-dir`, the cdylib copied under an extension-module
-name, and calls `_native.parse`.
+The C backend spawns the consumer once per call (`c_consumer <hook> <name>
+<input>`, exit 0 with the answer on stdout, exit 1 on reject). The Python
+backend imports `_native` from `--module-dir`, the cdylib copied under an
+extension-module name, and calls `_native.parse`, `_native.magnitude` and
+`_native.parts`.
 """
 
 import argparse
@@ -36,9 +40,9 @@ def load_vectors(paths):
 
 
 def make_c_backend(consumer):
-    def parse(scalar, value):
+    def call(hook, scalar, value):
         proc = subprocess.run(
-            [consumer, scalar, value],
+            [consumer, hook, scalar, value],
             stdout=subprocess.PIPE,
             check=False,
         )
@@ -47,25 +51,50 @@ def make_c_backend(consumer):
             return True, out
         if proc.returncode == 1:
             return False, out
-        raise SystemExit(f"c_consumer exited {proc.returncode} for {scalar}: {out}")
+        raise SystemExit(f"c_consumer exited {proc.returncode} for {hook} {scalar}: {out}")
 
-    return parse
+    return call
 
 
 def make_python_backend(module_dir):
     sys.path.insert(0, module_dir)
     native = importlib.import_module("_native")
-    for name in ("parse", "normalize", "validate", "coerce_lenient"):
+    for name in ("parse", "normalize", "validate", "magnitude", "parts", "coerce_lenient"):
         if not hasattr(native, name):
             raise SystemExit(f"_native lacks {name}")
 
-    def parse(scalar, value):
+    def call(hook, scalar, value):
         try:
-            return True, native.parse(scalar, value)
+            return True, getattr(native, hook)(scalar, value)
         except ValueError as err:
             return False, str(err)
 
-    return parse
+    return call
+
+
+def check_extras(call, canonical, case):
+    """The failures of a vector's `magnitude` and `parts`, and how many it states."""
+    failures = []
+    stated = 0
+    if "magnitude" in case:
+        stated += 1
+        ok, got = call("magnitude", canonical, case["input"])
+        if not ok or got != case["magnitude"]:
+            failures.append(
+                f"{canonical} magnitude({case['input']!r}) = {got!r}, want {case['magnitude']!r}"
+            )
+    if "parts" in case:
+        stated += 1
+        ok, got = call("parts", canonical, case["input"])
+        try:
+            same = ok and json.loads(got) == case["parts"]
+        except json.JSONDecodeError:
+            same = False
+        if not same:
+            failures.append(
+                f"{canonical} parts({case['input']!r}) = {got!r}, want {case['parts']!r}"
+            )
+    return failures, stated
 
 
 def main() -> int:
@@ -85,11 +114,11 @@ def main() -> int:
     if args.backend == "c":
         if not args.c_consumer:
             parser.error("--c-consumer is required for the C backend")
-        parse = make_c_backend(args.c_consumer)
+        call = make_c_backend(args.c_consumer)
     else:
         if not args.module_dir:
             parser.error("--module-dir is required for the Python backend")
-        parse = make_python_backend(args.module_dir)
+        call = make_python_backend(args.module_dir)
 
     scalars = load_vectors(args.vectors)
     missing = sorted(assembled - set(scalars))
@@ -99,7 +128,7 @@ def main() -> int:
     if unknown:
         raise SystemExit(f"vectors for scalars the assembly does not know: {unknown}")
 
-    accepted = rejected = skipped = failures = 0
+    accepted = rejected = skipped = failures = extras = 0
     exercised_extension_scalars = set()
     for canonical, cases in sorted(scalars.items()):
         if owners[canonical] != "builtin":
@@ -108,7 +137,7 @@ def main() -> int:
             if case.get("unresolved"):
                 skipped += 1
                 continue
-            ok, got = parse(canonical, case["input"])
+            ok, got = call("parse", canonical, case["input"])
             if not ok:
                 failures += 1
                 print(f"{canonical} parse({case['input']!r}) rejected: {got}", file=sys.stderr)
@@ -120,11 +149,16 @@ def main() -> int:
                 )
             else:
                 accepted += 1
+            extra_failures, stated = check_extras(call, canonical, case)
+            extras += stated
+            failures += len(extra_failures)
+            for failure in extra_failures:
+                print(failure, file=sys.stderr)
         for case in cases.get("rejected", []):
             if case.get("unresolved"):
                 skipped += 1
                 continue
-            ok, got = parse(canonical, case["input"])
+            ok, got = call("parse", canonical, case["input"])
             if ok:
                 failures += 1
                 print(f"{canonical} parse({case['input']!r}) accepted as {got!r}", file=sys.stderr)
@@ -133,8 +167,16 @@ def main() -> int:
 
     if not exercised_extension_scalars:
         raise SystemExit("no extension scalar was exercised; the vectors cover built-ins only")
+    if extras == 0:
+        raise SystemExit("no vector states a magnitude or parts; the extension's parts went unchecked")
+    # A scalar without a magnitude refuses through this binding too.
+    ok, got = call("magnitude", "Contact.Email", "a@b.co")
+    if ok or "the scalar has no magnitude" not in got:
+        failures += 1
+        print(f"Contact.Email magnitude = {got!r}, want a refusal", file=sys.stderr)
     print(
         f"{args.backend}: {accepted} accepted, {rejected} rejected, {skipped} skipped (unresolved), "
+        f"{extras} magnitude or parts checks, "
         f"{failures} failures; extension scalars: {', '.join(sorted(exercised_extension_scalars))}"
     )
     return 1 if failures else 0

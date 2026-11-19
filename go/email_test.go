@@ -60,9 +60,9 @@ func TestContactEmail_UnmarshalJSON(t *testing.T) {
 
 func TestValidateEmail(t *testing.T) {
 	// ValidateEmail is the runtime extension hook and is intentionally a no-op:
-	// the @scalarPattern directive on Contact_Email enforces the regex earlier
+	// the schema runtime validates Contact.Email with the core parser earlier
 	// in the validation pipeline. These cases pin that no-op contract so we
-	// notice if behavior drifts back into duplicating directive checks.
+	// notice if behavior drifts back into a second check.
 	tests := []struct {
 		name     string
 		input    string
@@ -79,7 +79,7 @@ func TestValidateEmail(t *testing.T) {
 			wantErrs: false,
 		},
 		{
-			name:     "malformed email is no-op (directive enforces regex)",
+			name:     "malformed email is no-op (the core parser refuses it)",
 			input:    "not-an-email",
 			wantErrs: false,
 		},
@@ -116,6 +116,9 @@ func TestNormalizeAndValidateEmail(t *testing.T) {
 		{"with subdomain", "user@mail.example.com", "user@mail.example.com", false},
 		{"with plus addressing", "user+tag@example.com", "user+tag@example.com", false},
 		{"with dots in local part", "first.last@example.com", "first.last@example.com", false},
+		{"with an apostrophe", "O'Brien@example.com", "o'brien@example.com", false},
+		{"punycode top-level domain", "user@example.xn--p1ai", "user@example.xn--p1ai", false},
+		{"letter outside ASCII", "Jos\u00e9@example.com", "jos\u00e9@example.com", false},
 
 		// rejected
 		{"empty input", "", "", true},
@@ -123,7 +126,8 @@ func TestNormalizeAndValidateEmail(t *testing.T) {
 		{"non-email string", "not-an-email", "", true},
 		{"missing @", "userexample.com", "", true},
 		{"missing TLD", "user@example", "", true},
-		{"TLD too short", "user@example.c", "", true},
+		{"dot at the start", ".user@example.com", "", true},
+		{"name with the address", "User <user@example.com>", "", true},
 		{"local part with whitespace", "us er@example.com", "", true},
 		{"domain part with whitespace", "user@exa mple.com", "", true},
 		{"multiple @", "user@@example.com", "", true},

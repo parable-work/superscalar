@@ -44,6 +44,16 @@ def test_fractional_temporal_integer_captures_parse_error():
         assert result["error"]["kind"] == "parse"
 
 
+def test_generic_json_keeps_a_string_and_reads_object_text():
+    # The value is Generic.JSON's canonical JSON text. A plain string stays a
+    # quoted JSON string; a string holding an object's JSON text is that
+    # object.
+    for value, expected in (("Draft", '"Draft"'), ('{"a": 1}', '{"a":1}')):
+        result = _native.coerce_lenient("Generic.JSON", json.dumps(value))
+        assert result["error"] is None
+        assert result["value"] == expected
+
+
 def test_unknown_scalar_name_raises():
     # Names are exact and case-sensitive; an unknown one raises rather than
     # riding in `error`, because no coercion was attempted.

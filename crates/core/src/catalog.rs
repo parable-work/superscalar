@@ -137,6 +137,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Auth",
@@ -168,6 +169,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Contact",
@@ -177,7 +179,10 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         metadata_primitive: "String",
         json_schema_type: "string",
         tag: ScalarTag::CustomLogic,
-        pattern: Some("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"),
+        // The `email_address` crate parses the address by RFC 5321, RFC 5322
+        // and RFC 6531 (see crates/core/src/scalars/email.rs). No regex states
+        // that grammar, so the def declares no pattern.
+        pattern: None,
         min_length: None,
         max_length: Some(255),
         minimum: None,
@@ -199,6 +204,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: false, normalize: true, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Contact",
@@ -230,6 +236,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: false, normalize: true, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Crypto",
@@ -261,6 +268,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Crypto",
@@ -292,6 +300,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Design",
@@ -323,6 +332,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: false, normalize: true, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Embedding",
@@ -354,6 +364,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "File",
@@ -385,6 +396,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Finance",
@@ -426,6 +438,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Finance",
@@ -457,6 +470,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Finance",
@@ -489,6 +503,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -523,6 +538,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -556,6 +572,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -587,6 +604,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -620,6 +638,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         // decodes its canonical JSON output back into a native map.
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Geo",
@@ -653,6 +672,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         // decodes its canonical JSON output back into the {lat, lon} object.
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Identity",
@@ -684,6 +704,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Identity",
@@ -715,6 +736,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Identity",
@@ -746,6 +768,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Identity",
@@ -777,6 +800,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Localization",
@@ -808,6 +832,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Network",
@@ -839,6 +864,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Network",
@@ -870,6 +896,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Network",
@@ -901,6 +928,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Network",
@@ -934,6 +962,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -965,6 +994,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -994,8 +1024,9 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: Some("temporal_instant"),
-        hooks: ScalarHooks::NONE,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1027,6 +1058,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: Some("temporal_instant"),
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1058,6 +1090,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: true, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1089,6 +1122,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1118,8 +1152,9 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: None,
-        hooks: ScalarHooks::NONE,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1151,6 +1186,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1180,8 +1216,9 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: None,
-        hooks: ScalarHooks::NONE,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1190,7 +1227,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         sql_type: "TIME",
         metadata_primitive: "String",
         json_schema_type: "string",
-        tag: ScalarTag::PatternOnly,
+        tag: ScalarTag::CustomLogic,
         pattern: Some("^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?|(?:0?[1-9]|1[0-2]):[0-5][0-9](?::[0-5][0-9])?\\s?[AaPp][Mm])$"),
         min_length: None,
         max_length: None,
@@ -1198,8 +1235,8 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         maximum: None,
         case_insensitive: false,
         reserved_words: &[],
-        examples: &["12:25"],
-        description: "Time of day. 24-hour 'HH:MM' or 'HH:MM:SS' (hours 00-23), or 12-hour 'H:MM'/'HH:MM' with optional ':SS' and required AM/PM suffix (hours 1-12). Seconds and the AM/PM separator space are optional.",
+        examples: &["12:25:00"],
+        description: "Time of day, normalized to 24-hour 'HH:MM:SS'. Accepts 24-hour 'HH:MM' or 'HH:MM:SS' (hours 00-23), or 12-hour 'H:MM'/'HH:MM' with optional ':SS' and a required AM/PM suffix in any case (hours 1-12), so '1:05pm' and '1:05 PM' are both '13:05:00'. Seconds and the space before AM/PM are optional.",
         type_mappings: &[("typescript", "string"), ("python", "str"), ("go", "string"), ("rust", "String"), ("sql", "TIME"), ("json_schema", "string")],
         file_upload: None,
         image_constraints: None,
@@ -1213,6 +1250,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1248,6 +1286,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1279,6 +1318,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Text",
@@ -1289,7 +1329,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         json_schema_type: "string",
         tag: ScalarTag::PatternOnly,
         pattern: Some("^[\\s\\S]*$"),
-        min_length: Some(1),
+        min_length: None,
         max_length: None,
         minimum: None,
         maximum: None,
@@ -1310,6 +1350,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: true,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1341,6 +1382,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1372,6 +1414,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1403,6 +1446,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1434,6 +1478,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Text",
@@ -1465,6 +1510,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: true,
     },
     ScalarDef {
         namespace: "Crypto",
@@ -1503,6 +1549,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Network",
@@ -1541,6 +1588,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Temporal",
@@ -1580,8 +1628,9 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
         comparability_class: None,
-        hooks: ScalarHooks::NONE,
+        hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Ordering",
@@ -1620,6 +1669,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Version",
@@ -1658,6 +1708,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Git",
@@ -1700,6 +1751,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: false, normalize: false, validate: true },
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "AgentSkill",
@@ -1738,6 +1790,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -1776,6 +1829,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -1814,6 +1868,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -1852,6 +1907,7 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Generic",
@@ -1894,5 +1950,6 @@ pub(crate) static CATALOG: [ScalarDef; 54] = [
         comparability_class: None,
         hooks: ScalarHooks { parse: true, normalize: false, validate: false },
         metadata_omit: false,
+        large_text: false,
     },
 ];

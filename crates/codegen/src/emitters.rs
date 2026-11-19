@@ -242,6 +242,7 @@ pub(crate) struct MetadataEntry {
     pub(crate) reserved_words_literal: String,
     pub(crate) reserved_words_case_insensitive: bool,
     pub(crate) reserved_words_match_partial: bool,
+    pub(crate) large_text: bool,
 }
 
 #[derive(Serialize)]
@@ -271,6 +272,7 @@ pub(crate) fn metadata_entries(registry: &Registry) -> Vec<MetadataEntry> {
             reserved_words_literal: str_slice_literal(def.reserved_words),
             reserved_words_case_insensitive: def.reserved_words_case_insensitive,
             reserved_words_match_partial: def.reserved_words_match_partial,
+            large_text: def.large_text,
         })
         .collect()
 }

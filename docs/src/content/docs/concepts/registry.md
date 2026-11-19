@@ -51,11 +51,43 @@ Each `ScalarDef` records, among other fields:
   [comparability and sortability](/superscalar/concepts/comparability-and-sortability/).
 - `file_upload` and `image_constraints`, optional limits a structural scalar
   may declare. No built-in sets them; the fields exist so an extension can.
+- `hooks`, three flags (`parse`, `normalize`, `validate`) for a schema
+  runtime that is generated from the definitions. A set flag tells that
+  runtime to call the core for the step instead of applying the declarative
+  rules alone. A hand-written scalar that refuses a value its declarative
+  rules accept sets `validate`; a core test holds every built-in to that.
+  The flags do not change how the core or the bindings in this repository
+  dispatch.
+- `large_text`, true when a value of the scalar is likely large, the way SQL
+  `TEXT` differs from `VARCHAR(n)`. It states size, not prose: the built-in
+  members are `Text.Markdown` and `Text.Sql`. A member declares no
+  `max_length`. A consumer reads the flag to choose storage or display for a
+  column. Every generated metadata table carries it: `large_text` in Rust and
+  Python, `LargeText` in Go, `largeText` in TypeScript.
 
 The `Scalar` trait is the behaviour side: `parse`, `normalize` and
 `validate`, each taking the input string. A hand-written implementation
 exists for deep and structural scalars; directive scalars get a generic
 implementation built from the definition's rules.
+
+The trait has two more methods, each with a default that refuses:
+
+- `magnitude` returns the value's amount in the scalar's base unit, as a
+  decimal integer string, for a scalar whose values are amounts written with
+  a unit: a CPU quantity in millicores, a size in bytes. The answer is text,
+  so an amount beyond 64 bits survives every binding.
+- `parts` returns the value's parts as a JSON object string, for a scalar
+  whose values name several facts at once: a machine tier's CPU count and
+  memory.
+
+No built-in implements either, so every built-in refuses with a `custom`
+error, `the scalar has no magnitude` or `the scalar has no parts`. An
+extension's scalar implements the one it has. `Registry::magnitude(name,
+input)` and `Registry::parts(name, input)` are the name-keyed forms, and
+every binding exposes both: `scalar_magnitude` and `scalar_parts` in the C
+ABI and the WASM build, `magnitude` and `parts` in the napi addon, the
+Python `_native` module and the TypeScript `ScalarBackend`, `Magnitude` and
+`Parts` in Go.
 
 ## The name is the identity
 
@@ -123,8 +155,8 @@ this order and stop at the first failure:
 
 An assembled registry is read-only. It answers `def`, `scalar`, `owner`
 (`"builtin"` for a built-in), `resolved`, `comparable_with`, `names`, `defs`,
-`len`, `extensions` and `legacy_aliases`. The `Scalar` methods `parse`,
-`normalize` and `validate` receive the registry, so a scalar can check input
+`len`, `extensions` and `legacy_aliases`, and `magnitude` and `parts` by
+name. Every `Scalar` method receives the registry, so a scalar can check input
 against the assembled catalog rather than the built-in one. The free
 functions `scalar_def` and `scalar_for` cover the built-ins only and panic on
 any other name.
@@ -132,7 +164,7 @@ any other name.
 `Registry::dump()` returns the assembled registry as JSON with a fixed field
 order: `dump_version` (2), `superscalar_version`, `extensions`, `scalars`
 (each def's fields plus its owner, `is_sortable` and `is_directive`, sorted
-by canonical name) and `legacy_aliases`. `superscalar registry dump`
+by canonical name; `large_text` is the last key of each) and `legacy_aliases`. `superscalar registry dump`
 (`make dump`) prints the built-in registry's dump; the acme example prints
 its own and its vector runners read the scalar list from it. The code
 generator and the docs generator read the `Registry` itself, not the dump.

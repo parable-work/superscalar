@@ -92,6 +92,24 @@ ScalarResult scalar_normalize(const char *scalar, const char *input);
 // each be null or a valid NUL-terminated C string valid for the call.
 ScalarResult scalar_validate(const char *scalar, const char *input);
 
+// The value's amount in the scalar's base unit, as a decimal integer
+// string: millicores for a CPU quantity, bytes for a size. A scalar
+// without a magnitude refuses with a `Custom` error.
+//
+// # Safety
+// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+// each be null or a valid NUL-terminated C string valid for the call.
+ScalarResult scalar_magnitude(const char *scalar, const char *input);
+
+// The value's parts, as a JSON object string: a machine tier's CPU
+// count and memory. A scalar without parts refuses with a `Custom`
+// error.
+//
+// # Safety
+// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+// each be null or a valid NUL-terminated C string valid for the call.
+ScalarResult scalar_parts(const char *scalar, const char *input);
+
 // Lenient ("flag, don't block") coercion: JSON value in, JSON value out.
 //
 // Unlike `scalar_parse`/`normalize`/`validate` (string in, string out), this

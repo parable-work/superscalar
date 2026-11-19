@@ -40,7 +40,8 @@ ROW = re.compile(
     r"case_insensitive: (?P<case_insensitive>true|false),\s*"
     r'reserved_words: &\[(?P<words>(?:"(?:[^"\\]|\\.)*"(?:, )?)*)\],\s*'
     r"reserved_words_case_insensitive: (?P<words_ci>true|false),\s*"
-    r"reserved_words_match_partial: (?P<words_partial>true|false)",
+    r"reserved_words_match_partial: (?P<words_partial>true|false),\s*"
+    r"large_text: (?P<large_text>true|false)",
     re.S,
 )
 
@@ -62,6 +63,7 @@ def parse_table(source: str) -> "dict[str, dict]":
             "reserved_words": json.loads("[" + m.group("words") + "]"),
             "reserved_words_case_insensitive": m.group("words_ci") == "true",
             "reserved_words_match_partial": m.group("words_partial") == "true",
+            "large_text": m.group("large_text") == "true",
         }
     return rows
 

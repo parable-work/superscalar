@@ -24,7 +24,7 @@ const { VALID_SCALARS, SCALAR_METADATA_BY_CANONICAL } = generated;
 // Both backend factories come from the CJS Node entry; wasmBackend() loads the
 // nodejs-target wasm bundle so the wasm path is exercised end-to-end in Node.
 const { napiBackend, wasmBackend } = require("../dist/backend.js");
-const { runCorpus, checkUnknownName, checkWrappers } = require("./corpus-runner.cjs");
+const { runCorpus, checkUnknownName, checkMagnitudeAndParts, checkWrappers } = require("./corpus-runner.cjs");
 
 const corpus = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "..", "..", "conformance", "core-scalars.v2.json"), "utf8"),
@@ -40,6 +40,7 @@ if (JSON.stringify(corpusNames) !== JSON.stringify([...VALID_SCALARS])) {
 // An unknown or differently cased name throws through both backends.
 for (const [name, be] of [["napi", napiBackend()], ["wasm", wasmBackend()]]) {
   failures += checkUnknownName(name, be);
+  failures += checkMagnitudeAndParts(name, be);
 }
 // napiBackend() binds the napi addon; wasmBackend() binds the nodejs-target
 // wasm bundle. Running the full corpus through each proves both cores agree and
@@ -87,6 +88,10 @@ for (const [canonical, want] of Object.entries(metaVectors)) {
   if (got.reservedWordsMatchPartial !== want.reserved_words_match_partial) {
     failures++;
     console.error(`${canonical} reservedWordsMatchPartial = ${got.reservedWordsMatchPartial}, want ${want.reserved_words_match_partial}`);
+  }
+  if (got.largeText !== want.large_text) {
+    failures++;
+    console.error(`${canonical} largeText = ${got.largeText}, want ${want.large_text}`);
   }
   if (!want.is_sortable) {
     nonSortable++;
@@ -170,6 +175,17 @@ if (handReserved === undefined || handReserved === null) {
     failures++;
     console.error(`reserved-word rows = ${derivedReservedJson}, want ${handReservedJson}`);
   }
+}
+const largeText = Object.keys(metaVectors)
+  .filter((canonical) => metaVectors[canonical].large_text === true)
+  .sort();
+const handLargeText = corpus.meta.large_text_scalars;
+if (!Array.isArray(handLargeText)) {
+  failures++;
+  console.error("corpus meta.large_text_scalars is missing; it is hand-maintained and the generator must never remove it");
+} else if (JSON.stringify(largeText) !== JSON.stringify(handLargeText)) {
+  failures++;
+  console.error(`large-text rows = ${JSON.stringify(largeText)}, want ${JSON.stringify(handLargeText)}`);
 }
 // set(scalars) - set(metadata) === set(metadata_excluded), not the weaker
 // disjointness check: disjointness alone passes if a scalar is missing from

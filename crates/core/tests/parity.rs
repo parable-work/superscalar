@@ -61,6 +61,9 @@ struct Meta {
     /// Every row that reserves a word or sets either reserved-word flag, with
     /// those three fields. Hand-maintained on the same terms.
     reserved_word_scalars: std::collections::BTreeMap<String, ReservedWordRule>,
+    /// Sorted canonical names of the rows with `large_text` set.
+    /// Hand-maintained on the same terms.
+    large_text_scalars: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -70,6 +73,7 @@ struct MetadataVector {
     case_insensitive: bool,
     #[serde(flatten)]
     reserved: ReservedWordRule,
+    large_text: bool,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -373,6 +377,7 @@ fn v2_metadata_section_matches_the_generated_table() {
             md.reserved_words_match_partial, want.reserved.reserved_words_match_partial,
             "{canonical}"
         );
+        assert_eq!(md.large_text, want.large_text, "{canonical}");
     }
     // One independent invariant at the corpus layer. The section is a
     // TRANSCRIPT of the emitted table, so if the emitter were wrong the
@@ -425,6 +430,17 @@ fn v2_metadata_section_matches_the_generated_table() {
         reserved,
         vectors.meta.reserved_word_scalars.iter().collect()
     );
+    // Same independence argument, for `large_text`.
+    let large_text: Vec<&String> = vectors
+        .metadata
+        .iter()
+        .filter(|(_, vector)| vector.large_text)
+        .map(|(canonical, _)| canonical)
+        .collect();
+    assert_eq!(
+        large_text,
+        vectors.meta.large_text_scalars.iter().collect::<Vec<_>>()
+    );
     // The two sections legitimately differ by one key, and the corpus now says
     // which one rather than leaving each reader to hardcode the name.
     // Both sides sorted, matching the Go and TypeScript readers. `scalars` is a
@@ -459,7 +475,7 @@ fn v2_metadata_section_matches_the_generated_table() {
 #[test]
 fn a_named_class_decodes_from_a_metadata_vector() {
     let v: MetadataVector =
-        serde_json::from_str(r#"{"comparability_class": "temporal_instant", "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false}"#)
+        serde_json::from_str(r#"{"comparability_class": "temporal_instant", "is_sortable": true, "case_insensitive": false, "reserved_words": [], "reserved_words_case_insensitive": false, "reserved_words_match_partial": false, "large_text": false}"#)
             .expect("vector parses");
     assert_eq!(v.comparability_class.as_deref(), Some("temporal_instant"));
     assert!(v.is_sortable);
@@ -471,7 +487,7 @@ fn a_named_class_decodes_from_a_metadata_vector() {
 #[test]
 fn reserved_words_decode_from_a_metadata_vector() {
     let v: MetadataVector = serde_json::from_str(
-        r#"{"comparability_class": null, "is_sortable": true, "case_insensitive": true, "reserved_words": ["admin", "root"], "reserved_words_case_insensitive": true, "reserved_words_match_partial": true}"#,
+        r#"{"comparability_class": null, "is_sortable": true, "case_insensitive": true, "reserved_words": ["admin", "root"], "reserved_words_case_insensitive": true, "reserved_words_match_partial": true, "large_text": true}"#,
     )
     .expect("vector parses");
     assert!(v.case_insensitive);
@@ -479,4 +495,5 @@ fn reserved_words_decode_from_a_metadata_vector() {
     assert!(v.reserved.reserved_words_case_insensitive);
     assert!(v.reserved.reserved_words_match_partial);
     assert!(v.reserved.is_set());
+    assert!(v.large_text);
 }

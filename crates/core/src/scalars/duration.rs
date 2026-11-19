@@ -156,6 +156,18 @@ fn normalize_duration(input: &str) -> Result<String, ScalarError> {
 
 pub struct Duration;
 
+impl Duration {
+    /// The signed length of a Temporal.Duration value, in nanoseconds.
+    ///
+    /// The same parse that [`Scalar::parse`] normalizes, for a caller that
+    /// compares a length rather than stores a string, such as a check that
+    /// one interval is a whole multiple of another. A leading `-` gives a
+    /// negative length.
+    pub fn nanos(input: &str) -> Result<i128, ScalarError> {
+        parse_duration_nanos(input)
+    }
+}
+
 impl Scalar for Duration {
     fn parse(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
         normalize_duration(input)
@@ -167,5 +179,21 @@ impl Scalar for Duration {
 
     fn validate(&self, _registry: &Registry, input: &str) -> Result<(), ScalarError> {
         parse_duration_nanos(input).map(|_| ())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nanos_reads_the_length_the_parse_normalizes() {
+        assert_eq!(Duration::nanos("15m"), Ok(15 * NANOS_PER_MINUTE));
+        assert_eq!(Duration::nanos("1h30m"), Ok(90 * NANOS_PER_MINUTE));
+        assert_eq!(Duration::nanos("15m0s"), Ok(15 * NANOS_PER_MINUTE));
+        assert_eq!(Duration::nanos("-5s"), Ok(-5 * NANOS_PER_SECOND));
+        assert_eq!(Duration::nanos("0s"), Ok(0));
+        assert!(Duration::nanos("1d").is_err());
+        assert!(Duration::nanos("").is_err());
     }
 }

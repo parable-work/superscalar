@@ -58,7 +58,7 @@ resolves; there is nothing to await.
   it as plain JavaScript, with no WebAssembly or asset support and no plugin;
   CI bundles with `bun build --target=browser`. The page compiles it
   synchronously on the main thread, which Chrome allows for modules up to 8 MB
-  (since 2023; the module is 2.2 MB). A Content-Security-Policy must allow
+  (since 2023; the module is 2.3 MB). A Content-Security-Policy must allow
   `'wasm-unsafe-eval'`.
 - **Cloudflare Workers.** workerd compiles no WebAssembly from bytes at run
   time, so the Workers build imports the module as a `.wasm` file, which a
@@ -78,9 +78,9 @@ Sizes, from the `wasm-release` profile (opt-level `"s"`, LTO):
 
 | Artifact | Raw | Gzipped |
 | -------- | --- | ------- |
-| WebAssembly module | 2.2 MB | 0.66 MB |
-| browser bundle of a small site (`bun build --target=browser`) | 3.0 MB | 1.0 MB |
-| wrangler upload of a small Worker | 2.2 MB | 0.68 MB |
+| WebAssembly module | 2.3 MB | 0.73 MB |
+| browser bundle of a small site (`bun build --target=browser`) | 3.2 MB | 1.1 MB |
+| wrangler upload of a small Worker | 2.4 MB | 0.75 MB |
 
 A Worker may be 64 MiB uncompressed on the Free and Paid plans.
 

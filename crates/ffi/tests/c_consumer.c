@@ -21,9 +21,19 @@ int main(void) {
 
   ScalarResult bad = scalar_parse(SCALAR_CONTACT_EMAIL, "not-an-email");
   assert(!bad.ok);
-  assert(bad.error_category == ErrorCategory_Pattern);
+  assert(bad.error_category == ErrorCategory_Parse);
   assert(bad.error != NULL);
   scalar_result_free(bad);
+
+  /* No built-in has a magnitude or parts: both entry points refuse. */
+  ScalarResult no_magnitude = scalar_magnitude(SCALAR_CONTACT_EMAIL, "foo@bar.com");
+  assert(!no_magnitude.ok);
+  assert(no_magnitude.error_category == ErrorCategory_Custom);
+  scalar_result_free(no_magnitude);
+  ScalarResult no_parts = scalar_parts(SCALAR_CONTACT_EMAIL, "foo@bar.com");
+  assert(!no_parts.ok);
+  assert(no_parts.error_category == ErrorCategory_Custom);
+  scalar_result_free(no_parts);
 
   /* Batch equals N singles. */
   const char *inputs[3] = {"a@b.io", "bad", "C@D.com"};

@@ -296,6 +296,7 @@ pub fn render_page(
         yes_no(def.case_insensitive)
     ));
     out.push_str(&format!("| Sortable | {} |\n", yes_no(def.is_sortable())));
+    out.push_str(&format!("| Large text | {} |\n", yes_no(def.large_text)));
     out.push_str(&format!(
         "| Comparability class | {} |\n",
         def.comparability_class

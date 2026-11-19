@@ -84,6 +84,19 @@ def test_unknown_scalar_name_raises():
         _native.parse("contact.email", "a@b.com")
 
 
+@pytest.mark.parametrize("method", ["magnitude", "parts"])
+def test_magnitude_and_parts_refuse_for_a_builtin(method):
+    # No built-in scalar has a magnitude or parts, so both functions refuse a
+    # valid value with the core's message, and an unknown name with the
+    # unknown-scalar error. An extension's scalar answers through the same
+    # two functions.
+    call = getattr(_native, method)
+    with pytest.raises(ValueError, match=f"custom: the scalar has no {method}"):
+        call("Contact.Email", "a@b.co")
+    with pytest.raises(ValueError, match='unknown scalar "contact.email"'):
+        call("contact.email", "a@b.co")
+
+
 def test_generated_wrappers_route():
     from superscalar import _generated
 
@@ -179,6 +192,10 @@ def test_metadata_parity():
         or row["reserved_words_match_partial"]
     }
     assert derived_reserved == CORPUS["meta"].get("reserved_word_scalars")
+    large_text = sorted(
+        canonical for canonical, row in vectors.items() if row["large_text"]
+    )
+    assert large_text == CORPUS["meta"].get("large_text_scalars")
     # set(scalars) - set(metadata) == set(metadata_excluded), not the weaker
     # disjointness check: disjointness alone passes if a scalar is missing from
     # `metadata` without being declared excluded, which is the drift that

@@ -28,6 +28,12 @@ lossless-json = ["serde_json/arbitrary_precision"]
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
+# The parser of Contact.Email. The exact pin keeps one parser version in every
+# lockfile that builds this crate, so every binding accepts the same addresses.
+# Change the version together with the Contact.Email conformance vectors. The
+# default feature only adds serde impls for the crate's own type, which the
+# core does not use.
+email_address = { version = "=0.2.9", default-features = false }
 once_cell = "1"
 phonenumber = "0.3"
 regex = "1.12"
@@ -36,6 +42,8 @@ serde = { version = "1.0.228", features = ["derive"] }
 # serde_json's private number and raw-value markers. `arbitrary_precision` is
 # the `lossless-json` feature above.
 serde_json = { version = "1.0.149", features = ["preserve_order", "raw_value"] }
+# Contact.Email writes its canonical form in NFC.
+unicode-normalization = "0.1"
 uuid = { version = "1", features = ["serde", "v4"] }
 
 [dev-dependencies]

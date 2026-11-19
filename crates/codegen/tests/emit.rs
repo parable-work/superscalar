@@ -608,6 +608,48 @@ fn a_named_comparability_class_reaches_the_go_ts_and_python_templates() {
     );
 }
 
+/// `large_text` comes from the def for every scalar and reaches every
+/// binding's metadata row. The expected counts come from the registry, so a
+/// template that hardcodes `false` fails as long as one def sets the flag.
+#[test]
+fn large_text_reaches_every_generated_table() {
+    with_context(|ctx| {
+        let defs: Vec<_> = Registry::builtin()
+            .defs()
+            .filter(|def| !def.metadata_omit)
+            .collect();
+        let members: Vec<&str> = defs
+            .iter()
+            .filter(|def| def.large_text)
+            .map(|def| def.canonical)
+            .collect();
+        assert_eq!(members, ["Text.Markdown", "Text.Sql"]);
+        let others = defs.len() - members.len();
+        for (name, yes, no) in [
+            (
+                "rust_metadata",
+                "        large_text: true,",
+                "        large_text: false,",
+            ),
+            ("go", "\t\tLargeText: true,", "\t\tLargeText: false,"),
+            (
+                "typescript",
+                "    largeText: true,",
+                "    largeText: false,",
+            ),
+            (
+                "python",
+                "        \"large_text\": True,",
+                "        \"large_text\": False,",
+            ),
+        ] {
+            let text = rendered(ctx, name);
+            assert_eq!(text.matches(yes).count(), members.len(), "{name}: {yes}");
+            assert_eq!(text.matches(no).count(), others, "{name}: {no}");
+        }
+    });
+}
+
 /// `case_insensitive` and the three reserved-word fields reach every generated
 /// table, one per row. The expected counts come from the registry, so a
 /// template that hardcodes `false` or an empty list fails as long as one def

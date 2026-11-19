@@ -116,3 +116,25 @@ export function mergeValidationErrors(
 
   return result;
 }
+
+/**
+ * Counts the Unicode code points in a string. A `minLength` or `maxLength`
+ * rule counts code points in every language, so this is the TypeScript count.
+ * `String.prototype.length` counts UTF-16 units, and a character outside the
+ * Basic Multilingual Plane is two units but one code point. A lone surrogate
+ * counts as one code point, as it does in `[...value].length`.
+ */
+export function codePointLength(value: string): number {
+  let count = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff && index + 1 < value.length) {
+      const next = value.charCodeAt(index + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        index += 1;
+      }
+    }
+    count += 1;
+  }
+  return count;
+}

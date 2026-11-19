@@ -24,6 +24,8 @@ pub struct ScalarMetadata {
     pub reserved_words_case_insensitive: bool,
     /// `ScalarDef::reserved_words_match_partial`.
     pub reserved_words_match_partial: bool,
+    /// `ScalarDef::large_text`: a value of this scalar is likely large.
+    pub large_text: bool,
 }
 
 pub const SCALAR_METADATA: &[ScalarMetadata] = &[
@@ -42,6 +44,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: {{ e.reserved_words_literal }},
         reserved_words_case_insensitive: {% if e.reserved_words_case_insensitive %}true{% else %}false{% endif %},
         reserved_words_match_partial: {% if e.reserved_words_match_partial %}true{% else %}false{% endif %},
+        large_text: {% if e.large_text %}true{% else %}false{% endif %},
     },
 {% endfor %}];
 

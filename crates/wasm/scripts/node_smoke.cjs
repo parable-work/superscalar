@@ -38,6 +38,12 @@ assert.throws(
 assert.strictEqual(wasm.scalar_validate(CONTACT_EMAIL, "ok@example.com"), undefined);
 assert.throws(() => wasm.scalar_validate(CONTACT_EMAIL, "nope"));
 
+// No built-in scalar has a magnitude or parts: both exports refuse a valid
+// value with the core's message.
+assert.throws(() => wasm.scalar_magnitude(CONTACT_EMAIL, "ok@example.com"), /the scalar has no magnitude/);
+assert.throws(() => wasm.scalar_parts(CONTACT_EMAIL, "ok@example.com"), /the scalar has no parts/);
+assert.throws(() => wasm.scalar_magnitude("No.Such", "anything"), /unknown scalar "No\.Such"/);
+
 // Smoke success marker. Write straight to stdout rather than via console.* so
 // this stays clear of the no-console rule while still printing the ok signal.
 process.stdout.write("wasm node smoke: ok\n");

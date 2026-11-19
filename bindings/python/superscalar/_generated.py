@@ -71,7 +71,8 @@ VALID_SCALARS = (
 # which is the intended behaviour, not a gap. `case_insensitive`,
 # `reserved_words`, `reserved_words_case_insensitive` and
 # `reserved_words_match_partial` are the def's fields of the same names;
-# `reserved_words` is an empty list when the scalar reserves none.
+# `reserved_words` is an empty list when the scalar reserves none. `large_text`
+# is the def's flag of that name: True when a value is likely large.
 #
 # Deliberately ONE dict of plain dicts and not a NamedTuple and not one dict per
 # field. Not a NamedTuple: this module is imported by six services and
@@ -88,6 +89,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": True,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Auth.JWT": {
         "comparability_class": None,
@@ -96,6 +98,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Auth.Password": {
         "comparability_class": None,
@@ -104,6 +107,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Contact.Email": {
         "comparability_class": None,
@@ -112,6 +116,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Contact.PhoneNumber": {
         "comparability_class": None,
@@ -120,6 +125,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Crypto.RSAPrivateKey": {
         "comparability_class": None,
@@ -128,6 +134,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Crypto.RSAPublicKey": {
         "comparability_class": None,
@@ -136,6 +143,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Crypto.SHA256": {
         "comparability_class": None,
@@ -144,6 +152,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Design.Color": {
         "comparability_class": None,
@@ -152,6 +161,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Embedding.Vector": {
         "comparability_class": None,
@@ -160,6 +170,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "File.SizeBytes": {
         "comparability_class": None,
@@ -168,6 +179,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Finance.Currency": {
         "comparability_class": None,
@@ -176,6 +188,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Finance.Money": {
         "comparability_class": None,
@@ -184,6 +197,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Finance.SignedMoney": {
         "comparability_class": None,
@@ -192,6 +206,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.Boolean": {
         "comparability_class": None,
@@ -200,6 +215,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.Decimal": {
         "comparability_class": None,
@@ -208,6 +224,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.Float64": {
         "comparability_class": None,
@@ -216,6 +233,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.Int64": {
         "comparability_class": None,
@@ -224,6 +242,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.JSON": {
         "comparability_class": None,
@@ -232,6 +251,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.Probability": {
         "comparability_class": None,
@@ -240,6 +260,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.StringMap": {
         "comparability_class": None,
@@ -248,6 +269,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Generic.Text": {
         "comparability_class": None,
@@ -256,6 +278,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Geo.Location": {
         "comparability_class": None,
@@ -264,6 +287,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Git.PathPattern": {
         "comparability_class": None,
@@ -272,6 +296,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Identity.Name": {
         "comparability_class": None,
@@ -280,6 +305,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Identity.Slug": {
         "comparability_class": None,
@@ -288,6 +314,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Identity.UUID": {
         "comparability_class": None,
@@ -296,6 +323,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Identity.UserID": {
         "comparability_class": None,
@@ -304,6 +332,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Localization.Locale": {
         "comparability_class": None,
@@ -312,6 +341,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Network.DnsLabel": {
         "comparability_class": None,
@@ -320,6 +350,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Network.DomainName": {
         "comparability_class": None,
@@ -328,6 +359,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Network.IpAddress": {
         "comparability_class": None,
@@ -336,6 +368,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Network.Uri": {
         "comparability_class": None,
@@ -344,6 +377,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Network.Url": {
         "comparability_class": None,
@@ -352,6 +386,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Ordering.Rank": {
         "comparability_class": None,
@@ -360,6 +395,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.CronExpression": {
         "comparability_class": None,
@@ -368,6 +404,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Date": {
         "comparability_class": "temporal_instant",
@@ -376,6 +413,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.DateTime": {
         "comparability_class": "temporal_instant",
@@ -384,6 +422,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Days": {
         "comparability_class": None,
@@ -392,6 +431,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Duration": {
         "comparability_class": None,
@@ -400,6 +440,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Hours": {
         "comparability_class": None,
@@ -408,6 +449,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Milliseconds": {
         "comparability_class": None,
@@ -416,6 +458,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Minutes": {
         "comparability_class": None,
@@ -424,6 +467,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Month": {
         "comparability_class": None,
@@ -432,6 +476,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Quarter": {
         "comparability_class": None,
@@ -440,6 +485,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.QuarterYear": {
         "comparability_class": None,
@@ -448,6 +494,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.RecurrenceRule": {
         "comparability_class": None,
@@ -456,6 +503,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Seconds": {
         "comparability_class": None,
@@ -464,6 +512,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Time": {
         "comparability_class": None,
@@ -472,6 +521,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.TimeZone": {
         "comparability_class": None,
@@ -480,6 +530,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Temporal.Year": {
         "comparability_class": None,
@@ -488,6 +539,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
     "Text.Markdown": {
         "comparability_class": None,
@@ -496,6 +548,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": True,
     },
     "Text.Sql": {
         "comparability_class": None,
@@ -504,6 +557,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": True,
     },
     "Version.SemVer": {
         "comparability_class": None,
@@ -512,6 +566,7 @@ SCALAR_METADATA = {
         "reserved_words": [],
         "reserved_words_case_insensitive": False,
         "reserved_words_match_partial": False,
+        "large_text": False,
     },
 }
 

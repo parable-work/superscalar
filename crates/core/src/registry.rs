@@ -1,7 +1,7 @@
 use crate::catalog::CATALOG;
 use crate::definitions::Definitions;
 use crate::directive::DirectiveScalar;
-use crate::error::ScalarError;
+use crate::error::{ErrorKind, ScalarError};
 use crate::extension::{AssemblyError, Extension, LegacyAlias};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -141,6 +141,11 @@ pub struct ImageConstraints {
 /// Which hooks generated schema runtimes must delegate to the core instead of
 /// running primitive-only behaviour. Data on the def, read by codegen; it does
 /// not change how the core dispatches.
+///
+/// A scalar whose hand-written impl refuses a value its directives accept
+/// sets `validate`. `tests/generated_validator_delegation.rs` fails for a
+/// custom built-in that neither sets it nor is in that test's exemption
+/// table.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct ScalarHooks {
     pub parse: bool,
@@ -265,6 +270,18 @@ pub struct ScalarDef {
     /// `metadata` section. No built-in sets it; the motivating case is a
     /// secret reference, which is never a queryable data column.
     pub metadata_omit: bool,
+    /// Marks the large-text family: a value of this scalar is likely large,
+    /// the way SQL `TEXT` differs from `VARCHAR(n)`. It states size, not
+    /// prose: `Text.Sql` is a member, and so is `Text.Markdown`. A member
+    /// declares no `max_length`, because an upper bound would refuse the
+    /// values the scalar exists to hold; the only lower bound a member may
+    /// keep is the one that refuses the empty string (`Text.Sql`). A
+    /// consumer reads the flag to choose storage, indexing or display for
+    /// the column, such as an unbounded text type or a truncated preview.
+    /// Every metadata table carries it (`large_text` in Rust and Python,
+    /// `LargeText` in Go, `largeText` in TypeScript), and so does the
+    /// registry dump.
+    pub large_text: bool,
 }
 
 /// The sortability rule, as a fail-closed allowlist over a scalar's declared
@@ -312,6 +329,15 @@ impl ScalarDef {
         json_shape_is_sortable(self.json_schema_type)
     }
 
+    /// Whether a value of this scalar may be any JSON value, a JSON string
+    /// included (`Generic.JSON`). Its text is a value's JSON encoding, so
+    /// lenient coercion keeps a string value quoted, unless the string holds
+    /// an object's or array's JSON text. Reads `json_schema_type` and nothing
+    /// else: `"any"` is the declared shape of such a scalar.
+    pub fn holds_any_json(&self) -> bool {
+        self.json_schema_type == "any"
+    }
+
     /// The generated-binding symbol for this scalar (`symbol_from_canonical`).
     pub fn symbol(&self) -> String {
         symbol_from_canonical(self.canonical)
@@ -338,6 +364,27 @@ pub trait Scalar: Send + Sync {
     fn normalize(&self, registry: &Registry, input: &str) -> Result<String, ScalarError>;
     /// Enforce shape without returning a value.
     fn validate(&self, registry: &Registry, input: &str) -> Result<(), ScalarError>;
+    /// The value's amount in the scalar's base unit, as a decimal integer
+    /// string, for a scalar whose values are amounts written with a unit: a
+    /// CPU quantity in millicores, a size in bytes. The answer is text so an
+    /// amount beyond 64 bits survives every binding. A scalar without a
+    /// magnitude keeps this default, which refuses; no built-in has one.
+    fn magnitude(&self, _registry: &Registry, _input: &str) -> Result<String, ScalarError> {
+        Err(ScalarError::new(
+            ErrorKind::Custom,
+            "the scalar has no magnitude",
+        ))
+    }
+    /// The value's parts, as a JSON object string, for a scalar whose values
+    /// name several facts at once: a machine tier's CPU count and memory. A
+    /// scalar without parts keeps this default, which refuses; no built-in
+    /// has parts.
+    fn parts(&self, _registry: &Registry, _input: &str) -> Result<String, ScalarError> {
+        Err(ScalarError::new(
+            ErrorKind::Custom,
+            "the scalar has no parts",
+        ))
+    }
     /// True only for the generic directive engine. Hand-written impls inherit
     /// the `false` default; the assembly exhaustiveness check uses this to
     /// catch a tagged-custom scalar that silently fell through to
@@ -455,6 +502,30 @@ impl Registry {
         self.slots.get(canonical).map(|slot| &*slot.scalar)
     }
 
+    /// [`Scalar::magnitude`] of the scalar named `canonical`: the amount
+    /// `input` states, in the scalar's base unit, as a decimal integer
+    /// string. Fails with [`ErrorKind::Enum`] for a name no extension
+    /// declared, with the scalar's own error for a value it refuses, and with
+    /// [`ErrorKind::Custom`] for a scalar that has no magnitude.
+    pub fn magnitude(&self, canonical: &str, input: &str) -> Result<String, ScalarError> {
+        self.known_scalar(canonical)?.magnitude(self, input)
+    }
+
+    /// [`Scalar::parts`] of the scalar named `canonical`: the parts of
+    /// `input`, as a JSON object string. Fails as [`Registry::magnitude`]
+    /// does, with [`ErrorKind::Custom`] for a scalar that has no parts.
+    pub fn parts(&self, canonical: &str, input: &str) -> Result<String, ScalarError> {
+        self.known_scalar(canonical)?.parts(self, input)
+    }
+
+    /// The implementation serving `canonical`, or the error the name-keyed
+    /// entry points return for a name no extension declared.
+    fn known_scalar(&self, canonical: &str) -> Result<&dyn Scalar, ScalarError> {
+        self.scalar(canonical).ok_or_else(|| {
+            ScalarError::new(ErrorKind::Enum, format!("unknown scalar: {canonical}"))
+        })
+    }
+
     /// The name of the extension that declared `canonical` (`"builtin"` for
     /// built-ins).
     pub fn owner(&self, canonical: &str) -> Option<&'static str> {
@@ -551,6 +622,7 @@ impl Registry {
             is_sortable: bool,
             is_directive: bool,
             hooks: ScalarHooks,
+            large_text: bool,
         }
         let scalars = self
             .slots
@@ -590,6 +662,7 @@ impl Registry {
                     is_sortable: def.is_sortable(),
                     is_directive: slot.scalar.is_directive(),
                     hooks: def.hooks,
+                    large_text: def.large_text,
                 }
             })
             .collect();

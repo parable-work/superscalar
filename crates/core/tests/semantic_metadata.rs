@@ -166,6 +166,30 @@ fn json_valued_scalars_declare_no_string_rules() {
     );
 }
 
+/// The large-text family is exactly `Text.Markdown` and `Text.Sql`, and a
+/// member declares what the flag promises: text with no upper length bound.
+/// The one lower bound a member may keep refuses the empty string
+/// (`Text.Sql`).
+#[test]
+fn large_text_scalars_are_unbounded_text() {
+    let members: Vec<_> = Registry::builtin()
+        .defs()
+        .filter(|def| def.large_text)
+        .collect();
+    let names: Vec<&str> = members.iter().map(|def| def.canonical).collect();
+    assert_eq!(names, ["Text.Markdown", "Text.Sql"]);
+    for def in members {
+        let name = def.canonical;
+        assert_eq!(def.primitive, PrimitiveKind::String, "{name}");
+        assert_eq!(def.json_schema_type, "string", "{name}");
+        assert_eq!(def.max_length, None, "{name} declares an upper bound");
+        assert!(
+            def.min_length.unwrap_or(0) <= 1,
+            "{name} declares a lower bound beyond refusing the empty string"
+        );
+    }
+}
+
 /// Every example a def declares is a value of its scalar, written in canonical
 /// form: `parse` accepts it and returns it unchanged. The examples reach the
 /// generated metadata tables and the reference docs, so an example in a form

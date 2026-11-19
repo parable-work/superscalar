@@ -18,6 +18,12 @@ crate outside this directory.
   assembled into: it accepts `Acme.OrderNumber` through this assembly and
   rejects it through the built-in registry. Its vectors therefore pass only if
   a binding dispatches into the assembled registry.
+- A scalar may answer more than parse, normalize and validate.
+  `Acme.ScalarRef` implements `Scalar::parts` (the namespace, the name and the
+  owner of the scalar a reference names), which no built-in does. Its vectors
+  state the parts, and every binding returns them through the generic entry
+  point. `Scalar::magnitude` works the same way for a scalar that states an
+  amount with a unit; neither Acme scalar has one, so both refuse.
 - Each binding is one line: an export macro applied to `acme_scalars::registry`
   (`ffi/src/lib.rs`, `napi/src/lib.rs`, `python/src/lib.rs`, `wasm/src/lib.rs`).
   The exported symbols, and the C header, are the same as the built-in
@@ -34,7 +40,7 @@ ext/                       crate acme-scalars: AcmeExtension, DEFS, ScalarRef, r
   examples/dump.rs         prints Registry::dump() as JSON
   tests/conformance.rs     built-in + Acme vectors through the assembled registry
 ffi/                       crate acme-scalars-ffi: export_c_abi!(acme_scalars::registry)
-  tests/c_consumer.c       one scalar_parse call per process, driven by run_vectors.py
+  tests/c_consumer.c       one scalar_parse, scalar_magnitude or scalar_parts call per process, driven by run_vectors.py
 napi/                      crate acme-scalars-napi: export_napi!(...) plus the napi build.rs
 python/                    crate acme-scalars-python: export_pymodule!(_native, ...)
 wasm/                      crate acme-scalars-wasm: export_wasm!(...)
@@ -77,7 +83,8 @@ Three files, all in this directory:
    registered in `impls()` under that name if the tag is not `PatternOnly`.
    Names are append-only: a published name is never renamed or reused.
 2. `conformance/acme-scalars.v2.json`: accepted and rejected vectors, and a
-   `metadata` row (`comparability_class`, `is_sortable`), for the new name.
+   `metadata` row (`comparability_class`, `is_sortable`, `case_insensitive`,
+   the three reserved-word fields and `large_text`), for the new name.
 3. `README.md`, if the scalar is worth describing.
 
 `scripts/check_third_scalar.sh` does exactly this with `scripts/third_scalar.patch`

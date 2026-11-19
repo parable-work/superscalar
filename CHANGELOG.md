@@ -59,6 +59,11 @@ bump they require (minor when loosening, major when tightening).
 - Go: `ScalarMetadata` carries `TypeScriptType`, `PythonType` and `RustType`
   beside `GoType`; `GenericJSON` implements `driver.Valuer` and `sql.Scanner`
   and keeps SQL NULL distinct from an explicit JSON `null`.
+- TypeScript: `codePointLength(value)` in the `validation` module counts the
+  Unicode code points of a string, the count a `min_length` or `max_length`
+  rule uses in the core. `String.prototype.length` counts UTF-16 units, so a
+  generated validator that used it disagreed with the core on a character
+  outside the Basic Multilingual Plane.
 - TypeScript: `JSONValue` and `isJSONValue` (`src/json-value.ts`), exported
   from the package root and from the generated module. Codegen reads the
   module path from the optional `[typescript] json_value_module` key
@@ -132,6 +137,38 @@ bump they require (minor when loosening, major when tightening).
   `1747270862000` and `100000000000` (the smallest 12-digit count). The
   scalar already rejected them; no accept-set change, no bump required.
   Carried from parable-platform PR #7381.
+- `Scalar::magnitude` and `Scalar::parts`, two trait methods with defaults
+  that refuse. `magnitude` returns the value's amount in the scalar's base
+  unit as a decimal integer string, for a scalar whose values are amounts
+  written with a unit (a CPU quantity in millicores, a size in bytes).
+  `parts` returns the value's parts as a JSON object string, for a scalar
+  whose values name several facts at once (a machine tier's CPU count and
+  memory). No built-in implements either: each refuses with a `custom` error,
+  `the scalar has no magnitude` or `the scalar has no parts`. An extension's
+  scalar implements the one it has. Additive for an existing `Scalar` impl.
+  - Core: `Registry::magnitude(name, input)` and `Registry::parts(name,
+    input)`, which fail with `enum` for a name no extension declared.
+  - C ABI: `scalar_magnitude` and `scalar_parts`, with the signature of
+    `scalar_parse`; `export_c_abi!` emits them, so the header declares eleven
+    entry points (was nine). `Hook` gains `Magnitude` and `Parts`. Adding an
+    entry point is a minor change.
+  - WASM: `scalar_magnitude` and `scalar_parts`. napi: `magnitude` and
+    `parts`. Python: `_native.magnitude` and `_native.parts`. Each export
+    macro emits them over the registry it is given, and each binding crate
+    gains `run_magnitude` and `run_parts`.
+  - Go: `Magnitude(canonical, value)` and `Parts(canonical, value)`, beside
+    `Parse`, `Normalize` and `Validate`.
+  - TypeScript: `ScalarBackend` gains `magnitude(scalar, value)` and
+    `parts(scalar, value)`, and `WasmExports` gains `scalar_magnitude` and
+    `scalar_parts`. Code that implements either interface by hand must add
+    them.
+  - Conformance: an accepted vector may state `magnitude` and `parts`. The
+    acme example gives `Acme.ScalarRef` parts and checks them through C,
+    napi, WASM and Python.
+- Core: `scalars::duration::Duration::nanos(input)` returns the signed length
+  of a `Temporal.Duration` value in nanoseconds, as an `i128`, from the same
+  parse the scalar normalizes with. It is for a caller that compares a length
+  instead of storing the text. No accept-set change.
 - Three built-in scalars for plain fields: `Generic.Text` (any string),
   `Generic.Float64` (any finite number) and `Generic.Boolean` (`true` or
   `false`). `Generic.Boolean` is the first scalar backed by the `Bool`
@@ -217,6 +254,118 @@ bump they require (minor when loosening, major when tightening).
     order, number spelling, negative zero, and the refusals above. Two new
     core tests keep definitions honest: a JSON-valued scalar declares no
     `pattern` or length bounds, and every example parses to itself.
+- `Contact.Email` is parsed by the `email_address` crate (pinned `=0.2.9`,
+  RFC 5321, RFC 5322 and RFC 6531) instead of matched against a regex.
+  Breaking: the accept set loosens and tightens, the canonical form of some
+  inputs changes, and the error kind changes, a major bump.
+  - Newly accepted: every RFC 5322 atom character in the local part
+    (`o'brien@example.com`, `!#$%&'*+/=?^_`{|}~-@example.com`), letters
+    outside ASCII in either part, a punycode or one-letter top-level domain
+    (`user@example.xn--p1ai`, `user@example.c`) and an underscore in the
+    domain (`user@exam_ple.com`).
+  - Newly refused: a dot at the start or end of the local part or twice in a
+    row, a local part over 64 characters, and a domain label that is empty or
+    that starts or ends with a hyphen. A quoted local part, display text
+    (`Ana <ana@example.com>`), a comment, an address literal
+    (`ana@[192.0.2.1]`) and a trailing dot stay refused; a domain still needs
+    a top-level domain.
+  - Canonical form: trimmed, lowercased, then Unicode NFC, so a letter
+    written as a base letter and a combining mark has one stored form. An
+    ASCII address is unchanged.
+  - Errors: a malformed address fails with `parse` (was `pattern`) and the
+    message `invalid email address: <reason>`, which never repeats the
+    input. The length check (255 characters) now runs first and fails with
+    `length`; an empty input still fails with `empty`.
+  - Definition: `pattern` is `None`, so the generated metadata tables carry
+    no pattern for the scalar and the Go binding no longer emits
+    `ContactEmailPattern`. The core gains the dependencies `email_address`
+    and `unicode-normalization`.
+  - Conformance: 14 accepted and 20 rejected vectors are added
+    (`user@example.c` moves from rejected to accepted), and the three other
+    `pattern` rejections become `parse`.
+- `ScalarDef` gains the field `large_text: bool`, which marks the large-text
+  family: a value of the scalar is likely large, the way SQL `TEXT` differs
+  from `VARCHAR(n)`. It is `true` for `Text.Markdown` and `Text.Sql` and
+  `false` for every other built-in. A member declares no `max_length`.
+  Breaking for Rust: the field is required, so every `ScalarDef` literal an
+  extension writes must set it (`large_text: false` keeps today's
+  behaviour), and code that builds a `ScalarMetadata` value by hand must set
+  the new field of the same name.
+  - Metadata tables: every generated table carries the flag for built-in and
+    extension scalars alike: `large_text` in the Rust `ScalarMetadata` and in
+    each Python `SCALAR_METADATA` row, `LargeText` in Go, `largeText` in
+    TypeScript. The scalar reference pages gain a `Large text` row.
+  - Registry dump: each scalar gains the key `large_text`, after `hooks`.
+    `dump_version` stays 2; the change adds a key and moves none.
+  - Conformance: the corpus `metadata` rows record `large_text`, and every
+    reader checks it against a new hand-maintained expectation,
+    `meta.large_text_scalars`. An extension corpus that carries `metadata`
+    rows adds the field to each row.
+- `Contact.PhoneNumber` accepts only the number. Breaking: the accept set
+  tightens, a major bump.
+  - The input must be a `+` (after an optional `(`), then digits and
+    separators (whitespace, `(`, `)`, `.`, `-` and the other hyphen and dash
+    characters), then an optional extension such as `ext. 3`, `x3` or `#3`;
+    or a `tel:` URI (RFC 3966) with its parameters. The scalar checks this
+    shape before the phone-number library reads the value.
+  - Newly refused, with `custom` and the message `Invalid phone number format
+    - must be only the number, starting with +`: a number inside free text
+    (`Phone: +1 415 555 2671`), letters read as keypad digits
+    (`+1 800 FLOWERS`), a `/` or a bracket as a separator, a fullwidth plus
+    sign, an `x` with no extension digits, and a `tel:` URI that holds
+    spaces. The library took the first number out of each of these.
+  - Still accepted, now with vectors: surrounding whitespace, dots and
+    dashes as separators, `(+44)`, an extension, and the three `tel:` forms.
+    Invisible marks that copy and paste or a CSV export adds (a byte order
+    mark, a zero-width space, the directional marks and isolates) are
+    removed before the check. The canonical form is still E.164.
+  - Conformance: 13 accepted and 10 rejected vectors are added.
+- `Temporal.Time` has one canonical form, 24-hour `HH:MM:SS`. Breaking: the
+  canonical form changes, a major bump.
+  - Canonical form: `parse` and `normalize` rewrite an accepted value to
+    `HH:MM:SS`: `12:25` is `12:25:00`, `1:05pm` and `1:05 PM` are `13:05:00`,
+    `12:00 AM` is `00:00:00` and `12:00 PM` is `12:00:00`. Before, the value
+    was returned as written, so one time of day had many stored forms, and a
+    strict time decoder refused some of them.
+  - Accept set: unchanged. The def keeps its pattern, and the scalar accepts
+    exactly the values the pattern accepts; a refused value still fails with
+    `pattern`, and `normalize` returns it as written.
+  - Definition: tag `CustomLogic` (was `PatternOnly`), served by
+    `scalars::temporal_time::TemporalTime`; the example is `12:25:00` and the
+    description states the canonical form. No hook is set.
+  - Conformance: the `12:25` vector now normalizes to `12:25:00`, and 17
+    accepted and 6 rejected vectors are added.
+- `Text.Markdown` accepts the empty string: its `min_length` is `None` (was
+  1), so an empty Markdown value is valid. The vector for `""` moves from
+  rejected (`length`) to accepted. The accept set loosens, a minor bump.
+  `Text.Sql` keeps `min_length` 1.
+  `Text.Markdown` and `Text.Sql` each gain an accepted vector of over
+  100,000 characters, which grows the corpus file to about 280 KB.
+- The shipped WebAssembly module is 2.3 MB, 0.73 MB gzipped (was 2.2 MB and
+  0.66 MB), and the browser bundle of a small site is 3.2 MB, 1.1 MB gzipped
+  (was 3.0 MB and 1.0 MB). The growth comes with the `Contact.Email`,
+  `Contact.PhoneNumber` and `Temporal.Time` changes in this section: the
+  email parser and the Unicode normalization tables are new code in the
+  core.
+- Lenient coercion of `Generic.JSON` keeps a JSON string as a string. The
+  coerced value is the canonical JSON text of the input, so the string
+  `Draft` gives `"Draft"` (it failed with `parse`) and the string `123` gives
+  `"123"` (it gave the number `123`); `true`, `null` and an already quoted
+  string stay strings the same way. One exception stays: a string that holds
+  the JSON text of an object or array is read as that object or array, since
+  some SQL APIs deliver a structured cell that way, and a string that starts
+  like one but does not parse (`{not json`) stays a string. The rule applies
+  to every scalar whose def declares `json_schema_type: "any"`, which the new
+  `ScalarDef::holds_any_json()` reports; `Generic.JSON` is the only built-in.
+  `Generic.StringMap` and the other object-shaped scalars still read a string
+  as JSON text. A caller that relied on a numeric string becoming a JSON
+  number sees a different value, so this is a breaking change to
+  `coerce_lenient`. No scalar's parse, normalize or validate changes and no
+  vector changes.
+- Go: `GenericJSON.UnmarshalJSON` stores the compact form of the token, as
+  `Scan` already did, so a value holds the same bytes whether it was decoded
+  from a JSON document or scanned from a column. It kept the token's
+  whitespace before.
 - A scalar's canonical name is its only identity; numeric scalar ids are
   gone. Every C ABI entry point takes the name where it took a `uint32_t`
   (`scalar_parse(const char *scalar, const char *input)` and the other eight),
@@ -263,6 +412,15 @@ bump they require (minor when loosening, major when tightening).
   cycle, a `Set`) as `undefined`; `validateGenericJSON` rejects such inputs.
   A breaking change for TypeScript callers of those wrappers. `Generic.JSON`
   and `Git.PathPattern` set the `validate` hook.
+- `Temporal.Date`, `Temporal.Month`, `Temporal.QuarterYear` and
+  `Temporal.RecurrenceRule` set the `validate` hook. Each has a hand-written
+  validator and declares no pattern or bound, so its declarative rules accept
+  any string (`2026-02-30`, month `13`), and a schema runtime generated from
+  the defs must call the core validator for them. The Go metadata rows have
+  `HasCustomValidate` true and the registry dump shows the hook. A new core
+  test, `generated_validator_delegation`, holds every built-in to the rule: a
+  custom scalar sets the hook or is listed there with the reason it does not
+  need it. No accept-set change and no vector change.
 - `Generic.StringMap` sets the `parse` hook, so a generated schema runtime
   hands its value to the core parser. The TypeScript strict wrappers decode
   the core's canonical JSON into a `Record<string, string>` instead of

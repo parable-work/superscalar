@@ -91,6 +91,30 @@ func callScalarValidate(canonical string, value string) error {
 	return err
 }
 
+// callScalarMagnitude returns a value's amount in its scalar's base unit, as
+// a decimal integer string. A scalar without a magnitude refuses.
+func callScalarMagnitude(canonical string, value string) (string, error) {
+	cn, owned := cScalarName(canonical)
+	if owned {
+		defer C.free(unsafe.Pointer(cn))
+	}
+	cs := C.CString(value)
+	defer C.free(unsafe.Pointer(cs))
+	return readResult(C.scalar_magnitude(cn, cs))
+}
+
+// callScalarParts returns a value's parts as a JSON object string. A scalar
+// without parts refuses.
+func callScalarParts(canonical string, value string) (string, error) {
+	cn, owned := cScalarName(canonical)
+	if owned {
+		defer C.free(unsafe.Pointer(cn))
+	}
+	cs := C.CString(value)
+	defer C.free(unsafe.Pointer(cs))
+	return readResult(C.scalar_parts(cn, cs))
+}
+
 // callScalarCoerceLenient runs the "flag, don't block" coercion: jsonStr is a
 // JSON document, the returned string is the serialized LenientCoerceResult JSON
 // ({"value":<json|null>,"error":<{kind,message}|null>}) on success. The C ABI

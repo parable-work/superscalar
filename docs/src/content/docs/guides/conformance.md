@@ -21,15 +21,16 @@ corpus against your build is how you know it behaves like the reference.
 scalars. Its top level:
 
 - `meta`: `version` (2), `source_language` (`rust-core`), a description, and
-  four hand-maintained expectations checked against the `metadata` section:
+  five hand-maintained expectations checked against the `metadata` section:
   `non_sortable_count`, `comparability_classes` (each class and its sorted
   members), `case_insensitive_scalars` (the sorted names of the rows with
-  `case_insensitive` set) and `reserved_word_scalars` (each row that reserves a
-  word or sets either reserved-word flag, with those three fields).
+  `case_insensitive` set), `reserved_word_scalars` (each row that reserves a
+  word or sets either reserved-word flag, with those three fields) and
+  `large_text_scalars` (the sorted names of the rows with `large_text` set).
 - `scalars`: a map from canonical name to `{ accepted, rejected }`.
 - `metadata`: a map from canonical name to `{ comparability_class,
   is_sortable, case_insensitive, reserved_words,
-  reserved_words_case_insensitive, reserved_words_match_partial }`, a
+  reserved_words_case_insensitive, reserved_words_match_partial, large_text }`, a
   transcript of the generated metadata table. Regenerate it with
   `python3 conformance/gen_core_scalars_metadata.py` after running the code
   generator.
@@ -40,6 +41,13 @@ An accepted vector is `{ "input": ..., "normalized": ... }`: `parse(input)`
 must succeed and return exactly `normalized`. A rejected vector is `{ "input":
 ..., "validator": ... }`: `parse(input)` must fail, and `validator` names the
 error kind that fires (`pattern`, `empty`, `length`, `parse`, and so on).
+
+An accepted vector of a scalar that implements `Scalar::magnitude` or
+`Scalar::parts` may also state `"magnitude"`, the amount as a decimal integer
+string, and `"parts"`, a JSON object. No built-in implements either, so the
+built-in corpus has no such key and the single-file runners do not read them;
+the acme runners check both (`parts` is compared as a JSON value, not as
+text).
 
 A vector may carry `"unresolved": true`. That flags intended behaviour the
 core does not yet enforce; every runner skips it and counts the skips, so the
@@ -99,8 +107,9 @@ its own files together through its assembled registry. The
   (napi and WASM) take a registry dump (`--registry`) and any number of
   vector files. They merge `scalars` the same way and fail when a key is in
   two files, an assembled scalar has no vectors, a vector names a scalar the
-  assembly does not know, or no extension scalar was exercised. They check
-  parse results only, not the metadata section. `scripts/smoke.sh`
+  assembly does not know, no extension scalar was exercised, or no vector
+  states a `magnitude` or `parts`. They check parse results and those two
+  keys, not the metadata section. `scripts/smoke.sh`
   (`make acme`) builds each binding and runs them over both files.
 
 A vector file left off the list fails the run, because its scalars then have

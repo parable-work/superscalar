@@ -42,7 +42,7 @@ func TestValidate(t *testing.T) {
 		{"stringmap valid", "Generic.StringMap", `{"a":"b"}`, false},
 		{"slug empty", "Identity.Slug", "", true},
 		{"slug valid", "Identity.Slug", "my-slug", false},
-		{"markdown empty", "Text.Markdown", "", true},
+		{"markdown empty", "Text.Markdown", "", false},
 		{"markdown valid", "Text.Markdown", "# hi", false},
 		{"sql empty", "Text.Sql", "", true},
 		{"sql valid", "Text.Sql", "SELECT 1", false},
@@ -126,5 +126,33 @@ func TestCoerceJSON(t *testing.T) {
 	}
 	if _, err := CoerceJSON("Not.AScalar", `1`); !errors.Is(err, ErrUnknownScalar) {
 		t.Fatalf("CoerceJSON unknown scalar = %v, want ErrUnknownScalar", err)
+	}
+}
+
+// No built-in scalar has a magnitude or parts, so both entry points refuse a
+// valid value with the core's message, and an unknown name with
+// ErrUnknownScalar. An extension's scalar answers through the same C symbols.
+func TestMagnitudeAndPartsRefuseForABuiltin(t *testing.T) {
+	for _, call := range []struct {
+		name string
+		fn   func(string, string) (string, error)
+		want string
+	}{
+		{"Magnitude", Magnitude, "custom: the scalar has no magnitude"},
+		{"Parts", Parts, "custom: the scalar has no parts"},
+	} {
+		got, err := call.fn("Contact.Email", "a@b.co")
+		if err == nil || got != "" {
+			t.Fatalf("%s(Contact.Email) = %q, %v; want a refusal", call.name, got, err)
+		}
+		if err.Error() != call.want {
+			t.Errorf("%s(Contact.Email) error = %q, want %q", call.name, err.Error(), call.want)
+		}
+		if errors.Is(err, ErrUnknownScalar) {
+			t.Errorf("%s(Contact.Email) reports a known scalar as unknown", call.name)
+		}
+		if _, err := call.fn("Not.AScalar", "anything"); !errors.Is(err, ErrUnknownScalar) {
+			t.Errorf("%s on an unknown scalar = %v, want errors.Is ErrUnknownScalar", call.name, err)
+		}
 	}
 }

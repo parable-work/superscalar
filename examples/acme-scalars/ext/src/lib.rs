@@ -7,7 +7,9 @@
 //! registry it was assembled into, so it accepts `Acme.OrderNumber` through
 //! this assembly and rejects it through the built-in registry. That difference
 //! is what the conformance vectors pin: a binding that passes them dispatches
-//! into the assembled registry, not the built-in one.
+//! into the assembled registry, not the built-in one. It also implements
+//! `Scalar::parts`, which no built-in does: the parts of a reference are the
+//! namespace, the name and the extension that declared the scalar.
 //!
 //! `registry()` is the one thing the four binding crates in this workspace
 //! consume; each hands it to its export macro. `definitions()` is the same
@@ -65,6 +67,7 @@ pub static DEFS: [ScalarDef; 2] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Acme",
@@ -107,6 +110,7 @@ pub static DEFS: [ScalarDef; 2] = [
             validate: true,
         },
         metadata_omit: false,
+        large_text: false,
     },
 ];
 
@@ -128,7 +132,8 @@ impl Extension for AcmeExtension {
 }
 
 /// `Acme.ScalarRef`: accepts exactly the canonical names the registry it was
-/// assembled into knows. Case-sensitive, no normalization.
+/// assembled into knows. Case-sensitive, no normalization. Its parts are the
+/// reference's `namespace`, its `name` and the `owner` that declared it.
 pub struct ScalarRef;
 
 impl Scalar for ScalarRef {
@@ -152,6 +157,24 @@ impl Scalar for ScalarRef {
             ErrorKind::Enum,
             format!("unknown scalar: {input}"),
         ))
+    }
+
+    /// `{"namespace":"Contact","name":"Email","owner":"builtin"}` for
+    /// `Contact.Email`. The owner comes from the assembled registry, so the
+    /// answer for `Acme.OrderNumber` names this extension.
+    fn parts(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
+        self.validate(registry, input)?;
+        let def = registry.def(input).expect("validate accepted the name");
+        let name = input
+            .strip_prefix(def.namespace)
+            .and_then(|rest| rest.strip_prefix('.'))
+            .unwrap_or(input);
+        let parts = serde_json::json!({
+            "namespace": def.namespace,
+            "name": name,
+            "owner": registry.owner(input),
+        });
+        Ok(parts.to_string())
     }
 }
 

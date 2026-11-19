@@ -105,6 +105,8 @@ pub struct Entry {
     /// catalog carries neither `jsonSchemaType` nor `sqlType` and so cannot
     /// re-derive it.
     pub is_sortable: bool,
+    /// `ScalarDef::large_text`, carried into every metadata table.
+    pub large_text: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -212,7 +214,7 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 canonical_literal: canonical_literal.clone(),
                 is_object,
                 has_json_parse: def.hooks.parse && def.json_schema_type == "object",
-                allows_json_null: def.json_schema_type == "any",
+                allows_json_null: def.holds_any_json(),
                 is_metadata_alias: is_object && !go_type.starts_with("struct{"),
                 is_alias_member,
                 include_metadata: !def.metadata_omit,
@@ -261,6 +263,7 @@ pub fn entries(registry: &Registry, config: &Config) -> Vec<Entry> {
                 comparability_class_ts: optional_lang_str_literal(def.comparability_class, "null"),
                 comparability_class_py: optional_lang_str_literal(def.comparability_class, "None"),
                 is_sortable: def.is_sortable(),
+                large_text: def.large_text,
                 camel,
             }
         })
