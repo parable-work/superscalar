@@ -539,7 +539,8 @@ fn dump_has_the_documented_shape() {
             "comparability_class",
             "is_sortable",
             "is_directive",
-            "hooks"
+            "hooks",
+            "large_text"
         ]
     );
     assert_eq!(email["canonical"], "Contact.Email");
@@ -555,6 +556,13 @@ fn dump_has_the_documented_shape() {
         email["hooks"],
         serde_json::json!({ "parse": false, "normalize": true, "validate": true })
     );
+    assert_eq!(email["large_text"], false);
+    let large_text: Vec<&str> = scalars
+        .iter()
+        .filter(|scalar| scalar["large_text"] == true)
+        .map(|scalar| scalar["canonical"].as_str().expect("canonical"))
+        .collect();
+    assert_eq!(large_text, ["Text.Markdown", "Text.Sql"]);
     let user_id = scalars
         .iter()
         .find(|scalar| scalar["canonical"] == "Identity.UserID")

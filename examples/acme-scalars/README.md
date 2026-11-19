@@ -77,7 +77,8 @@ Three files, all in this directory:
    registered in `impls()` under that name if the tag is not `PatternOnly`.
    Names are append-only: a published name is never renamed or reused.
 2. `conformance/acme-scalars.v2.json`: accepted and rejected vectors, and a
-   `metadata` row (`comparability_class`, `is_sortable`), for the new name.
+   `metadata` row (`comparability_class`, `is_sortable`, `case_insensitive`,
+   the three reserved-word fields and `large_text`), for the new name.
 3. `README.md`, if the scalar is worth describing.
 
 `scripts/check_third_scalar.sh` does exactly this with `scripts/third_scalar.patch`

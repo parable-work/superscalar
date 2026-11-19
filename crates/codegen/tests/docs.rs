@@ -76,6 +76,13 @@ fn full_registry_writes_one_page_per_scalar_plus_index() {
     assert!(email
         .contains("`parse_contact_email`, `normalize_contact_email`, `validate_contact_email`"));
     assert!(email.contains("`Registry::scalar(\"Contact.Email\")`"));
+    assert!(email.contains("| Large text | no |"));
+
+    // The large-text flag comes from the def, and a vector too long for a
+    // table cell is cut with its length noted.
+    let markdown = fs::read_to_string(out.join("text-markdown.md")).expect("page");
+    assert!(markdown.contains("| Large text | yes |"));
+    assert!(markdown.contains("(cut; 100016 characters)"));
 
     // A JSON-object scalar carried as text has Go functions, a type mapping
     // with backticks gets a wider code span, and the Go UUID override reaches
@@ -166,6 +173,7 @@ const fn acme_def(canonical: &'static str, description: &'static str) -> ScalarD
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     }
 }
 

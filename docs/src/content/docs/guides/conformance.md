@@ -21,15 +21,16 @@ corpus against your build is how you know it behaves like the reference.
 scalars. Its top level:
 
 - `meta`: `version` (2), `source_language` (`rust-core`), a description, and
-  four hand-maintained expectations checked against the `metadata` section:
+  five hand-maintained expectations checked against the `metadata` section:
   `non_sortable_count`, `comparability_classes` (each class and its sorted
   members), `case_insensitive_scalars` (the sorted names of the rows with
-  `case_insensitive` set) and `reserved_word_scalars` (each row that reserves a
-  word or sets either reserved-word flag, with those three fields).
+  `case_insensitive` set), `reserved_word_scalars` (each row that reserves a
+  word or sets either reserved-word flag, with those three fields) and
+  `large_text_scalars` (the sorted names of the rows with `large_text` set).
 - `scalars`: a map from canonical name to `{ accepted, rejected }`.
 - `metadata`: a map from canonical name to `{ comparability_class,
   is_sortable, case_insensitive, reserved_words,
-  reserved_words_case_insensitive, reserved_words_match_partial }`, a
+  reserved_words_case_insensitive, reserved_words_match_partial, large_text }`, a
   transcript of the generated metadata table. Regenerate it with
   `python3 conformance/gen_core_scalars_metadata.py` after running the code
   generator.

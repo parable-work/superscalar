@@ -561,6 +561,7 @@ mod tests {
             comparability_class: None,
             hooks: ScalarHooks::NONE,
             metadata_omit: true,
+            large_text: false,
         }];
         struct Acme;
         impl Extension for Acme {

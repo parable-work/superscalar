@@ -35,6 +35,7 @@ struct MetadataVector {
     reserved_words: Vec<String>,
     reserved_words_case_insensitive: bool,
     reserved_words_match_partial: bool,
+    large_text: bool,
 }
 
 #[derive(Deserialize, Default)]
@@ -219,6 +220,11 @@ fn metadata_rows_match_the_defs() {
         assert_eq!(
             row.reserved_words_match_partial, def.reserved_words_match_partial,
             "{} reserved_words_match_partial",
+            def.canonical
+        );
+        assert_eq!(
+            row.large_text, def.large_text,
+            "{} large_text",
             def.canonical
         );
     }

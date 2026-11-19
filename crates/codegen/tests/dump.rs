@@ -82,7 +82,8 @@ fn keys_are_in_a_fixed_order() {
             "comparability_class",
             "is_sortable",
             "is_directive",
-            "hooks"
+            "hooks",
+            "large_text"
         ]
     );
     // Every scalar carries the same key set in the same order.

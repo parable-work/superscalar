@@ -179,6 +179,10 @@ def test_metadata_parity():
         or row["reserved_words_match_partial"]
     }
     assert derived_reserved == CORPUS["meta"].get("reserved_word_scalars")
+    large_text = sorted(
+        canonical for canonical, row in vectors.items() if row["large_text"]
+    )
+    assert large_text == CORPUS["meta"].get("large_text_scalars")
     # set(scalars) - set(metadata) == set(metadata_excluded), not the weaker
     # disjointness check: disjointness alone passes if a scalar is missing from
     # `metadata` without being declared excluded, which is the drift that

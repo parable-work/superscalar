@@ -42,8 +42,8 @@ Create `crates/core/src/scalars/<name>.rs` and implement the `Scalar` trait:
 contract: `parse` returns the canonical form or an error, `normalize` moves
 toward canonical form without enforcing shape, `validate` is `parse` without
 the value. The email scalar is a small model to copy from: `normalize` trims
-and lower-cases, `parse` normalizes then checks empty, pattern and length,
-`validate` delegates to `parse`.
+and lower-cases, `parse` normalizes then checks empty, length and the address
+grammar, `validate` delegates to `parse`.
 
 Errors use `ScalarError::new(ErrorKind::..., message)`. Pick the kind the
 input actually failed (`Empty`, `Pattern`, `Length`, `Parse`, and so on);
@@ -98,7 +98,8 @@ Update the hand-maintained expectations in `meta` yourself: if the scalar is
 non-sortable, increase `meta.non_sortable_count`; if it sets
 `case_insensitive`, add its name to `meta.case_insensitive_scalars`; if it
 reserves words or sets `reserved_words_case_insensitive` or
-`reserved_words_match_partial`, add it to `meta.reserved_word_scalars`. Those
+`reserved_words_match_partial`, add it to `meta.reserved_word_scalars`; if it
+sets `large_text`, add its name to `meta.large_text_scalars`. Those
 expectations are a check on the generated section and must not be derived from
 it.
 

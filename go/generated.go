@@ -52,6 +52,9 @@ type ScalarMetadata struct {
 	// reserved_words_case_insensitive and reserved_words_match_partial flags.
 	ReservedWordsCaseInsensitive bool
 	ReservedWordsMatchPartial    bool
+	// LargeText is the def's large_text flag: a value of this scalar is
+	// likely large, the way SQL TEXT differs from VARCHAR(n).
+	LargeText bool
 }
 
 func scalarInt64Ptr(value int64) *int64 {
@@ -388,6 +391,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: true,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Auth.JWT",
@@ -417,6 +421,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Auth.Password",
@@ -446,6 +451,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Contact.Email",
@@ -475,6 +481,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Contact.PhoneNumber",
@@ -504,6 +511,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Crypto.RSAPrivateKey",
@@ -533,6 +541,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Crypto.RSAPublicKey",
@@ -562,6 +571,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Crypto.SHA256",
@@ -591,6 +601,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Design.Color",
@@ -620,6 +631,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Embedding.Vector",
@@ -649,6 +661,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "File.SizeBytes",
@@ -678,6 +691,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Finance.Currency",
@@ -707,6 +721,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Finance.Money",
@@ -736,6 +751,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Finance.SignedMoney",
@@ -765,6 +781,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.Boolean",
@@ -794,6 +811,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.Decimal",
@@ -823,6 +841,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.Float64",
@@ -852,6 +871,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.Int64",
@@ -881,6 +901,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.JSON",
@@ -910,6 +931,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.Probability",
@@ -939,6 +961,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.StringMap",
@@ -968,6 +991,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Generic.Text",
@@ -997,6 +1021,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Geo.Location",
@@ -1026,6 +1051,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Git.PathPattern",
@@ -1055,6 +1081,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Identity.Name",
@@ -1084,6 +1111,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Identity.Slug",
@@ -1113,6 +1141,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Identity.UUID",
@@ -1142,6 +1171,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Identity.UserID",
@@ -1171,6 +1201,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Localization.Locale",
@@ -1200,6 +1231,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Network.DnsLabel",
@@ -1229,6 +1261,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Network.DomainName",
@@ -1258,6 +1291,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Network.IpAddress",
@@ -1287,6 +1321,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Network.Uri",
@@ -1316,6 +1351,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Network.Url",
@@ -1345,6 +1381,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Ordering.Rank",
@@ -1374,6 +1411,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.CronExpression",
@@ -1403,6 +1441,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Date",
@@ -1432,6 +1471,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.DateTime",
@@ -1461,6 +1501,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Days",
@@ -1490,6 +1531,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Duration",
@@ -1519,6 +1561,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Hours",
@@ -1548,6 +1591,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Milliseconds",
@@ -1577,6 +1621,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Minutes",
@@ -1606,6 +1651,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Month",
@@ -1635,6 +1681,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Quarter",
@@ -1664,6 +1711,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.QuarterYear",
@@ -1693,6 +1741,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.RecurrenceRule",
@@ -1722,6 +1771,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Seconds",
@@ -1751,6 +1801,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Time",
@@ -1780,6 +1831,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.TimeZone",
@@ -1809,6 +1861,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Temporal.Year",
@@ -1838,6 +1891,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 	{
 		CanonicalName:                "Text.Markdown",
@@ -1852,7 +1906,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		JSONSchemaType:               "string",
 		Format:                       "",
 		MaxLength:                    0,
-		MinLength:                    1,
+		MinLength:                    0,
 		Maximum:                      nil,
 		Minimum:                      nil,
 		Pattern:                      "^[\\s\\S]*$",
@@ -1867,6 +1921,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    true,
 	},
 	{
 		CanonicalName:                "Text.Sql",
@@ -1896,6 +1951,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    true,
 	},
 	{
 		CanonicalName:                "Version.SemVer",
@@ -1925,6 +1981,7 @@ var SCALAR_METADATA = []ScalarMetadata{
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
 		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
 	},
 }
 

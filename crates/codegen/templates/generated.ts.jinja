@@ -43,6 +43,8 @@ export interface ScalarMetadata {
   reservedWordsCaseInsensitive: boolean;
   /** The def's `reserved_words_match_partial` flag. */
   reservedWordsMatchPartial: boolean;
+  /** The def's `large_text` flag: a value of this scalar is likely large. */
+  largeText: boolean;
 }
 
 /**
@@ -292,6 +294,7 @@ export const normalize{{ alias.name }}Strict = normalize{{ alias.target }}Strict
     reservedWords: [{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}],
     reservedWordsCaseInsensitive: {% if e.reserved_words_case_insensitive %}true{% else %}false{% endif %},
     reservedWordsMatchPartial: {% if e.reserved_words_match_partial %}true{% else %}false{% endif %},
+    largeText: {% if e.large_text %}true{% else %}false{% endif %},
   },
 {% endfor %}];
 

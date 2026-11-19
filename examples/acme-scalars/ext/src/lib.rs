@@ -65,6 +65,7 @@ pub static DEFS: [ScalarDef; 2] = [
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     },
     ScalarDef {
         namespace: "Acme",
@@ -107,6 +108,7 @@ pub static DEFS: [ScalarDef; 2] = [
             validate: true,
         },
         metadata_omit: false,
+        large_text: false,
     },
 ];
 

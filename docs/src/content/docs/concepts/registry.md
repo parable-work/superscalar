@@ -51,6 +51,12 @@ Each `ScalarDef` records, among other fields:
   [comparability and sortability](/superscalar/concepts/comparability-and-sortability/).
 - `file_upload` and `image_constraints`, optional limits a structural scalar
   may declare. No built-in sets them; the fields exist so an extension can.
+- `large_text`, true when a value of the scalar is likely large, the way SQL
+  `TEXT` differs from `VARCHAR(n)`. It states size, not prose: the built-in
+  members are `Text.Markdown` and `Text.Sql`. A member declares no
+  `max_length`. A consumer reads the flag to choose storage or display for a
+  column. Every generated metadata table carries it: `large_text` in Rust and
+  Python, `LargeText` in Go, `largeText` in TypeScript.
 
 The `Scalar` trait is the behaviour side: `parse`, `normalize` and
 `validate`, each taking the input string. A hand-written implementation
@@ -132,7 +138,7 @@ any other name.
 `Registry::dump()` returns the assembled registry as JSON with a fixed field
 order: `dump_version` (2), `superscalar_version`, `extensions`, `scalars`
 (each def's fields plus its owner, `is_sortable` and `is_directive`, sorted
-by canonical name) and `legacy_aliases`. `superscalar registry dump`
+by canonical name; `large_text` is the last key of each) and `legacy_aliases`. `superscalar registry dump`
 (`make dump`) prints the built-in registry's dump; the acme example prints
 its own and its vector runners read the scalar list from it. The code
 generator and the docs generator read the `Registry` itself, not the dump.

@@ -246,6 +246,30 @@ bump they require (minor when loosening, major when tightening).
   - Conformance: 14 accepted and 20 rejected vectors are added
     (`user@example.c` moves from rejected to accepted), and the three other
     `pattern` rejections become `parse`.
+- `ScalarDef` gains the field `large_text: bool`, which marks the large-text
+  family: a value of the scalar is likely large, the way SQL `TEXT` differs
+  from `VARCHAR(n)`. It is `true` for `Text.Markdown` and `Text.Sql` and
+  `false` for every other built-in. A member declares no `max_length`.
+  Breaking for Rust: the field is required, so every `ScalarDef` literal an
+  extension writes must set it (`large_text: false` keeps today's
+  behaviour), and code that builds a `ScalarMetadata` value by hand must set
+  the new field of the same name.
+  - Metadata tables: every generated table carries the flag for built-in and
+    extension scalars alike: `large_text` in the Rust `ScalarMetadata` and in
+    each Python `SCALAR_METADATA` row, `LargeText` in Go, `largeText` in
+    TypeScript. The scalar reference pages gain a `Large text` row.
+  - Registry dump: each scalar gains the key `large_text`, after `hooks`.
+    `dump_version` stays 2; the change adds a key and moves none.
+  - Conformance: the corpus `metadata` rows record `large_text`, and every
+    reader checks it against a new hand-maintained expectation,
+    `meta.large_text_scalars`. An extension corpus that carries `metadata`
+    rows adds the field to each row.
+- `Text.Markdown` accepts the empty string: its `min_length` is `None` (was
+  1), as a large-text member declares no bound that refuses a value a source
+  may hold. The vector for `""` moves from rejected (`length`) to accepted.
+  The accept set loosens, a minor bump. `Text.Sql` keeps `min_length` 1.
+  `Text.Markdown` and `Text.Sql` each gain an accepted vector of over
+  100,000 characters, which grows the corpus file to about 280 KB.
 - Lenient coercion of `Generic.JSON` keeps a JSON string as a string. The
   coerced value is the canonical JSON text of the input, so the string
   `Draft` gives `"Draft"` (it failed with `parse`) and the string `123` gives

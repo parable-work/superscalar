@@ -33,6 +33,9 @@ type metadataVector struct {
 	IsSortable         bool    `json:"is_sortable"`
 	CaseInsensitive    bool    `json:"case_insensitive"`
 	reservedWordRule
+	// A pointer for the same reason ComparabilityClass is: a row that lost
+	// the key must not read as "not large text".
+	LargeText *bool `json:"large_text"`
 }
 
 // The three reserved-word fields of a metadata row, and the value shape of
@@ -70,6 +73,8 @@ type parityMeta struct {
 	CaseInsensitiveScalars []string `json:"case_insensitive_scalars"`
 	// Every row that reserves a word or sets either reserved-word flag.
 	ReservedWordScalars map[string]reservedWordRule `json:"reserved_word_scalars"`
+	// Sorted canonical names of the rows with large_text set.
+	LargeTextScalars []string `json:"large_text_scalars"`
 }
 
 type paritySpec struct {
@@ -176,6 +181,11 @@ func TestV2MetadataParity(t *testing.T) {
 		if got.ReservedWordsMatchPartial != want.ReservedWordsMatchPartial {
 			t.Errorf("%s ReservedWordsMatchPartial = %v, want %v", canonical, got.ReservedWordsMatchPartial, want.ReservedWordsMatchPartial)
 		}
+		if want.LargeText == nil {
+			t.Errorf("%s: corpus row has no large_text", canonical)
+		} else if got.LargeText != *want.LargeText {
+			t.Errorf("%s LargeText = %v, want %v", canonical, got.LargeText, *want.LargeText)
+		}
 		if !want.IsSortable {
 			nonSortable++
 		}
@@ -224,16 +234,21 @@ func TestV2MetadataParity(t *testing.T) {
 	// Same independence argument, for the case and reserved-word fields. Nil
 	// checks first, for the reason given above.
 	var caseInsensitive []string
+	var largeText []string
 	derivedReserved := map[string]reservedWordRule{}
 	for canonical, want := range spec.Metadata {
 		if want.CaseInsensitive {
 			caseInsensitive = append(caseInsensitive, canonical)
+		}
+		if want.LargeText != nil && *want.LargeText {
+			largeText = append(largeText, canonical)
 		}
 		if want.isSet() {
 			derivedReserved[canonical] = want.reservedWordRule
 		}
 	}
 	sort.Strings(caseInsensitive)
+	sort.Strings(largeText)
 	if spec.Meta.CaseInsensitiveScalars == nil {
 		t.Error("corpus meta.case_insensitive_scalars is missing; it is hand-maintained and the generator must never remove it")
 	} else if !slices.Equal(caseInsensitive, spec.Meta.CaseInsensitiveScalars) {
@@ -243,6 +258,11 @@ func TestV2MetadataParity(t *testing.T) {
 		t.Error("corpus meta.reserved_word_scalars is missing; it is hand-maintained and the generator must never remove it")
 	} else if !maps.EqualFunc(derivedReserved, spec.Meta.ReservedWordScalars, reservedWordRule.equal) {
 		t.Errorf("reserved-word rows = %+v, meta declares %+v", derivedReserved, spec.Meta.ReservedWordScalars)
+	}
+	if spec.Meta.LargeTextScalars == nil {
+		t.Error("corpus meta.large_text_scalars is missing; it is hand-maintained and the generator must never remove it")
+	} else if !slices.Equal(largeText, spec.Meta.LargeTextScalars) {
+		t.Errorf("large-text rows = %v, meta declares %v", largeText, spec.Meta.LargeTextScalars)
 	}
 	// set(scalars) - set(metadata) == set(metadata_excluded), not the weaker
 	// disjointness check. Disjointness alone passes if a scalar is missing from

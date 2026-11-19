@@ -24,6 +24,8 @@ pub struct ScalarMetadata {
     pub reserved_words_case_insensitive: bool,
     /// `ScalarDef::reserved_words_match_partial`.
     pub reserved_words_match_partial: bool,
+    /// `ScalarDef::large_text`: a value of this scalar is likely large.
+    pub large_text: bool,
 }
 
 pub const SCALAR_METADATA: &[ScalarMetadata] = &[
@@ -42,6 +44,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: true,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Auth.JWT",
@@ -58,6 +61,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Auth.Password",
@@ -74,6 +78,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Contact.Email",
@@ -90,6 +95,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Contact.PhoneNumber",
@@ -106,6 +112,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Crypto.RSAPrivateKey",
@@ -122,6 +129,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Crypto.RSAPublicKey",
@@ -138,6 +146,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Crypto.SHA256",
@@ -154,6 +163,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Design.Color",
@@ -170,6 +180,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Embedding.Vector",
@@ -186,6 +197,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "File.SizeBytes",
@@ -202,6 +214,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Finance.Currency",
@@ -218,6 +231,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Finance.Money",
@@ -234,6 +248,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Finance.SignedMoney",
@@ -250,6 +265,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.Boolean",
@@ -266,6 +282,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.Decimal",
@@ -282,6 +299,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.Float64",
@@ -298,6 +316,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.Int64",
@@ -314,6 +333,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.JSON",
@@ -330,6 +350,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.Probability",
@@ -346,6 +367,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.StringMap",
@@ -362,6 +384,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Generic.Text",
@@ -378,6 +401,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Geo.Location",
@@ -394,6 +418,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Git.PathPattern",
@@ -410,6 +435,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Identity.Name",
@@ -426,6 +452,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Identity.Slug",
@@ -442,6 +469,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Identity.UUID",
@@ -458,6 +486,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Identity.UserID",
@@ -474,6 +503,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Localization.Locale",
@@ -490,6 +520,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Network.DnsLabel",
@@ -506,6 +537,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Network.DomainName",
@@ -522,6 +554,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Network.IpAddress",
@@ -538,6 +571,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Network.Uri",
@@ -554,6 +588,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Network.Url",
@@ -570,6 +605,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Ordering.Rank",
@@ -586,6 +622,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.CronExpression",
@@ -602,6 +639,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Date",
@@ -618,6 +656,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.DateTime",
@@ -634,6 +673,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Days",
@@ -650,6 +690,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Duration",
@@ -666,6 +707,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Hours",
@@ -682,6 +724,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Milliseconds",
@@ -698,6 +741,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Minutes",
@@ -714,6 +758,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Month",
@@ -730,6 +775,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Quarter",
@@ -746,6 +792,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.QuarterYear",
@@ -762,6 +809,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.RecurrenceRule",
@@ -778,6 +826,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Seconds",
@@ -794,6 +843,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Time",
@@ -810,6 +860,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.TimeZone",
@@ -826,6 +877,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Temporal.Year",
@@ -842,6 +894,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
     ScalarMetadata {
         canonical_name: "Text.Markdown",
@@ -850,7 +903,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         json_schema_type: Some("string"),
         format: None,
         max_length: None,
-        min_length: Some(1),
+        min_length: None,
         pattern: Some("^[\\s\\S]*$"),
         comparability_class: None,
         is_sortable: true,
@@ -858,6 +911,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: true,
     },
     ScalarMetadata {
         canonical_name: "Text.Sql",
@@ -874,6 +928,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: true,
     },
     ScalarMetadata {
         canonical_name: "Version.SemVer",
@@ -890,6 +945,7 @@ pub const SCALAR_METADATA: &[ScalarMetadata] = &[
         reserved_words: &[],
         reserved_words_case_insensitive: false,
         reserved_words_match_partial: false,
+        large_text: false,
     },
 ];
 

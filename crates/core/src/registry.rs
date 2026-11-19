@@ -265,6 +265,18 @@ pub struct ScalarDef {
     /// `metadata` section. No built-in sets it; the motivating case is a
     /// secret reference, which is never a queryable data column.
     pub metadata_omit: bool,
+    /// Marks the large-text family: a value of this scalar is likely large,
+    /// the way SQL `TEXT` differs from `VARCHAR(n)`. It states size, not
+    /// prose: `Text.Sql` is a member, and so is `Text.Markdown`. A member
+    /// declares no `max_length`, because an upper bound would refuse the
+    /// values the scalar exists to hold; the only lower bound a member may
+    /// keep is the one that refuses the empty string (`Text.Sql`). A
+    /// consumer reads the flag to choose storage, indexing or display for
+    /// the column, such as an unbounded text type or a truncated preview.
+    /// Every metadata table carries it (`large_text` in Rust and Python,
+    /// `LargeText` in Go, `largeText` in TypeScript), and so does the
+    /// registry dump.
+    pub large_text: bool,
 }
 
 /// The sortability rule, as a fail-closed allowlist over a scalar's declared
@@ -560,6 +572,7 @@ impl Registry {
             is_sortable: bool,
             is_directive: bool,
             hooks: ScalarHooks,
+            large_text: bool,
         }
         let scalars = self
             .slots
@@ -599,6 +612,7 @@ impl Registry {
                     is_sortable: def.is_sortable(),
                     is_directive: slot.scalar.is_directive(),
                     hooks: def.hooks,
+                    large_text: def.large_text,
                 }
             })
             .collect();

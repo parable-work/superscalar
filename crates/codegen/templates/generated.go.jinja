@@ -52,6 +52,9 @@ type ScalarMetadata struct {
 	// reserved_words_case_insensitive and reserved_words_match_partial flags.
 	ReservedWordsCaseInsensitive bool
 	ReservedWordsMatchPartial    bool
+	// LargeText is the def's large_text flag: a value of this scalar is
+	// likely large, the way SQL TEXT differs from VARCHAR(n).
+	LargeText bool
 }
 
 func scalarInt64Ptr(value int64) *int64 {
@@ -126,6 +129,7 @@ var validScalarsMap = func() map[{{ go.scalar_list_type }}]struct{} {
 		ReservedWords: []string{{ "{" }}{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 		ReservedWordsCaseInsensitive: {% if e.reserved_words_case_insensitive %}true{% else %}false{% endif %},
 		ReservedWordsMatchPartial: {% if e.reserved_words_match_partial %}true{% else %}false{% endif %},
+		LargeText: {% if e.large_text %}true{% else %}false{% endif %},
 	},
 {% endfor %}}
 

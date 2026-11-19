@@ -42,7 +42,7 @@ func TestValidate(t *testing.T) {
 		{"stringmap valid", "Generic.StringMap", `{"a":"b"}`, false},
 		{"slug empty", "Identity.Slug", "", true},
 		{"slug valid", "Identity.Slug", "my-slug", false},
-		{"markdown empty", "Text.Markdown", "", true},
+		{"markdown empty", "Text.Markdown", "", false},
 		{"markdown valid", "Text.Markdown", "# hi", false},
 		{"sql empty", "Text.Sql", "", true},
 		{"sql valid", "Text.Sql", "SELECT 1", false},

@@ -88,6 +88,10 @@ for (const [canonical, want] of Object.entries(metaVectors)) {
     failures++;
     console.error(`${canonical} reservedWordsMatchPartial = ${got.reservedWordsMatchPartial}, want ${want.reserved_words_match_partial}`);
   }
+  if (got.largeText !== want.large_text) {
+    failures++;
+    console.error(`${canonical} largeText = ${got.largeText}, want ${want.large_text}`);
+  }
   if (!want.is_sortable) {
     nonSortable++;
   }
@@ -170,6 +174,17 @@ if (handReserved === undefined || handReserved === null) {
     failures++;
     console.error(`reserved-word rows = ${derivedReservedJson}, want ${handReservedJson}`);
   }
+}
+const largeText = Object.keys(metaVectors)
+  .filter((canonical) => metaVectors[canonical].large_text === true)
+  .sort();
+const handLargeText = corpus.meta.large_text_scalars;
+if (!Array.isArray(handLargeText)) {
+  failures++;
+  console.error("corpus meta.large_text_scalars is missing; it is hand-maintained and the generator must never remove it");
+} else if (JSON.stringify(largeText) !== JSON.stringify(handLargeText)) {
+  failures++;
+  console.error(`large-text rows = ${JSON.stringify(largeText)}, want ${JSON.stringify(handLargeText)}`);
 }
 // set(scalars) - set(metadata) === set(metadata_excluded), not the weaker
 // disjointness check: disjointness alone passes if a scalar is missing from

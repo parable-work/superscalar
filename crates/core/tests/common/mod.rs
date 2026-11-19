@@ -49,6 +49,7 @@ pub const fn def(
         comparability_class: None,
         hooks: ScalarHooks::NONE,
         metadata_omit: false,
+        large_text: false,
     }
 }
 

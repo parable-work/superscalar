@@ -18,7 +18,8 @@ VALID_SCALARS = (
 # which is the intended behaviour, not a gap. `case_insensitive`,
 # `reserved_words`, `reserved_words_case_insensitive` and
 # `reserved_words_match_partial` are the def's fields of the same names;
-# `reserved_words` is an empty list when the scalar reserves none.
+# `reserved_words` is an empty list when the scalar reserves none. `large_text`
+# is the def's flag of that name: True when a value is likely large.
 #
 # Deliberately ONE dict of plain dicts and not a NamedTuple and not one dict per
 # field. Not a NamedTuple: this module is imported by six services and
@@ -35,6 +36,7 @@ SCALAR_METADATA = {
         "reserved_words": [{% for word in e.reserved_words %}{{ word.literal }}{% if not loop.last %}, {% endif %}{% endfor %}],
         "reserved_words_case_insensitive": {% if e.reserved_words_case_insensitive %}True{% else %}False{% endif %},
         "reserved_words_match_partial": {% if e.reserved_words_match_partial %}True{% else %}False{% endif %},
+        "large_text": {% if e.large_text %}True{% else %}False{% endif %},
     },
 {% endfor %}}
 
