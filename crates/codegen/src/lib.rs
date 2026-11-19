@@ -342,7 +342,7 @@ pub fn render<T: Serialize>(name: &str, source: &str, context: &T) -> Result<Str
         .map_err(|err| RenderError(format!("{name}: {err}")))?;
     env.get_template(name)
         .map_err(|err| RenderError(format!("{name}: {err}")))?
-        .render(context)
+        .render(minijinja::value::Serde(context))
         .map_err(|err| RenderError(format!("{name}: {err}")))
 }
 
