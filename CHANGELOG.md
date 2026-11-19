@@ -292,6 +292,25 @@ bump they require (minor when loosening, major when tightening).
     reader checks it against a new hand-maintained expectation,
     `meta.large_text_scalars`. An extension corpus that carries `metadata`
     rows adds the field to each row.
+- `Contact.PhoneNumber` accepts only the number. Breaking: the accept set
+  tightens, a major bump.
+  - The input must be a `+` (after an optional `(`), then digits and
+    separators (whitespace, `(`, `)`, `.`, `-` and the other hyphen and dash
+    characters), then an optional extension such as `ext. 3`, `x3` or `#3`;
+    or a `tel:` URI (RFC 3966) with its parameters. The scalar checks this
+    shape before the phone-number library reads the value.
+  - Newly refused, with `custom` and the message `Invalid phone number format
+    - must be only the number, starting with +`: a number inside free text
+    (`Phone: +1 415 555 2671`), letters read as keypad digits
+    (`+1 800 FLOWERS`), a `/` or a bracket as a separator, a fullwidth plus
+    sign, an `x` with no extension digits, and a `tel:` URI that holds
+    spaces. The library took the first number out of each of these.
+  - Still accepted, now with vectors: surrounding whitespace, dots and
+    dashes as separators, `(+44)`, an extension, and the three `tel:` forms.
+    Invisible marks that copy and paste or a CSV export adds (a byte order
+    mark, a zero-width space, the directional marks and isolates) are
+    removed before the check. The canonical form is still E.164.
+  - Conformance: 13 accepted and 10 rejected vectors are added.
 - `Temporal.Time` has one canonical form, 24-hour `HH:MM:SS`. Breaking: the
   canonical form changes, a major bump.
   - Canonical form: `parse` and `normalize` rewrite an accepted value to
