@@ -72,6 +72,31 @@ function checkUnknownName(name, be) {
   return failures;
 }
 
+// No built-in scalar has a magnitude or parts, so both calls refuse a valid
+// value with the core's message, and an unknown name with the unknown-scalar
+// error. An extension's scalar answers through the same two exports.
+function checkMagnitudeAndParts(name, be) {
+  let failures = 0;
+  for (const [method, what] of [["magnitude", "magnitude"], ["parts", "parts"]]) {
+    for (const [scalar, want] of [
+      ["Contact.Email", `the scalar has no ${what}`],
+      ["contact.email", 'unknown scalar "contact.email"'],
+    ]) {
+      try {
+        const got = be[method](scalar, "a@b.co");
+        failures++;
+        console.error(`${name}: ${method}(${scalar}) returned ${JSON.stringify(got)}, want a refusal`);
+      } catch (e) {
+        if (!String(e.message).includes(want)) {
+          failures++;
+          console.error(`${name}: ${method}(${scalar}) threw ${JSON.stringify(e.message)}, want ${JSON.stringify(want)}`);
+        }
+      }
+    }
+  }
+  return failures;
+}
+
 // The generated wrappers over the backend that `api`, the package's generated
 // module, was built with: the canonical forms they hand back and the inputs
 // they refuse.
@@ -262,4 +287,4 @@ function checkWrappers(api) {
   return failures;
 }
 
-module.exports = { runCorpus, checkUnknownName, checkWrappers };
+module.exports = { runCorpus, checkUnknownName, checkMagnitudeAndParts, checkWrappers };

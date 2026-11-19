@@ -13,7 +13,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { runCorpus, checkUnknownName, checkWrappers } = require("./corpus-runner.cjs");
+const { runCorpus, checkUnknownName, checkMagnitudeAndParts, checkWrappers } = require("./corpus-runner.cjs");
 const pkg = fileURLToPath(new URL("..", import.meta.url));
 const corpus = JSON.parse(
   readFileSync(new URL("../../../conformance/core-scalars.v2.json", import.meta.url), "utf8"),
@@ -77,6 +77,7 @@ assert.equal(api.wasmBackend(), backendModule.backend);
 assert.throws(() => api.napiBackend(), /native addon loads only in Node/);
 
 failures += checkUnknownName("browser", backendModule.backend);
+failures += checkMagnitudeAndParts("browser", backendModule.backend);
 failures += runCorpus("browser", backendModule.backend, corpus);
 failures += checkWrappers(api);
 

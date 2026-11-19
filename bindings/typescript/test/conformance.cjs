@@ -24,7 +24,7 @@ const { VALID_SCALARS, SCALAR_METADATA_BY_CANONICAL } = generated;
 // Both backend factories come from the CJS Node entry; wasmBackend() loads the
 // nodejs-target wasm bundle so the wasm path is exercised end-to-end in Node.
 const { napiBackend, wasmBackend } = require("../dist/backend.js");
-const { runCorpus, checkUnknownName, checkWrappers } = require("./corpus-runner.cjs");
+const { runCorpus, checkUnknownName, checkMagnitudeAndParts, checkWrappers } = require("./corpus-runner.cjs");
 
 const corpus = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "..", "..", "conformance", "core-scalars.v2.json"), "utf8"),
@@ -40,6 +40,7 @@ if (JSON.stringify(corpusNames) !== JSON.stringify([...VALID_SCALARS])) {
 // An unknown or differently cased name throws through both backends.
 for (const [name, be] of [["napi", napiBackend()], ["wasm", wasmBackend()]]) {
   failures += checkUnknownName(name, be);
+  failures += checkMagnitudeAndParts(name, be);
 }
 // napiBackend() binds the napi addon; wasmBackend() binds the nodejs-target
 // wasm bundle. Running the full corpus through each proves both cores agree and

@@ -9,6 +9,12 @@ export interface ScalarBackend {
   parse(scalar: string, value: string): string;
   normalize(scalar: string, value: string): string;
   validate(scalar: string, value: string): void;
+  // The value's amount in the scalar's base unit, as a decimal integer
+  // string. Throws on reject, and for a scalar without a magnitude.
+  magnitude(scalar: string, value: string): string;
+  // The value's parts, as a JSON object string. Throws on reject, and for a
+  // scalar without parts.
+  parts(scalar: string, value: string): string;
   // Lenient ("flag, don't block") coercion: a JSON document string in, the
   // serialized LenientCoerceResult JSON
   // ({"value":<json|null>,"error":<{kind,message}|null>}) out. Throws only on an
@@ -60,6 +66,8 @@ export interface WasmExports {
   scalar_parse(scalar: string, value: string): string;
   scalar_normalize(scalar: string, value: string): string;
   scalar_validate(scalar: string, value: string): void;
+  scalar_magnitude(scalar: string, value: string): string;
+  scalar_parts(scalar: string, value: string): string;
   scalar_coerce_lenient(scalar: string, jsonIn: string): string;
 }
 
@@ -70,6 +78,8 @@ export function wrapWasm(wasm: WasmExports): ScalarBackend {
     validate: (scalar: string, value: string): void => {
       wasm.scalar_validate(scalar, value);
     },
+    magnitude: (scalar: string, value: string): string => wasm.scalar_magnitude(scalar, value),
+    parts: (scalar: string, value: string): string => wasm.scalar_parts(scalar, value),
     coerceLenient: (scalar: string, jsonIn: string): string => wasm.scalar_coerce_lenient(scalar, jsonIn),
   };
 }

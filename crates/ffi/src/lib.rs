@@ -9,7 +9,7 @@
 //! constructor. With the default `builtin` feature this crate is also the
 //! built-in assembly: the macro is applied below to `Registry::builtin()`. A
 //! downstream applies the same macro to its own assembled registry, depends on
-//! this crate with `default-features = false`, and gets the same nine symbols
+//! this crate with `default-features = false`, and gets the same eleven symbols
 //! plus whatever extra entry points it writes; the macro checks the feature at
 //! compile time through `BUILTIN_ASSEMBLY`.
 

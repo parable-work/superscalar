@@ -6,7 +6,7 @@ apply reads them as context.
 
 --- a/ext/src/lib.rs
 +++ b/ext/src/lib.rs
-@@ -24,10 +24,12 @@
+@@ -26,10 +26,12 @@
  pub const ORDER_NUMBER: &str = "Acme.OrderNumber";
  /// `Acme.ScalarRef`.
  pub const SCALAR_REF: &str = "Acme.ScalarRef";
@@ -20,7 +20,7 @@ apply reads them as context.
      ScalarDef {
          namespace: "Acme",
          canonical: ORDER_NUMBER,
-@@ -110,6 +112,45 @@
+@@ -112,6 +114,45 @@
          metadata_omit: false,
          large_text: false,
      },

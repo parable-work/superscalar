@@ -19,8 +19,10 @@ export { firstAvailableBackend, napiBackend, wrapWasm } from "./web-backend";
 // The raw wasm-bindgen exports: `superscalar/wasm` resolves here in this build.
 export {
   scalar_coerce_lenient,
+  scalar_magnitude,
   scalar_normalize,
   scalar_parse,
+  scalar_parts,
   scalar_validate,
 } from "../wasm-web/superscalar_wasm.js";
 

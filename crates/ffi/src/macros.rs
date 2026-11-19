@@ -4,8 +4,9 @@
 ///
 /// `$registry` is a path to a `fn() -> &'static Registry`, for example
 /// `superscalar::Registry::builtin` or a downstream `acme::registry`.
-/// The expansion is the nine `extern "C"` functions declared in
+/// The expansion is the eleven `extern "C"` functions declared in
 /// `superscalar.h`: `scalar_parse`, `scalar_normalize`, `scalar_validate`,
+/// `scalar_magnitude`, `scalar_parts`,
 /// `scalar_coerce_lenient`, `scalar_result_free`, `scalar_parse_batch`,
 /// `scalar_normalize_batch`, `scalar_validate_batch`,
 /// `scalar_result_array_free`. Their names and signatures are the ABI and do
@@ -90,6 +91,36 @@ macro_rules! export_c_abi {
             input: *const ::std::os::raw::c_char,
         ) -> $crate::ScalarResult {
             $crate::run($registry(), scalar, input, $crate::Hook::Validate)
+        }
+
+        /// The value's amount in the scalar's base unit, as a decimal integer
+        /// string: millicores for a CPU quantity, bytes for a size. A scalar
+        /// without a magnitude refuses with a `Custom` error.
+        ///
+        /// # Safety
+        /// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+        /// each be null or a valid NUL-terminated C string valid for the call.
+        #[no_mangle]
+        pub unsafe extern "C" fn scalar_magnitude(
+            scalar: *const ::std::os::raw::c_char,
+            input: *const ::std::os::raw::c_char,
+        ) -> $crate::ScalarResult {
+            $crate::run($registry(), scalar, input, $crate::Hook::Magnitude)
+        }
+
+        /// The value's parts, as a JSON object string: a machine tier's CPU
+        /// count and memory. A scalar without parts refuses with a `Custom`
+        /// error.
+        ///
+        /// # Safety
+        /// `scalar` (a canonical name such as `"Contact.Email"`) and `input` must
+        /// each be null or a valid NUL-terminated C string valid for the call.
+        #[no_mangle]
+        pub unsafe extern "C" fn scalar_parts(
+            scalar: *const ::std::os::raw::c_char,
+            input: *const ::std::os::raw::c_char,
+        ) -> $crate::ScalarResult {
+            $crate::run($registry(), scalar, input, $crate::Hook::Parts)
         }
 
         /// Lenient ("flag, don't block") coercion: JSON value in, JSON value out.

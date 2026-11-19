@@ -63,6 +63,25 @@ The `Scalar` trait is the behaviour side: `parse`, `normalize` and
 exists for deep and structural scalars; directive scalars get a generic
 implementation built from the definition's rules.
 
+The trait has two more methods, each with a default that refuses:
+
+- `magnitude` returns the value's amount in the scalar's base unit, as a
+  decimal integer string, for a scalar whose values are amounts written with
+  a unit: a CPU quantity in millicores, a size in bytes. The answer is text,
+  so an amount beyond 64 bits survives every binding.
+- `parts` returns the value's parts as a JSON object string, for a scalar
+  whose values name several facts at once: a machine tier's CPU count and
+  memory.
+
+No built-in implements either, so every built-in refuses with a `custom`
+error, `the scalar has no magnitude` or `the scalar has no parts`. An
+extension's scalar implements the one it has. `Registry::magnitude(name,
+input)` and `Registry::parts(name, input)` are the name-keyed forms, and
+every binding exposes both: `scalar_magnitude` and `scalar_parts` in the C
+ABI and the WASM build, `magnitude` and `parts` in the napi addon, the
+Python `_native` module and the TypeScript `ScalarBackend`, `Magnitude` and
+`Parts` in Go.
+
 ## The name is the identity
 
 A scalar is identified by its canonical name and nothing else. The C ABI,
@@ -129,8 +148,8 @@ this order and stop at the first failure:
 
 An assembled registry is read-only. It answers `def`, `scalar`, `owner`
 (`"builtin"` for a built-in), `resolved`, `comparable_with`, `names`, `defs`,
-`len`, `extensions` and `legacy_aliases`. The `Scalar` methods `parse`,
-`normalize` and `validate` receive the registry, so a scalar can check input
+`len`, `extensions` and `legacy_aliases`, and `magnitude` and `parts` by
+name. Every `Scalar` method receives the registry, so a scalar can check input
 against the assembled catalog rather than the built-in one. The free
 functions `scalar_def` and `scalar_for` cover the built-ins only and panic on
 any other name.

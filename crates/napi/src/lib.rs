@@ -2,11 +2,11 @@
 //!
 //! Two parts. The library (`resolve`, `run_*`) does the work over an explicit
 //! registry and carries no `#[napi]` attribute. The `export_napi!` macro emits
-//! the four exported functions over a registry constructor. With the default
+//! the six exported functions over a registry constructor. With the default
 //! `builtin` feature this crate is also the built-in assembly: the macro is
 //! applied below to `Registry::builtin()`. A downstream applies it to its own
 //! assembled registry, depends on this crate with `default-features = false`,
-//! keeps a `build.rs` calling `napi_build::setup()`, and ships the same four
+//! keeps a `build.rs` calling `napi_build::setup()`, and ships the same six
 //! exports; the macro checks the feature at compile time through
 //! `BUILTIN_ASSEMBLY`.
 
@@ -54,6 +54,23 @@ pub fn run_validate(registry: &Registry, scalar: &str, value: &str) -> Result<()
         .map_err(|err| Error::from_reason(err.to_string()))
 }
 
+/// `magnitude` over `registry`: the value's amount in the scalar's base unit,
+/// as a decimal integer string. Throws on reject, and for a scalar without a
+/// magnitude.
+pub fn run_magnitude(registry: &Registry, scalar: &str, value: &str) -> Result<String> {
+    resolve(registry, scalar)?
+        .magnitude(registry, value)
+        .map_err(|err| Error::from_reason(err.to_string()))
+}
+
+/// `parts` over `registry`: the value's parts, as a JSON object string. Throws
+/// on reject, and for a scalar without parts.
+pub fn run_parts(registry: &Registry, scalar: &str, value: &str) -> Result<String> {
+    resolve(registry, scalar)?
+        .parts(registry, value)
+        .map_err(|err| Error::from_reason(err.to_string()))
+}
+
 /// Lenient coercion over `registry`: a JSON document string in, the serialized
 /// `LenientCoerceResult` JSON out. Throws only on an unknown name or unparseable
 /// `json_in`; a captured coercion failure rides in the result's `error`.
@@ -65,8 +82,9 @@ pub fn run_coerce_lenient(registry: &Registry, scalar: &str, json_in: &str) -> R
     serde_json::to_string(&result).map_err(|err| Error::from_reason(err.to_string()))
 }
 
-/// Emit the four `#[napi]` exports (`parse`, `normalize`, `validate`,
-/// `coerce_lenient`, which napi exposes as `coerceLenient`) over the registry
+/// Emit the six `#[napi]` exports (`parse`, `normalize`, `validate`,
+/// `magnitude`, `parts` and `coerce_lenient`, which napi exposes as
+/// `coerceLenient`) over the registry
 /// that `$registry()` returns, a path to a `fn() -> &'static Registry`.
 ///
 /// `#[napi]` registers each export through `napi-build`, so the calling crate
@@ -86,7 +104,7 @@ macro_rules! export_napi {
     ($registry:path) => {
         const _: () = ::core::assert!(
             !$crate::BUILTIN_ASSEMBLY,
-            "superscalar-napi was built with its `builtin` feature and already registers the four exports over Registry::builtin(); depend on it with default-features = false"
+            "superscalar-napi was built with its `builtin` feature and already registers the six exports over Registry::builtin(); depend on it with default-features = false"
         );
         $crate::export_napi!(@emit $registry);
     };
@@ -107,6 +125,20 @@ macro_rules! export_napi {
         #[::napi_derive::napi]
         pub fn validate(scalar: String, value: String) -> ::napi::Result<()> {
             $crate::run_validate($registry(), &scalar, &value)
+        }
+
+        /// The value's amount in the scalar's base unit, as a decimal integer
+        /// string (throws on reject, and for a scalar without a magnitude).
+        #[::napi_derive::napi]
+        pub fn magnitude(scalar: String, value: String) -> ::napi::Result<String> {
+            $crate::run_magnitude($registry(), &scalar, &value)
+        }
+
+        /// The value's parts, as a JSON object string (throws on reject, and
+        /// for a scalar without parts).
+        #[::napi_derive::napi]
+        pub fn parts(scalar: String, value: String) -> ::napi::Result<String> {
+            $crate::run_parts($registry(), &scalar, &value)
         }
 
         /// Lenient ("flag, don't block") coercion: a JSON document string in, the

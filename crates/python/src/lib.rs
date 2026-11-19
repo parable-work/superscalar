@@ -2,7 +2,7 @@
 //!
 //! Two parts. The library (`resolve`, `run_*`) does the work over an explicit
 //! registry and carries no `#[pyfunction]` attribute. The `export_pymodule!`
-//! macro emits the four `#[pyfunction]`s and the `#[pymodule]` that registers
+//! macro emits the six `#[pyfunction]`s and the `#[pymodule]` that registers
 //! them, over a registry constructor. With the default `builtin` feature this
 //! crate is also the built-in assembly: the macro is applied below to
 //! `Registry::builtin()` as module `_native`. A downstream applies it to its
@@ -57,6 +57,23 @@ pub fn run_validate(registry: &Registry, scalar: &str, value: &str) -> PyResult<
         .map_err(|err| PyValueError::new_err(err.to_string()))
 }
 
+/// `magnitude` over `registry`: the value's amount in the scalar's base unit,
+/// as a decimal integer string. Raises `ValueError` on reject, and for a
+/// scalar without a magnitude.
+pub fn run_magnitude(registry: &Registry, scalar: &str, value: &str) -> PyResult<String> {
+    resolve(registry, scalar)?
+        .magnitude(registry, value)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+}
+
+/// `parts` over `registry`: the value's parts, as a JSON object string.
+/// Raises `ValueError` on reject, and for a scalar without parts.
+pub fn run_parts(registry: &Registry, scalar: &str, value: &str) -> PyResult<String> {
+    resolve(registry, scalar)?
+        .parts(registry, value)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+}
+
 /// Lenient coercion over `registry`: a JSON document string in, a
 /// `{"value": <decoded JSON | None>, "error": {"kind", "message"} | None}` dict
 /// out. A coercion failure does not raise: it rides in `error`. An unknown
@@ -99,8 +116,9 @@ pub fn run_coerce_lenient<'py>(
 }
 
 /// Emit the Python module `$module` over the registry that `$registry()`
-/// returns, a path to a `fn() -> &'static Registry`. The module holds the four
-/// `#[pyfunction]`s `parse`, `normalize`, `validate`, `coerce_lenient`, plus
+/// returns, a path to a `fn() -> &'static Registry`. The module holds the six
+/// `#[pyfunction]`s `parse`, `normalize`, `validate`, `magnitude`, `parts`,
+/// `coerce_lenient`, plus
 /// every function named in the optional `extra = [f, g]` list, which must be
 /// `#[pyfunction]`s visible at the call site.
 ///
@@ -157,6 +175,21 @@ macro_rules! export_pymodule {
             $crate::run_validate($registry(), scalar, value)
         }
 
+        /// The value's amount in the scalar's base unit, as a decimal integer
+        /// string. Raises ValueError on reject, and for a scalar without a
+        /// magnitude.
+        #[::pyo3::pyfunction]
+        fn magnitude(scalar: &str, value: &str) -> ::pyo3::PyResult<String> {
+            $crate::run_magnitude($registry(), scalar, value)
+        }
+
+        /// The value's parts, as a JSON object string. Raises ValueError on
+        /// reject, and for a scalar without parts.
+        #[::pyo3::pyfunction]
+        fn parts(scalar: &str, value: &str) -> ::pyo3::PyResult<String> {
+            $crate::run_parts($registry(), scalar, value)
+        }
+
         /// Lenient ("flag, don't block") coercion: a JSON document string in, a
         /// `{"value": <decoded JSON | None>, "error": {"kind", "message"} | None}` dict
         /// out.
@@ -181,6 +214,8 @@ macro_rules! export_pymodule {
             ::pyo3::types::PyModuleMethods::add_function(m, ::pyo3::wrap_pyfunction!(parse, m)?)?;
             ::pyo3::types::PyModuleMethods::add_function(m, ::pyo3::wrap_pyfunction!(normalize, m)?)?;
             ::pyo3::types::PyModuleMethods::add_function(m, ::pyo3::wrap_pyfunction!(validate, m)?)?;
+            ::pyo3::types::PyModuleMethods::add_function(m, ::pyo3::wrap_pyfunction!(magnitude, m)?)?;
+            ::pyo3::types::PyModuleMethods::add_function(m, ::pyo3::wrap_pyfunction!(parts, m)?)?;
             ::pyo3::types::PyModuleMethods::add_function(
                 m,
                 ::pyo3::wrap_pyfunction!(coerce_lenient, m)?,

@@ -227,6 +227,8 @@ pub enum Hook {
     Parse,
     Normalize,
     Validate,
+    Magnitude,
+    Parts,
 }
 
 /// Decode a caller-owned C string; the `Err` is the `ScalarResult` to return
@@ -321,6 +323,12 @@ unsafe fn run_hook(
         Hook::Validate => scalar
             .validate(registry, decoded)
             .map(|()| ScalarValue::empty()),
+        Hook::Magnitude => scalar
+            .magnitude(registry, decoded)
+            .and_then(ScalarValue::from_string),
+        Hook::Parts => scalar
+            .parts(registry, decoded)
+            .and_then(ScalarValue::from_string),
     })
 }
 

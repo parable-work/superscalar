@@ -177,7 +177,13 @@ assembled catalog: your Go program links one static archive that answers for
 `Contact.Email` and `Acme.OrderNumber` alike. The C ABI is unchanged from the
 built-in packages (a canonical name and a UTF-8 string in, a `ScalarResult`
 out),
-so the same nine entry points exist and the built-in header applies.
+so the same eleven entry points exist and the built-in header applies.
+`Acme.ScalarRef` also implements `Scalar::parts`, which no built-in does: the
+parts of a reference are its namespace, its name and the extension that
+declared it. A scalar that states an amount with a unit implements
+`Scalar::magnitude` the same way. Both reach every binding through the
+generic entry points (`scalar_parts` and `scalar_magnitude` in C), so an
+extension writes no binding code for them.
 `napi`, `pyo3` and `wasm-bindgen` stay direct dependencies of your binding
 crates because the macros expand to items carrying those frameworks'
 attributes. They must be the same minor versions the superscalar binding
@@ -302,7 +308,9 @@ include the built-in scalars as well as yours, so your Go package has
 
 `conformance/acme-scalars.v2.json` has the same shape as the built-in
 corpus. `Acme.ScalarRef` accepts `"Contact.Email"` and `"Acme.OrderNumber"`
-and rejects `"Nope.Nope"` and `"contact.email"`. The example runs both the
+and rejects `"Nope.Nope"` and `"contact.email"`. Its accepted vectors also
+state `parts`, which every runner checks through the binding's own entry
+point. The example runs both the
 built-in file and its own at two levels, so the assembly proves that the 48
 built-ins still behave and that its scalars behave:
 

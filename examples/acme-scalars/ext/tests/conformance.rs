@@ -50,6 +50,10 @@ struct Cases {
 struct Accepted {
     input: String,
     normalized: Option<String>,
+    /// The amount in the scalar's base unit, for a scalar with a magnitude.
+    magnitude: Option<String>,
+    /// The value's parts, for a scalar with parts.
+    parts: Option<serde_json::Value>,
     #[serde(default)]
     unresolved: bool,
 }
@@ -108,6 +112,26 @@ fn assembled_registry_reproduces_every_vector() {
                     "{canonical}: parse({:?}) rejected ({err}), expected accept",
                     case.input
                 )),
+            }
+            if let Some(expected) = &case.magnitude {
+                let got = registry.magnitude(canonical, &case.input);
+                if got.as_ref() != Ok(expected) {
+                    failures.push(format!(
+                        "{canonical}: magnitude({:?}) = {got:?}, expected {expected:?}",
+                        case.input
+                    ));
+                }
+            }
+            if let Some(expected) = &case.parts {
+                let got = registry
+                    .parts(canonical, &case.input)
+                    .map(|text| serde_json::from_str::<serde_json::Value>(&text));
+                if !matches!(&got, Ok(Ok(value)) if value == expected) {
+                    failures.push(format!(
+                        "{canonical}: parts({:?}) = {got:?}, expected {expected}",
+                        case.input
+                    ));
+                }
             }
         }
         for case in cases.rejected.iter().filter(|c| !c.unresolved) {
@@ -262,6 +286,46 @@ fn scalar_ref_accept_set_is_the_assembly() {
     assert!(scalar_ref
         .validate(Registry::builtin(), "Acme.OrderNumber")
         .is_err());
+}
+
+/// `Acme.ScalarRef` has parts and no magnitude; `Acme.OrderNumber`, served by
+/// the directive engine, has neither. A scalar that implements neither method
+/// keeps the refusing defaults.
+#[test]
+fn scalar_ref_has_parts_and_the_other_scalars_refuse() {
+    let registry = registry();
+    let parts = registry
+        .parts(SCALAR_REF, "Acme.OrderNumber")
+        .expect("a known name has parts");
+    let parts: serde_json::Value = serde_json::from_str(&parts).expect("a JSON object");
+    assert_eq!(
+        parts,
+        serde_json::json!({ "namespace": "Acme", "name": "OrderNumber", "owner": "acme" })
+    );
+    // A value the scalar refuses fails with the scalar's own error.
+    let refused = registry
+        .parts(SCALAR_REF, "Nope.Nope")
+        .expect_err("unknown name rejects");
+    assert_eq!(refused.kind, ErrorKind::Enum);
+
+    for (result, message) in [
+        (
+            registry.magnitude(SCALAR_REF, "Contact.Email"),
+            "the scalar has no magnitude",
+        ),
+        (
+            registry.magnitude(ORDER_NUMBER, "ORD-000123"),
+            "the scalar has no magnitude",
+        ),
+        (
+            registry.parts(ORDER_NUMBER, "ORD-000123"),
+            "the scalar has no parts",
+        ),
+    ] {
+        let error = result.expect_err("the default refuses");
+        assert_eq!(error.kind, ErrorKind::Custom);
+        assert_eq!(error.message, message);
+    }
 }
 
 #[test]

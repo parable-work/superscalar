@@ -29,10 +29,10 @@
     },
     "Acme.ScalarRef": {
       "accepted": [
-        { "input": "Contact.Email", "normalized": "Contact.Email" },
-        { "input": "Identity.UUID", "normalized": "Identity.UUID" },
-        { "input": "Acme.OrderNumber", "normalized": "Acme.OrderNumber" },
-        { "input": "Acme.ScalarRef", "normalized": "Acme.ScalarRef" }
+        { "input": "Contact.Email", "normalized": "Contact.Email", "parts": { "namespace": "Contact", "name": "Email", "owner": "builtin" } },
+        { "input": "Identity.UUID", "normalized": "Identity.UUID", "parts": { "namespace": "Identity", "name": "UUID", "owner": "builtin" } },
+        { "input": "Acme.OrderNumber", "normalized": "Acme.OrderNumber", "parts": { "namespace": "Acme", "name": "OrderNumber", "owner": "acme" } },
+        { "input": "Acme.ScalarRef", "normalized": "Acme.ScalarRef", "parts": { "namespace": "Acme", "name": "ScalarRef", "owner": "acme" } }
       ],
       "rejected": [
         { "input": "Nope.Nope", "validator": "enum" },

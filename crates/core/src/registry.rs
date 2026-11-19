@@ -1,7 +1,7 @@
 use crate::catalog::CATALOG;
 use crate::definitions::Definitions;
 use crate::directive::DirectiveScalar;
-use crate::error::ScalarError;
+use crate::error::{ErrorKind, ScalarError};
 use crate::extension::{AssemblyError, Extension, LegacyAlias};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -359,6 +359,27 @@ pub trait Scalar: Send + Sync {
     fn normalize(&self, registry: &Registry, input: &str) -> Result<String, ScalarError>;
     /// Enforce shape without returning a value.
     fn validate(&self, registry: &Registry, input: &str) -> Result<(), ScalarError>;
+    /// The value's amount in the scalar's base unit, as a decimal integer
+    /// string, for a scalar whose values are amounts written with a unit: a
+    /// CPU quantity in millicores, a size in bytes. The answer is text so an
+    /// amount beyond 64 bits survives every binding. A scalar without a
+    /// magnitude keeps this default, which refuses; no built-in has one.
+    fn magnitude(&self, _registry: &Registry, _input: &str) -> Result<String, ScalarError> {
+        Err(ScalarError::new(
+            ErrorKind::Custom,
+            "the scalar has no magnitude",
+        ))
+    }
+    /// The value's parts, as a JSON object string, for a scalar whose values
+    /// name several facts at once: a machine tier's CPU count and memory. A
+    /// scalar without parts keeps this default, which refuses; no built-in
+    /// has parts.
+    fn parts(&self, _registry: &Registry, _input: &str) -> Result<String, ScalarError> {
+        Err(ScalarError::new(
+            ErrorKind::Custom,
+            "the scalar has no parts",
+        ))
+    }
     /// True only for the generic directive engine. Hand-written impls inherit
     /// the `false` default; the assembly exhaustiveness check uses this to
     /// catch a tagged-custom scalar that silently fell through to
@@ -474,6 +495,30 @@ impl Registry {
     /// engine), or `None` for a name no extension declared.
     pub fn scalar(&self, canonical: &str) -> Option<&dyn Scalar> {
         self.slots.get(canonical).map(|slot| &*slot.scalar)
+    }
+
+    /// [`Scalar::magnitude`] of the scalar named `canonical`: the amount
+    /// `input` states, in the scalar's base unit, as a decimal integer
+    /// string. Fails with [`ErrorKind::Enum`] for a name no extension
+    /// declared, with the scalar's own error for a value it refuses, and with
+    /// [`ErrorKind::Custom`] for a scalar that has no magnitude.
+    pub fn magnitude(&self, canonical: &str, input: &str) -> Result<String, ScalarError> {
+        self.known_scalar(canonical)?.magnitude(self, input)
+    }
+
+    /// [`Scalar::parts`] of the scalar named `canonical`: the parts of
+    /// `input`, as a JSON object string. Fails as [`Registry::magnitude`]
+    /// does, with [`ErrorKind::Custom`] for a scalar that has no parts.
+    pub fn parts(&self, canonical: &str, input: &str) -> Result<String, ScalarError> {
+        self.known_scalar(canonical)?.parts(self, input)
+    }
+
+    /// The implementation serving `canonical`, or the error the name-keyed
+    /// entry points return for a name no extension declared.
+    fn known_scalar(&self, canonical: &str) -> Result<&dyn Scalar, ScalarError> {
+        self.scalar(canonical).ok_or_else(|| {
+            ScalarError::new(ErrorKind::Enum, format!("unknown scalar: {canonical}"))
+        })
     }
 
     /// The name of the extension that declared `canonical` (`"builtin"` for

@@ -42,6 +42,13 @@ must succeed and return exactly `normalized`. A rejected vector is `{ "input":
 ..., "validator": ... }`: `parse(input)` must fail, and `validator` names the
 error kind that fires (`pattern`, `empty`, `length`, `parse`, and so on).
 
+An accepted vector of a scalar that implements `Scalar::magnitude` or
+`Scalar::parts` may also state `"magnitude"`, the amount as a decimal integer
+string, and `"parts"`, a JSON object. No built-in implements either, so the
+built-in corpus has no such key and the single-file runners do not read them;
+the acme runners check both (`parts` is compared as a JSON value, not as
+text).
+
 A vector may carry `"unresolved": true`. That flags intended behaviour the
 core does not yet enforce; every runner skips it and counts the skips, so the
 suite stays green while the gap is visible. Do not add unresolved vectors to
@@ -100,8 +107,9 @@ its own files together through its assembled registry. The
   (napi and WASM) take a registry dump (`--registry`) and any number of
   vector files. They merge `scalars` the same way and fail when a key is in
   two files, an assembled scalar has no vectors, a vector names a scalar the
-  assembly does not know, or no extension scalar was exercised. They check
-  parse results only, not the metadata section. `scripts/smoke.sh`
+  assembly does not know, no extension scalar was exercised, or no vector
+  states a `magnitude` or `parts`. They check parse results and those two
+  keys, not the metadata section. `scripts/smoke.sh`
   (`make acme`) builds each binding and runs them over both files.
 
 A vector file left off the list fails the run, because its scalars then have

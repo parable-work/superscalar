@@ -9,11 +9,12 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# `Acme.ScalarRef` writes its parts as a JSON object.
+serde_json.workspace = true
 superscalar.workspace = true
 
 [dev-dependencies]
 serde.workspace = true
-serde_json.workspace = true
 
 [lints]
 workspace = true

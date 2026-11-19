@@ -2,11 +2,11 @@
 //!
 //! Two parts. The library (`resolve`, `run_*`) does the work over an explicit
 //! registry and carries no `#[wasm_bindgen]` attribute. The `export_wasm!`
-//! macro emits the four exported functions over a registry constructor. With
+//! macro emits the six exported functions over a registry constructor. With
 //! the default `builtin` feature this crate is also the built-in assembly: the
 //! macro is applied below to `Registry::builtin()`. A downstream applies it to
 //! its own assembled registry, depends on this crate with
-//! `default-features = false`, and ships the same four exports; the macro
+//! `default-features = false`, and ships the same six exports; the macro
 //! checks that at compile time through `BUILTIN_ASSEMBLY`.
 
 use superscalar::{Registry, Scalar};
@@ -63,6 +63,23 @@ pub fn run_validate(registry: &Registry, scalar: &str, input: &str) -> Result<()
         .map_err(|err| JsError::new(&err.to_string()))
 }
 
+/// `magnitude` over `registry`: the value's amount in the scalar's base unit,
+/// as a decimal integer string. Throws on reject, and for a scalar without a
+/// magnitude.
+pub fn run_magnitude(registry: &Registry, scalar: &str, input: &str) -> Result<String, JsError> {
+    resolve(registry, scalar)?
+        .magnitude(registry, input)
+        .map_err(|err| JsError::new(&err.to_string()))
+}
+
+/// `parts` over `registry`: the value's parts, as a JSON object string. Throws
+/// on reject, and for a scalar without parts.
+pub fn run_parts(registry: &Registry, scalar: &str, input: &str) -> Result<String, JsError> {
+    resolve(registry, scalar)?
+        .parts(registry, input)
+        .map_err(|err| JsError::new(&err.to_string()))
+}
+
 /// Lenient coercion over `registry`: JSON document in, the serialized
 /// `LenientCoerceResult` JSON out. Throws only on an unknown name or unparseable
 /// `json_in`; a captured coercion failure is carried in the result's `error`.
@@ -78,8 +95,9 @@ pub fn run_coerce_lenient(
     serde_json::to_string(&result).map_err(|err| JsError::new(&err.to_string()))
 }
 
-/// Emit the four `#[wasm_bindgen]` exports (`scalar_parse`, `scalar_normalize`,
-/// `scalar_validate`, `scalar_coerce_lenient`) over the registry that
+/// Emit the six `#[wasm_bindgen]` exports (`scalar_parse`, `scalar_normalize`,
+/// `scalar_validate`, `scalar_magnitude`, `scalar_parts`,
+/// `scalar_coerce_lenient`) over the registry that
 /// `$registry()` returns, a path to a `fn() -> &'static Registry`.
 ///
 /// `#[wasm_bindgen]` exports each function under its Rust name, so one cdylib
@@ -98,7 +116,7 @@ macro_rules! export_wasm {
     ($registry:path) => {
         const _: () = ::core::assert!(
             !$crate::BUILTIN_ASSEMBLY,
-            "superscalar-wasm was built with its `builtin` feature and already exports the four functions over Registry::builtin(); depend on it with default-features = false"
+            "superscalar-wasm was built with its `builtin` feature and already exports the six functions over Registry::builtin(); depend on it with default-features = false"
         );
         $crate::export_wasm!(@emit $registry);
     };
@@ -126,6 +144,23 @@ macro_rules! export_wasm {
         #[::wasm_bindgen::prelude::wasm_bindgen]
         pub fn scalar_validate(scalar: &str, input: &str) -> Result<(), ::wasm_bindgen::JsError> {
             $crate::run_validate($registry(), scalar, input)
+        }
+
+        /// The value's amount in the scalar's base unit, as a decimal integer
+        /// string. Throws on reject, and for a scalar without a magnitude.
+        #[::wasm_bindgen::prelude::wasm_bindgen]
+        pub fn scalar_magnitude(
+            scalar: &str,
+            input: &str,
+        ) -> Result<String, ::wasm_bindgen::JsError> {
+            $crate::run_magnitude($registry(), scalar, input)
+        }
+
+        /// The value's parts, as a JSON object string. Throws on reject, and
+        /// for a scalar without parts.
+        #[::wasm_bindgen::prelude::wasm_bindgen]
+        pub fn scalar_parts(scalar: &str, input: &str) -> Result<String, ::wasm_bindgen::JsError> {
+            $crate::run_parts($registry(), scalar, input)
         }
 
         /// Lenient ("flag, don't block") coercion: JSON document in, the serialized

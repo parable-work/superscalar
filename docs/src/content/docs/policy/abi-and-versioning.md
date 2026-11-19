@@ -36,8 +36,9 @@ Everything below follows from that.
   and an extension, or two extensions, both declare.
 - The C ABI shape. Every entry point takes the scalar's canonical name as a
   NUL-terminated UTF-8 string, then its input, and returns a `ScalarResult`.
-  An unknown name returns a `Parse` error, `unknown scalar "<name>"`. The nine generic entry points are
+  An unknown name returns a `Parse` error, `unknown scalar "<name>"`. The eleven generic entry points are
   `scalar_parse`, `scalar_normalize`, `scalar_validate`,
+  `scalar_magnitude`, `scalar_parts`,
   `scalar_coerce_lenient`, `scalar_result_free`, `scalar_parse_batch`,
   `scalar_normalize_batch`, `scalar_validate_batch` and
   `scalar_result_array_free`. Adding an entry point is a minor change;

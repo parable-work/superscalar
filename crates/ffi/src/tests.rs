@@ -414,3 +414,147 @@ fn batch_over_unknown_name_fails_every_element() {
     );
     unsafe { scalar_result_array_free(array) };
 }
+
+// No built-in has a magnitude or parts: both entry points refuse a valid value
+// with the core's `Custom` error, and an unknown name as every hook does.
+#[test]
+fn magnitude_and_parts_refuse_for_a_builtin() {
+    type Entry = unsafe extern "C" fn(*const c_char, *const c_char) -> ScalarResult;
+    let entries: [(Entry, &str); 2] = [
+        (scalar_magnitude, "custom: the scalar has no magnitude"),
+        (scalar_parts, "custom: the scalar has no parts"),
+    ];
+    let email = cstr(names::CONTACT_EMAIL);
+    let input = cstr("a@b.co");
+    for (entry, message) in entries {
+        let result = unsafe { entry(email.as_ptr(), input.as_ptr()) };
+        assert!(!result.ok);
+        assert_eq!(result.error_category, ErrorCategory::Custom);
+        assert!(result.value.str_ptr.is_null());
+        assert_eq!(error_message(&result), message);
+        unsafe { scalar_result_free(result) };
+
+        let unknown = unsafe { entry(cstr("No.Such").as_ptr(), input.as_ptr()) };
+        assert!(!unknown.ok);
+        assert_eq!(unknown.error_category, ErrorCategory::Parse);
+        assert_eq!(error_message(&unknown), "parse: unknown scalar \"No.Such\"");
+        unsafe { scalar_result_free(unknown) };
+
+        let null_input = unsafe { entry(email.as_ptr(), ptr::null()) };
+        assert!(!null_input.ok);
+        assert_eq!(null_input.error_category, ErrorCategory::Parse);
+        unsafe { scalar_result_free(null_input) };
+    }
+}
+
+/// A registry of the built-ins plus `Acme.Mass`, a scalar with a magnitude
+/// and parts: digits then `g` or `kg`. No built-in has either, so the scalar
+/// comes from an inline extension, as a downstream's would.
+fn registry_with_a_mass_scalar() -> Registry {
+    use superscalar::{
+        ErrorKind, Extension, PrimitiveKind, Scalar, ScalarDef, ScalarError, ScalarHooks, ScalarTag,
+    };
+
+    static DEFS: [ScalarDef; 1] = [ScalarDef {
+        namespace: "Acme",
+        canonical: "Acme.Mass",
+        primitive: PrimitiveKind::String,
+        sql_type: "TEXT",
+        metadata_primitive: "String",
+        json_schema_type: "string",
+        tag: ScalarTag::CustomLogic,
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        minimum: None,
+        maximum: None,
+        case_insensitive: false,
+        reserved_words: &[],
+        examples: &[],
+        description: "",
+        type_mappings: &[],
+        file_upload: None,
+        image_constraints: None,
+        docstring: "",
+        alias_of: None,
+        schema_primitive_override: None,
+        schema_omit: false,
+        format: None,
+        reserved_words_case_insensitive: false,
+        reserved_words_match_partial: false,
+        comparability_class: None,
+        hooks: ScalarHooks::NONE,
+        metadata_omit: false,
+        large_text: false,
+    }];
+
+    struct Mass;
+    impl Mass {
+        fn grams(input: &str) -> Result<u64, ScalarError> {
+            let (digits, scale) = match input.strip_suffix("kg") {
+                Some(digits) => (digits, 1000),
+                None => (input.strip_suffix('g').unwrap_or(""), 1),
+            };
+            digits
+                .parse::<u64>()
+                .map(|amount| amount * scale)
+                .map_err(|_| ScalarError::new(ErrorKind::Pattern, "a mass is digits then g or kg"))
+        }
+    }
+    impl Scalar for Mass {
+        fn parse(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
+            self.validate(registry, input).map(|()| input.to_string())
+        }
+        fn normalize(&self, registry: &Registry, input: &str) -> Result<String, ScalarError> {
+            self.parse(registry, input)
+        }
+        fn validate(&self, _registry: &Registry, input: &str) -> Result<(), ScalarError> {
+            Self::grams(input).map(|_| ())
+        }
+        fn magnitude(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
+            Self::grams(input).map(|grams| grams.to_string())
+        }
+        fn parts(&self, _registry: &Registry, input: &str) -> Result<String, ScalarError> {
+            Self::grams(input).map(|grams| format!("{{\"grams\":{grams}}}"))
+        }
+    }
+
+    struct Acme;
+    impl Extension for Acme {
+        fn name(&self) -> &'static str {
+            "acme"
+        }
+        fn defs(&self) -> &'static [ScalarDef] {
+            &DEFS
+        }
+        fn impls(&self) -> Vec<(&'static str, Box<dyn Scalar>)> {
+            vec![("Acme.Mass", Box::new(Mass))]
+        }
+    }
+    Registry::assemble(&[&Acme])
+}
+
+// The two hooks carry a scalar's own answer and its own error across the
+// boundary, over the registry a downstream assembles.
+#[test]
+fn magnitude_and_parts_return_an_extension_scalars_answer() {
+    let registry = registry_with_a_mass_scalar();
+    let mass = cstr("Acme.Mass");
+    for (hook, expected) in [(Hook::Magnitude, "2000"), (Hook::Parts, "{\"grams\":2000}")] {
+        let result = unsafe { run(&registry, mass.as_ptr(), cstr("2kg").as_ptr(), hook) };
+        assert!(result.ok);
+        assert_eq!(result.value.kind, ValueKind::Str);
+        let got = unsafe { CStr::from_ptr(result.value.str_ptr) }
+            .to_str()
+            .expect("the answer is UTF-8")
+            .to_owned();
+        assert_eq!(got, expected);
+        assert_eq!(result.value.str_len, expected.len());
+        unsafe { free_result(result) };
+
+        let refused = unsafe { run(&registry, mass.as_ptr(), cstr("two kg").as_ptr(), hook) };
+        assert!(!refused.ok);
+        assert_eq!(refused.error_category, ErrorCategory::Pattern);
+        unsafe { free_result(refused) };
+    }
+}

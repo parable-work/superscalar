@@ -132,6 +132,34 @@ bump they require (minor when loosening, major when tightening).
   `1747270862000` and `100000000000` (the smallest 12-digit count). The
   scalar already rejected them; no accept-set change, no bump required.
   Carried from parable-platform PR #7381.
+- `Scalar::magnitude` and `Scalar::parts`, two trait methods with defaults
+  that refuse. `magnitude` returns the value's amount in the scalar's base
+  unit as a decimal integer string, for a scalar whose values are amounts
+  written with a unit (a CPU quantity in millicores, a size in bytes).
+  `parts` returns the value's parts as a JSON object string, for a scalar
+  whose values name several facts at once (a machine tier's CPU count and
+  memory). No built-in implements either: each refuses with a `custom` error,
+  `the scalar has no magnitude` or `the scalar has no parts`. An extension's
+  scalar implements the one it has. Additive for an existing `Scalar` impl.
+  - Core: `Registry::magnitude(name, input)` and `Registry::parts(name,
+    input)`, which fail with `enum` for a name no extension declared.
+  - C ABI: `scalar_magnitude` and `scalar_parts`, with the signature of
+    `scalar_parse`; `export_c_abi!` emits them, so the header declares eleven
+    entry points (was nine). `Hook` gains `Magnitude` and `Parts`. Adding an
+    entry point is a minor change.
+  - WASM: `scalar_magnitude` and `scalar_parts`. napi: `magnitude` and
+    `parts`. Python: `_native.magnitude` and `_native.parts`. Each export
+    macro emits them over the registry it is given, and each binding crate
+    gains `run_magnitude` and `run_parts`.
+  - Go: `Magnitude(canonical, value)` and `Parts(canonical, value)`, beside
+    `Parse`, `Normalize` and `Validate`.
+  - TypeScript: `ScalarBackend` gains `magnitude(scalar, value)` and
+    `parts(scalar, value)`, and `WasmExports` gains `scalar_magnitude` and
+    `scalar_parts`. Code that implements either interface by hand must add
+    them.
+  - Conformance: an accepted vector may state `magnitude` and `parts`. The
+    acme example gives `Acme.ScalarRef` parts and checks them through C,
+    napi, WASM and Python.
 - Three built-in scalars for plain fields: `Generic.Text` (any string),
   `Generic.Float64` (any finite number) and `Generic.Boolean` (`true` or
   `false`). `Generic.Boolean` is the first scalar backed by the `Bool`

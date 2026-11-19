@@ -84,6 +84,19 @@ def test_unknown_scalar_name_raises():
         _native.parse("contact.email", "a@b.com")
 
 
+@pytest.mark.parametrize("method", ["magnitude", "parts"])
+def test_magnitude_and_parts_refuse_for_a_builtin(method):
+    # No built-in scalar has a magnitude or parts, so both functions refuse a
+    # valid value with the core's message, and an unknown name with the
+    # unknown-scalar error. An extension's scalar answers through the same
+    # two functions.
+    call = getattr(_native, method)
+    with pytest.raises(ValueError, match=f"custom: the scalar has no {method}"):
+        call("Contact.Email", "a@b.co")
+    with pytest.raises(ValueError, match='unknown scalar "contact.email"'):
+        call("contact.email", "a@b.co")
+
+
 def test_generated_wrappers_route():
     from superscalar import _generated
 
