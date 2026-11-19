@@ -1,7 +1,29 @@
 ---
 title: FAQ
-description: Why the library is written in Rust, why the Go binding uses cgo, and why there is a WASM build.
+description: Why a coding agent should use a scalar instead of writing a validator, how SuperScalar relates to superschematic, why the library is written in Rust, why the Go binding uses cgo, and why there is a WASM build.
 ---
+
+## An agent can write a validator in seconds. Why use a library?
+
+Because writing it was never the expensive part. An agent writes the check
+again in each layer and each language, in separate steps, and nothing makes
+the copies agree; a person then has to review every one. A scalar is written
+once, runs the same code in every binding, and is pinned by conformance
+vectors, so the agent picks a name and the reviewer checks the choice. It is
+the same trade a front end makes when it imports a component instead of
+rebuilding it per screen. See
+[data components for agent-written code](/superscalar/concepts/data-components/).
+
+## How does SuperScalar relate to superschematic?
+
+SuperScalar is the base library of
+[superschematic](https://github.com/parable-work/superschematic), a schema
+compiler that generates database tables, servers and SDKs from one schema.
+The field types in a superschematic schema are SuperScalar scalars, and the
+validation in the code it generates is this library. SuperScalar has no
+dependency on superschematic and is useful on its own: use it directly when
+the code around the values is written by you or an agent, and use
+superschematic when you want that code generated too.
 
 ## Why is the core written in Rust?
 

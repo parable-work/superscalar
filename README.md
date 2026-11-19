@@ -14,6 +14,43 @@ Go, Python and TypeScript bindings for them without forking the core.
 
 Status: pre-release; APIs change until v0.1.0.
 
+## Data components for agent-written code
+
+Ask a coding agent for a signup form, the API handler behind it and the
+table it writes to, and it will write the email check three times: once per
+layer, in whatever language that layer uses. Each copy is cheap to generate
+and expensive to trust. Someone has to review it, test it and keep it in
+step with the other two, and the next project starts over.
+
+Front ends solved this with components. Nobody has an agent rebuild a date
+picker for every screen; it imports one. A scalar is the same kind of unit
+for a value. `Contact.Email` packages the validation, the coercion of loose
+input, the canonical form and the marshaling facts (SQL type, JSON Schema
+type, the type in each language), and an agent uses it by name instead of
+writing it again.
+
+- Less to generate. One name replaces a pattern, a normalizer, a codec and
+  their tests in every language the project touches.
+- Nothing to keep in step. The Go service, the Python job and the browser
+  call the same Rust implementation, and the conformance vectors run against
+  every binding in CI, so two layers cannot disagree about a value.
+- Less to review. The diff says `Contact.Email`. A reviewer checks that the
+  name is the right one, not that a regular expression is.
+- A catalog an agent can read. `superscalar registry dump` prints every
+  scalar's rules and types as JSON, each binding carries the same metadata
+  as a table, and the generated reference lists accepted and rejected inputs
+  per scalar. The agent looks a value type up instead of guessing at it.
+- Your own components. A value that belongs to your domain goes into an
+  extension crate once and comes back as generated bindings in each
+  language, so every later session reuses it.
+
+SuperScalar is also the base library of
+[superschematic](https://github.com/parable-work/superschematic), a schema
+compiler that generates tables, servers and SDKs in Go, TypeScript, Python
+and Rust. The field types in a superschematic schema are SuperScalar scalars,
+which is why a generated SDK refuses the request the generated server would
+refuse.
+
 ## The contract
 
 Every scalar implements three operations over a string input. `parse` checks

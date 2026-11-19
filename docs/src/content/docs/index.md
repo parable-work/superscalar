@@ -10,6 +10,19 @@ implementation. An email address therefore parses the same way in a Go
 service, a Python job, a Node process and a browser tab, and a corpus of
 conformance vectors proves it on every build.
 
+That matters most where coding agents write the code. An agent asked for a
+form, a handler and a table writes the same check once per layer and once
+per language, and every copy has to be reviewed and kept in step. A scalar
+is a reusable component for a value, in the way a React component is one for
+a piece of interface: the validation, coercion and marshaling of
+`Contact.Email` are written and tested once, and an agent uses the name
+instead of writing them again. See
+[data components for agent-written code](/superscalar/concepts/data-components/).
+
+SuperScalar is also the base library of
+[superschematic](https://github.com/parable-work/superschematic), a schema
+compiler whose field types are these scalars.
+
 The library was extracted from Parable's platform monorepo; the git history
 stayed behind, so this repository starts from the extracted tree.
 
@@ -30,8 +43,9 @@ stored as, its SQL and JSON Schema types, and the type it maps
 to in each binding language. That record is the scalar's definition in the
 registry; see [the registry](/superscalar/concepts/registry/).
 
-There are 48 built-in scalars. They fall into two kinds by how their rule is
-implemented: directive scalars are fully described by a pattern and length
+There are many built-in scalars, and the catalog keeps growing; the
+[scalar reference](/superscalar/reference/) lists them all. They fall into
+two kinds by how their rule is implemented: directive scalars are fully described by a pattern and length
 bounds, and deep scalars carry hand-written logic (colour math, phone numbers,
 durations, base62 UUIDs, a `{lat, lon}` object). A third kind, structural, is
 for object-shaped values an extension adds. The
@@ -100,6 +114,8 @@ The same two scalars in the other languages are on the install pages:
 
 ## Where to go next
 
+- Working with a coding agent, and what to put in its instructions:
+  [data components for agent-written code](/superscalar/concepts/data-components/).
 - Adding a scalar to the library:
   [add a built-in scalar](/superscalar/guides/add-a-builtin-scalar/).
 - Adding scalars that belong to your project, without forking:

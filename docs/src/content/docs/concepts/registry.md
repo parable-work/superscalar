@@ -12,7 +12,7 @@ what it accepts, or what type it maps to in Go, the answer is a registry entry.
 
 It is three Rust files in the core crate. `registry.rs` holds the
 `ScalarDef` struct, the `PrimitiveKind` and `ScalarTag` enums, the `Scalar`
-trait and `Registry`. `catalog.rs` holds the `names` constants and the 48
+trait and `Registry`. `catalog.rs` holds the `names` constants and the
 built-in definitions. `definitions.rs` holds `Definitions`, the assembled
 definitions without implementations, and the comparability rule.
 
@@ -133,7 +133,7 @@ A downstream crate adds scalars by implementing the `Extension` trait
   bindings alias to a canonical symbol (`Email` to `ContactEmail`). Empty by
   default.
 
-`Registry::builtin()` is the 48 built-ins, assembled on first use.
+`Registry::builtin()` is the built-ins, assembled on first use.
 `Registry::assemble(&[&dyn Extension])` assembles the built-ins plus the
 given extensions and panics if a check fails; `Registry::try_assemble` runs
 the same checks and returns the `AssemblyError` instead. The checks run in

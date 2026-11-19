@@ -30,7 +30,7 @@ docs/
   src/content/docs/       one Markdown file per page
     index.md              overview
     install/              per-language install and quickstart
-    concepts/             registry, scalar kinds, comparability and sortability
+    concepts/             data components for agents, registry, scalar kinds, comparability and sortability
     guides/               add a built-in scalar, build an extension, conformance
     policy/               ABI and versioning, security
     reference/            generated per-scalar pages (see below)
