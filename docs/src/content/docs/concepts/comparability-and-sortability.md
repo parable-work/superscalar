@@ -124,7 +124,7 @@ exists. `Embedding.Vector`, `Generic.JSON`, `Generic.StringMap` and
 `Geo.Location` show the gap the rule closes: their primitive is `String` but
 their JSON shape is an array, an object or any JSON value (`Generic.JSON`
 declares `any`), so a primitive-only rule would call them sortable. Among the
-48 built-ins, those four are the non-sortable ones.
+built-ins, those four are the non-sortable ones.
 
 The rule is an allowlist and fails closed on purpose. A shape nobody has
 declared, or a mistyped one, answers "not sortable". That direction matters

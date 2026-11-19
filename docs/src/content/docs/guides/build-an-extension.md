@@ -7,7 +7,7 @@ sidebar:
 
 An extension is a Rust crate that adds scalars to the registry without
 forking the core. You declare definitions and implementations, assemble a
-registry that holds the 48 built-ins plus yours, and apply four one-line
+registry that holds the built-ins plus yours, and apply four one-line
 macros to produce native bindings that carry the whole assembled catalog.
 The code generator then emits Go, Python and TypeScript wrappers for your
 scalars from a configuration file you own.
@@ -311,7 +311,7 @@ corpus. `Acme.ScalarRef` accepts `"Contact.Email"` and `"Acme.OrderNumber"`
 and rejects `"Nope.Nope"` and `"contact.email"`. Its accepted vectors also
 state `parts`, which every runner checks through the binding's own entry
 point. The example runs both the
-built-in file and its own at two levels, so the assembly proves that the 48
+built-in file and its own at two levels, so the assembly proves that the
 built-ins still behave and that its scalars behave:
 
 - In Rust, `ext/tests/conformance.rs` runs every vector through
