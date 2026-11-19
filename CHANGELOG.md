@@ -59,6 +59,11 @@ bump they require (minor when loosening, major when tightening).
 - Go: `ScalarMetadata` carries `TypeScriptType`, `PythonType` and `RustType`
   beside `GoType`; `GenericJSON` implements `driver.Valuer` and `sql.Scanner`
   and keeps SQL NULL distinct from an explicit JSON `null`.
+- TypeScript: `codePointLength(value)` in the `validation` module counts the
+  Unicode code points of a string, the count a `min_length` or `max_length`
+  rule uses in the core. `String.prototype.length` counts UTF-16 units, so a
+  generated validator that used it disagreed with the core on a character
+  outside the Basic Multilingual Plane.
 - TypeScript: `JSONValue` and `isJSONValue` (`src/json-value.ts`), exported
   from the package root and from the generated module. Codegen reads the
   module path from the optional `[typescript] json_value_module` key

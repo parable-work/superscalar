@@ -40,4 +40,5 @@ node test/comparability.cjs
 node test/backend-fallback.cjs
 node test/number-wrappers.cjs
 node test/number-array-wrappers.cjs
+node test/code-point-length.cjs
 node test/web-conformance.mjs
