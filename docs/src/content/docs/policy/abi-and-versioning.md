@@ -75,7 +75,9 @@ editing.
 
 A scalar's behaviour is its conformance vectors. A pull request that adds,
 removes or edits a vector, or changes which inputs a scalar accepts, must
-carry a `CHANGELOG.md` entry and the matching version bump. CI runs the
+name the version bump it requires in its title and description, which
+become the commit on `main`; a breaking change carries `!` in its title
+(`feat!:`). The commit history is the changelog. CI runs the
 corpus through every binding, so a behaviour change without a vector change
 fails, and a vector change is visible in review.
 
@@ -99,4 +101,4 @@ Pre-release versions (`v0.1.0-alpha.1` and the like) carry no compatibility
 promise; until v0.1.0 any of the above may change. From v0.1.0 the rules on
 this page apply. How the minor-versus-major rule is applied while the major
 version is still 0 has not been decided; until it is, read "major bump" as a
-breaking change that the changelog calls out as such.
+breaking change that its commit marks with `!`.

@@ -141,10 +141,12 @@ lint, header drift, codegen drift, the C smoke test, the WASM smoke test and
 the Go, Python and TypeScript conformance runs. All of them must pass before
 you open a pull request.
 
-## 7. Changelog
+## 7. Describe the change
 
-Add a line under the unreleased heading in `CHANGELOG.md` naming the scalar.
-A new scalar is a minor version change.
+Name the scalar in the pull request's title (`feat: add Contact.Email`) and
+state its accept set and canonical form in the description. The pull request
+is squashed, so that text is the commit on `main`, and the commit history is
+the changelog. A new scalar is a minor version change.
 
 ## Checklist
 
@@ -158,4 +160,5 @@ A new scalar is a minor version change.
 - `cargo run -p superscalar-codegen` run and diff
   committed.
 - `superscalar docs --check` and `make bindings` pass.
-- `CHANGELOG.md` updated.
+- The pull request's title names the scalar and its description states the
+  accept set and the bump.
