@@ -5,8 +5,8 @@
 ## Checklist
 
 - [ ] Every commit is signed off (`git commit -s`); see CONTRIBUTING.md
-- [ ] Conformance vectors added or unchanged (if changed: CHANGELOG.md entry
-      and version bump per CONTRIBUTING.md)
+- [ ] Conformance vectors added or unchanged (if changed: the title and
+      description name the version bump, per CONTRIBUTING.md)
 - [ ] Canonical scalar names are append-only; nothing renamed or removed
 - [ ] Generated files were regenerated, not hand-edited (`make codegen-check`)
 - [ ] `make bindings` passes locally

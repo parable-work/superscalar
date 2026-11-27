@@ -128,9 +128,10 @@ of them; run them locally before pushing.
 
 A scalar's behaviour is its conformance vectors and its accept set (the inputs
 it parses without error). Neither changes silently. A pull request that adds,
-removes or edits a vector, or changes which inputs a scalar accepts, must
-include a `CHANGELOG.md` entry and a version bump: loosening an accept set is
-a minor bump, tightening one is a major bump. If you find a bug in a scalar,
+removes or edits a vector, or changes which inputs a scalar accepts, must say
+so in its title and description, which become the commit on `main`, and name
+the version bump it requires: loosening an accept set is a minor bump,
+tightening one is a major bump, marked with `!` (`feat!:`, `fix!:`). If you find a bug in a scalar,
 file an issue and leave the vector as it is until the change is agreed.
 
 ### Frozen names
@@ -182,10 +183,11 @@ A release is four steps, each started by a person:
 1. Open the release pull request: run the `release-pr` workflow (Actions ->
    release-pr -> Run workflow) with the version, without the leading `v`
    (`0.1.0-alpha.1`, `0.1.0`). It runs `bump_version.py set`, which writes the
-   version everywhere and cuts the `Unreleased` section of `CHANGELOG.md`
-   into a dated `[X.Y.Z]` section, then opens `release/vX.Y.Z`. Review the
-   changelog. The pull request is opened with the workflow token, which does
-   not start CI: close and reopen it once so `ci-pass` runs, then merge it.
+   version everywhere, then opens `release/vX.Y.Z`. Review the commits since
+   the last release (`git log vA.B.C..main`) against the version: a `!` in
+   one calls for a major bump. The pull request is opened with the workflow
+   token, which does not start CI: close and reopen it once so `ci-pass`
+   runs, then merge it.
    (Without the workflow: `python3 scripts/bump_version.py set X.Y.Z` on a
    branch and open the pull request yourself.)
 2. Cut the tag: on a clean checkout of `main` at that merge, run
@@ -259,10 +261,11 @@ can only name platform packages `<package>-<triple>`, so the assemble job
 renames the manifests it generates and `bindings/typescript/src/native-addon.ts`
 is the runtime loader; the CLI's generated `index.js` is not shipped.
 
-### Behaviour changes and the changelog
+### Behaviour changes and the commit history
 
-A change to a scalar's conformance vectors or accept set never ships without
-a `CHANGELOG.md` entry under `Unreleased` that names the bump it requires
-(see "Behaviour freeze" above). `release-pr` refuses to cut a release whose
-`Unreleased` section is empty, and `release.yml` refuses a tag whose version
-has no changelog section.
+The commit history is the changelog; the repository keeps no `CHANGELOG.md`.
+Pull requests are squashed, so each commit on `main` is one pull request's
+title and description. A change to a scalar's conformance vectors or accept
+set names the bump it requires there (see "Behaviour freeze" above), and a
+breaking one carries `!` in its title. `release.yml` writes a release's notes
+from the pull requests merged since the last release.

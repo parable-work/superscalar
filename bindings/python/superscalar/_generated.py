@@ -14,6 +14,7 @@ VALID_SCALARS = (
     "Crypto.SHA256",
     "Design.Color",
     "Embedding.Vector",
+    "File.MediaType",
     "File.SizeBytes",
     "Finance.Currency",
     "Finance.Money",
@@ -26,6 +27,7 @@ VALID_SCALARS = (
     "Generic.Probability",
     "Generic.StringMap",
     "Generic.Text",
+    "Geo.CountryCode",
     "Geo.Location",
     "Git.PathPattern",
     "Identity.Name",
@@ -36,6 +38,7 @@ VALID_SCALARS = (
     "Network.DnsLabel",
     "Network.DomainName",
     "Network.IpAddress",
+    "Network.Port",
     "Network.Uri",
     "Network.Url",
     "Ordering.Rank",
@@ -45,9 +48,11 @@ VALID_SCALARS = (
     "Temporal.Days",
     "Temporal.Duration",
     "Temporal.Hours",
+    "Temporal.LocalDateTime",
     "Temporal.Milliseconds",
     "Temporal.Minutes",
     "Temporal.Month",
+    "Temporal.Period",
     "Temporal.Quarter",
     "Temporal.QuarterYear",
     "Temporal.RecurrenceRule",
@@ -172,6 +177,15 @@ SCALAR_METADATA = {
         "reserved_words_match_partial": False,
         "large_text": False,
     },
+    "File.MediaType": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+        "large_text": False,
+    },
     "File.SizeBytes": {
         "comparability_class": None,
         "is_sortable": True,
@@ -280,6 +294,15 @@ SCALAR_METADATA = {
         "reserved_words_match_partial": False,
         "large_text": False,
     },
+    "Geo.CountryCode": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+        "large_text": False,
+    },
     "Geo.Location": {
         "comparability_class": None,
         "is_sortable": False,
@@ -370,6 +393,15 @@ SCALAR_METADATA = {
         "reserved_words_match_partial": False,
         "large_text": False,
     },
+    "Network.Port": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+        "large_text": False,
+    },
     "Network.Uri": {
         "comparability_class": None,
         "is_sortable": True,
@@ -451,6 +483,15 @@ SCALAR_METADATA = {
         "reserved_words_match_partial": False,
         "large_text": False,
     },
+    "Temporal.LocalDateTime": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+        "large_text": False,
+    },
     "Temporal.Milliseconds": {
         "comparability_class": None,
         "is_sortable": True,
@@ -470,6 +511,15 @@ SCALAR_METADATA = {
         "large_text": False,
     },
     "Temporal.Month": {
+        "comparability_class": None,
+        "is_sortable": True,
+        "case_insensitive": False,
+        "reserved_words": [],
+        "reserved_words_case_insensitive": False,
+        "reserved_words_match_partial": False,
+        "large_text": False,
+    },
+    "Temporal.Period": {
         "comparability_class": None,
         "is_sortable": True,
         "case_insensitive": False,
@@ -707,6 +757,15 @@ def normalize_embedding_vector(value: str) -> str:
 def validate_embedding_vector(value: str) -> None:
     _native.validate("Embedding.Vector", value)
 
+def parse_file_media_type(value: str) -> str:
+    return _native.parse("File.MediaType", value)
+
+def normalize_file_media_type(value: str) -> str:
+    return _native.normalize("File.MediaType", value)
+
+def validate_file_media_type(value: str) -> None:
+    _native.validate("File.MediaType", value)
+
 def parse_file_size_bytes(value: str) -> str:
     return _native.parse("File.SizeBytes", value)
 
@@ -815,6 +874,15 @@ def normalize_generic_text(value: str) -> str:
 def validate_generic_text(value: str) -> None:
     _native.validate("Generic.Text", value)
 
+def parse_geo_country_code(value: str) -> str:
+    return _native.parse("Geo.CountryCode", value)
+
+def normalize_geo_country_code(value: str) -> str:
+    return _native.normalize("Geo.CountryCode", value)
+
+def validate_geo_country_code(value: str) -> None:
+    _native.validate("Geo.CountryCode", value)
+
 def parse_geo_location(value: str) -> str:
     return _native.parse("Geo.Location", value)
 
@@ -905,6 +973,15 @@ def normalize_network_ip_address(value: str) -> str:
 def validate_network_ip_address(value: str) -> None:
     _native.validate("Network.IpAddress", value)
 
+def parse_network_port(value: str) -> str:
+    return _native.parse("Network.Port", value)
+
+def normalize_network_port(value: str) -> str:
+    return _native.normalize("Network.Port", value)
+
+def validate_network_port(value: str) -> None:
+    _native.validate("Network.Port", value)
+
 def parse_network_uri(value: str) -> str:
     return _native.parse("Network.Uri", value)
 
@@ -986,6 +1063,15 @@ def normalize_temporal_hours(value: str) -> str:
 def validate_temporal_hours(value: str) -> None:
     _native.validate("Temporal.Hours", value)
 
+def parse_temporal_local_date_time(value: str) -> str:
+    return _native.parse("Temporal.LocalDateTime", value)
+
+def normalize_temporal_local_date_time(value: str) -> str:
+    return _native.normalize("Temporal.LocalDateTime", value)
+
+def validate_temporal_local_date_time(value: str) -> None:
+    _native.validate("Temporal.LocalDateTime", value)
+
 def parse_temporal_milliseconds(value: str) -> str:
     return _native.parse("Temporal.Milliseconds", value)
 
@@ -1012,6 +1098,15 @@ def normalize_temporal_month(value: str) -> str:
 
 def validate_temporal_month(value: str) -> None:
     _native.validate("Temporal.Month", value)
+
+def parse_temporal_period(value: str) -> str:
+    return _native.parse("Temporal.Period", value)
+
+def normalize_temporal_period(value: str) -> str:
+    return _native.normalize("Temporal.Period", value)
+
+def validate_temporal_period(value: str) -> None:
+    _native.validate("Temporal.Period", value)
 
 def parse_temporal_quarter(value: str) -> str:
     return _native.parse("Temporal.Quarter", value)

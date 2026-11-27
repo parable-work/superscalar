@@ -85,6 +85,7 @@ const (
 	scalarNameCryptoSHA256           = "Crypto.SHA256"
 	scalarNameDesignColor            = "Design.Color"
 	scalarNameEmbeddingVector        = "Embedding.Vector"
+	scalarNameFileMediaType          = "File.MediaType"
 	scalarNameFileSizeBytes          = "File.SizeBytes"
 	scalarNameFinanceCurrency        = "Finance.Currency"
 	scalarNameFinanceMoney           = "Finance.Money"
@@ -97,6 +98,7 @@ const (
 	scalarNameGenericProbability     = "Generic.Probability"
 	scalarNameGenericStringMap       = "Generic.StringMap"
 	scalarNameGenericText            = "Generic.Text"
+	scalarNameGeoCountryCode         = "Geo.CountryCode"
 	scalarNameGeoLocation            = "Geo.Location"
 	scalarNameGitPathPattern         = "Git.PathPattern"
 	scalarNameIdentityName           = "Identity.Name"
@@ -107,6 +109,7 @@ const (
 	scalarNameNetworkDnsLabel        = "Network.DnsLabel"
 	scalarNameNetworkDomainName      = "Network.DomainName"
 	scalarNameNetworkIpAddress       = "Network.IpAddress"
+	scalarNameNetworkPort            = "Network.Port"
 	scalarNameNetworkUri             = "Network.Uri"
 	scalarNameNetworkUrl             = "Network.Url"
 	scalarNameOrderingRank           = "Ordering.Rank"
@@ -116,9 +119,11 @@ const (
 	scalarNameTemporalDays           = "Temporal.Days"
 	scalarNameTemporalDuration       = "Temporal.Duration"
 	scalarNameTemporalHours          = "Temporal.Hours"
+	scalarNameTemporalLocalDateTime  = "Temporal.LocalDateTime"
 	scalarNameTemporalMilliseconds   = "Temporal.Milliseconds"
 	scalarNameTemporalMinutes        = "Temporal.Minutes"
 	scalarNameTemporalMonth          = "Temporal.Month"
+	scalarNameTemporalPeriod         = "Temporal.Period"
 	scalarNameTemporalQuarter        = "Temporal.Quarter"
 	scalarNameTemporalQuarterYear    = "Temporal.QuarterYear"
 	scalarNameTemporalRecurrenceRule = "Temporal.RecurrenceRule"
@@ -143,6 +148,7 @@ var VALID_SCALARS = []string{
 	string("Crypto.SHA256"),
 	string("Design.Color"),
 	string("Embedding.Vector"),
+	string("File.MediaType"),
 	string("File.SizeBytes"),
 	string("Finance.Currency"),
 	string("Finance.Money"),
@@ -155,6 +161,7 @@ var VALID_SCALARS = []string{
 	string("Generic.Probability"),
 	string("Generic.StringMap"),
 	string("Generic.Text"),
+	string("Geo.CountryCode"),
 	string("Geo.Location"),
 	string("Git.PathPattern"),
 	string("Identity.Name"),
@@ -165,6 +172,7 @@ var VALID_SCALARS = []string{
 	string("Network.DnsLabel"),
 	string("Network.DomainName"),
 	string("Network.IpAddress"),
+	string("Network.Port"),
 	string("Network.Uri"),
 	string("Network.Url"),
 	string("Ordering.Rank"),
@@ -174,9 +182,11 @@ var VALID_SCALARS = []string{
 	string("Temporal.Days"),
 	string("Temporal.Duration"),
 	string("Temporal.Hours"),
+	string("Temporal.LocalDateTime"),
 	string("Temporal.Milliseconds"),
 	string("Temporal.Minutes"),
 	string("Temporal.Month"),
+	string("Temporal.Period"),
 	string("Temporal.Quarter"),
 	string("Temporal.QuarterYear"),
 	string("Temporal.RecurrenceRule"),
@@ -227,6 +237,9 @@ type DesignColor string
 // Embedding.Vector - "Fixed-dimensional float32 vector"
 type EmbeddingVector []float32
 
+// File.MediaType - "IANA media type (MIME type): type/subtype with optional parameters, normalized to lowercase (e.g., image/png, text/csv;charset=utf-8)"
+type FileMediaType string
+
 // File.SizeBytes - "File size in bytes (non-negative, BIGINT-backed)"
 type FileSizeBytes int64
 
@@ -263,6 +276,9 @@ type GenericStringMap map[string]string
 // Generic.Text - "Text with no further shape"
 type GenericText string
 
+// Geo.CountryCode - "Officially assigned ISO 3166-1 alpha-2 country code (e.g., US, DE, JP)"
+type GeoCountryCode string
+
 // Geo.Location - "Geographic location with latitude and longitude"
 type GeoLocation struct {
 	Lat float64 `json:"lat"`
@@ -296,6 +312,9 @@ type NetworkDomainName string
 // Network.IpAddress - "IPv4 or IPv6 address"
 type NetworkIpAddress string
 
+// Network.Port - "TCP or UDP port number, 1 through 65535"
+type NetworkPort int64
+
 // Network.Uri - "RFC 3986 URI for connection strings and non-HTTP resources"
 type NetworkUri string
 
@@ -323,6 +342,9 @@ type TemporalDuration time.Duration
 // Temporal.Hours - "Signed integer count of hours: an amount of elapsed time, never a point in time."
 type TemporalHours int64
 
+// Temporal.LocalDateTime - "Date and time of day with no zone or offset (a wall-clock reading), normalized to 'YYYY-MM-DDTHH:MM:SS'. Accepts 'T', 't' or a space between the date and the time, and a time without seconds. Refuses a value that carries a zone or an offset."
+type TemporalLocalDateTime string
+
 // Temporal.Milliseconds - "Signed integer count of milliseconds: an amount of elapsed time, never a point in time. An epoch timestamp is Temporal.DateTime with x-temporal-format: unix_millis."
 type TemporalMilliseconds int64
 
@@ -331,6 +353,9 @@ type TemporalMinutes int64
 
 // Temporal.Month - "Calendar month, normalized to two-digit numeric (01-12). Accepts '2', '02', 'Feb', 'February' (case-insensitive)."
 type TemporalMonth string
+
+// Temporal.Period - "ISO 8601 duration: an amount of calendar time in years, months, weeks, days, hours, minutes and seconds (e.g., P2D, P1M, PT30M)"
+type TemporalPeriod string
 
 // Temporal.Quarter - "Calendar quarter (Q1-Q4)"
 type TemporalQuarter string
@@ -657,6 +682,36 @@ var SCALAR_METADATA = []ScalarMetadata{
 		Examples:                     []string{},
 		ComparabilityClass:           "",
 		IsSortable:                   false,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
+	},
+	{
+		CanonicalName:                "File.MediaType",
+		Symbol:                       "FileMediaType",
+		Primitive:                    "String",
+		Description:                  "IANA media type (MIME type): type/subtype with optional parameters, normalized to lowercase (e.g., image/png, text/csv;charset=utf-8)",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "VARCHAR(255)",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    255,
+		MinLength:                    0,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "",
+		HasCustomNormalize:           true,
+		HasCustomParse:               true,
+		HasCustomValidate:            true,
+		HasValidator:                 true,
+		Examples:                     []string{"image/png", "application/json", "text/csv;charset=utf-8"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
 		CaseInsensitive:              false,
 		ReservedWords:                []string{},
 		ReservedWordsCaseInsensitive: false,
@@ -1024,6 +1079,36 @@ var SCALAR_METADATA = []ScalarMetadata{
 		LargeText:                    false,
 	},
 	{
+		CanonicalName:                "Geo.CountryCode",
+		Symbol:                       "GeoCountryCode",
+		Primitive:                    "String",
+		Description:                  "Officially assigned ISO 3166-1 alpha-2 country code (e.g., US, DE, JP)",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "VARCHAR(2)",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    2,
+		MinLength:                    2,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "^[A-Z]{2}$",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            true,
+		HasValidator:                 true,
+		Examples:                     []string{"US", "DE", "JP"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
+	},
+	{
 		CanonicalName:                "Geo.Location",
 		Symbol:                       "GeoLocation",
 		Primitive:                    "String",
@@ -1324,6 +1409,36 @@ var SCALAR_METADATA = []ScalarMetadata{
 		LargeText:                    false,
 	},
 	{
+		CanonicalName:                "Network.Port",
+		Symbol:                       "NetworkPort",
+		Primitive:                    "Int",
+		Description:                  "TCP or UDP port number, 1 through 65535",
+		TypeScriptType:               "number",
+		PythonType:                   "int",
+		RustType:                     "i64",
+		GoType:                       "int64",
+		SQLType:                      "INTEGER",
+		JSONSchemaType:               "integer",
+		Format:                       "",
+		MaxLength:                    0,
+		MinLength:                    0,
+		Maximum:                      scalarInt64Ptr(65535),
+		Minimum:                      scalarInt64Ptr(1),
+		Pattern:                      "",
+		HasCustomNormalize:           false,
+		HasCustomParse:               false,
+		HasCustomValidate:            false,
+		HasValidator:                 true,
+		Examples:                     []string{"443", "8080"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
+	},
+	{
 		CanonicalName:                "Network.Uri",
 		Symbol:                       "NetworkUri",
 		Primitive:                    "String",
@@ -1594,6 +1709,36 @@ var SCALAR_METADATA = []ScalarMetadata{
 		LargeText:                    false,
 	},
 	{
+		CanonicalName:                "Temporal.LocalDateTime",
+		Symbol:                       "TemporalLocalDateTime",
+		Primitive:                    "String",
+		Description:                  "Date and time of day with no zone or offset (a wall-clock reading), normalized to 'YYYY-MM-DDTHH:MM:SS'. Accepts 'T', 't' or a space between the date and the time, and a time without seconds. Refuses a value that carries a zone or an offset.",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "TIMESTAMP",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    40,
+		MinLength:                    0,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "",
+		HasCustomNormalize:           true,
+		HasCustomParse:               true,
+		HasCustomValidate:            true,
+		HasValidator:                 true,
+		Examples:                     []string{"2026-10-31T09:00:00"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
+	},
+	{
 		CanonicalName:                "Temporal.Milliseconds",
 		Symbol:                       "TemporalMilliseconds",
 		Primitive:                    "Int",
@@ -1675,6 +1820,36 @@ var SCALAR_METADATA = []ScalarMetadata{
 		HasCustomValidate:            true,
 		HasValidator:                 true,
 		Examples:                     []string{"02"},
+		ComparabilityClass:           "",
+		IsSortable:                   true,
+		CaseInsensitive:              false,
+		ReservedWords:                []string{},
+		ReservedWordsCaseInsensitive: false,
+		ReservedWordsMatchPartial:    false,
+		LargeText:                    false,
+	},
+	{
+		CanonicalName:                "Temporal.Period",
+		Symbol:                       "TemporalPeriod",
+		Primitive:                    "String",
+		Description:                  "ISO 8601 duration: an amount of calendar time in years, months, weeks, days, hours, minutes and seconds (e.g., P2D, P1M, PT30M)",
+		TypeScriptType:               "string",
+		PythonType:                   "str",
+		RustType:                     "String",
+		GoType:                       "string",
+		SQLType:                      "VARCHAR(64)",
+		JSONSchemaType:               "string",
+		Format:                       "",
+		MaxLength:                    64,
+		MinLength:                    3,
+		Maximum:                      nil,
+		Minimum:                      nil,
+		Pattern:                      "^P(?:[0-9]{1,9}Y)?(?:[0-9]{1,9}M)?(?:[0-9]{1,9}W)?(?:[0-9]{1,9}D)?(?:T(?:[0-9]{1,9}H)?(?:[0-9]{1,9}M)?(?:[0-9]{1,9}(?:\\.[0-9]{1,9})?S)?)?$",
+		HasCustomNormalize:           true,
+		HasCustomParse:               true,
+		HasCustomValidate:            true,
+		HasValidator:                 true,
+		Examples:                     []string{"P2D", "P1M", "PT30M", "P1Y6M"},
 		ComparabilityClass:           "",
 		IsSortable:                   true,
 		CaseInsensitive:              false,
@@ -2093,6 +2268,7 @@ var CryptoSHA256Pattern = ScalarPattern(patternForCanonical("Crypto.SHA256"))
 var DesignColorPattern = ScalarPattern(patternForCanonical("Design.Color"))
 var FinanceCurrencyPattern = ScalarPattern(patternForCanonical("Finance.Currency"))
 var GenericDecimalPattern = ScalarPattern(patternForCanonical("Generic.Decimal"))
+var GeoCountryCodePattern = ScalarPattern(patternForCanonical("Geo.CountryCode"))
 var GitPathPatternPattern = ScalarPattern(patternForCanonical("Git.PathPattern"))
 var IdentitySlugPattern = ScalarPattern(patternForCanonical("Identity.Slug"))
 var IdentityUUIDPattern = ScalarPattern(patternForCanonical("Identity.UUID"))
@@ -2105,6 +2281,7 @@ var NetworkUriPattern = ScalarPattern(patternForCanonical("Network.Uri"))
 var NetworkUrlPattern = ScalarPattern(patternForCanonical("Network.Url"))
 var TemporalCronExpressionPattern = ScalarPattern(patternForCanonical("Temporal.CronExpression"))
 var TemporalDurationPattern = ScalarPattern(patternForCanonical("Temporal.Duration"))
+var TemporalPeriodPattern = ScalarPattern(patternForCanonical("Temporal.Period"))
 var TemporalQuarterPattern = ScalarPattern(patternForCanonical("Temporal.Quarter"))
 var TemporalTimePattern = ScalarPattern(patternForCanonical("Temporal.Time"))
 var TemporalTimeZonePattern = ScalarPattern(patternForCanonical("Temporal.TimeZone"))
@@ -2236,6 +2413,8 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameDesignColor, value) }
 	case "Embedding.Vector":
 		return func(value string) error { return callScalarValidate(scalarNameEmbeddingVector, value) }
+	case "File.MediaType":
+		return func(value string) error { return callScalarValidate(scalarNameFileMediaType, value) }
 	case "File.SizeBytes":
 		return func(value string) error { return callScalarValidate(scalarNameFileSizeBytes, value) }
 	case "Finance.Currency":
@@ -2260,6 +2439,8 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameGenericStringMap, value) }
 	case "Generic.Text":
 		return func(value string) error { return callScalarValidate(scalarNameGenericText, value) }
+	case "Geo.CountryCode":
+		return func(value string) error { return callScalarValidate(scalarNameGeoCountryCode, value) }
 	case "Geo.Location":
 		return func(value string) error { return callScalarValidate(scalarNameGeoLocation, value) }
 	case "Git.PathPattern":
@@ -2280,6 +2461,8 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameNetworkDomainName, value) }
 	case "Network.IpAddress":
 		return func(value string) error { return callScalarValidate(scalarNameNetworkIpAddress, value) }
+	case "Network.Port":
+		return func(value string) error { return callScalarValidate(scalarNameNetworkPort, value) }
 	case "Network.Uri":
 		return func(value string) error { return callScalarValidate(scalarNameNetworkUri, value) }
 	case "Network.Url":
@@ -2298,12 +2481,16 @@ func ValidatorFor(canonical string) func(string) error {
 		return func(value string) error { return callScalarValidate(scalarNameTemporalDuration, value) }
 	case "Temporal.Hours":
 		return func(value string) error { return callScalarValidate(scalarNameTemporalHours, value) }
+	case "Temporal.LocalDateTime":
+		return func(value string) error { return callScalarValidate(scalarNameTemporalLocalDateTime, value) }
 	case "Temporal.Milliseconds":
 		return func(value string) error { return callScalarValidate(scalarNameTemporalMilliseconds, value) }
 	case "Temporal.Minutes":
 		return func(value string) error { return callScalarValidate(scalarNameTemporalMinutes, value) }
 	case "Temporal.Month":
 		return func(value string) error { return callScalarValidate(scalarNameTemporalMonth, value) }
+	case "Temporal.Period":
+		return func(value string) error { return callScalarValidate(scalarNameTemporalPeriod, value) }
 	case "Temporal.Quarter":
 		return func(value string) error { return callScalarValidate(scalarNameTemporalQuarter, value) }
 	case "Temporal.QuarterYear":
@@ -2751,6 +2938,50 @@ func (v EmbeddingVector) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseFileMediaType validates and returns the canonical form of a File.MediaType value.
+func ParseFileMediaType(value string) (string, error) {
+	return callScalarParse(scalarNameFileMediaType, value)
+}
+
+// NormalizeFileMediaType returns the canonical form of a File.MediaType value without enforcing shape.
+func NormalizeFileMediaType(value string) (string, error) {
+	return callScalarNormalize(scalarNameFileMediaType, value)
+}
+
+// ValidateFileMediaType enforces the shape of a File.MediaType value.
+func ValidateFileMediaType(value string) error {
+	return callScalarValidate(scalarNameFileMediaType, value)
+}
+
+func (v FileMediaType) String() string {
+	return string(v)
+}
+
+func (v FileMediaType) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v FileMediaType) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v FileMediaType) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates FileMediaType and returns whether validation passed along with any errors.
+func (v FileMediaType) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameFileMediaType, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v FileMediaType) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseFileSizeBytes validates and returns the canonical form of a File.SizeBytes value.
 func ParseFileSizeBytes(value string) (string, error) {
 	return callScalarParse(scalarNameFileSizeBytes, value)
@@ -3167,6 +3398,50 @@ func (v GenericText) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseGeoCountryCode validates and returns the canonical form of a Geo.CountryCode value.
+func ParseGeoCountryCode(value string) (string, error) {
+	return callScalarParse(scalarNameGeoCountryCode, value)
+}
+
+// NormalizeGeoCountryCode returns the canonical form of a Geo.CountryCode value without enforcing shape.
+func NormalizeGeoCountryCode(value string) (string, error) {
+	return callScalarNormalize(scalarNameGeoCountryCode, value)
+}
+
+// ValidateGeoCountryCode enforces the shape of a Geo.CountryCode value.
+func ValidateGeoCountryCode(value string) error {
+	return callScalarValidate(scalarNameGeoCountryCode, value)
+}
+
+func (v GeoCountryCode) String() string {
+	return string(v)
+}
+
+func (v GeoCountryCode) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v GeoCountryCode) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v GeoCountryCode) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates GeoCountryCode and returns whether validation passed along with any errors.
+func (v GeoCountryCode) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameGeoCountryCode, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v GeoCountryCode) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseGeoLocation validates and returns the canonical form of a Geo.Location value.
 func ParseGeoLocation(value string) (string, error) {
 	return callScalarParse(scalarNameGeoLocation, value)
@@ -3535,6 +3810,36 @@ func (v NetworkIpAddress) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseNetworkPort validates and returns the canonical form of a Network.Port value.
+func ParseNetworkPort(value string) (string, error) {
+	return callScalarParse(scalarNameNetworkPort, value)
+}
+
+// NormalizeNetworkPort returns the canonical form of a Network.Port value without enforcing shape.
+func NormalizeNetworkPort(value string) (string, error) {
+	return callScalarNormalize(scalarNameNetworkPort, value)
+}
+
+// ValidateNetworkPort enforces the shape of a Network.Port value.
+func ValidateNetworkPort(value string) error { return callScalarValidate(scalarNameNetworkPort, value) }
+
+func (v NetworkPort) String() string {
+	return scalarStringValue(v)
+}
+
+// Validate validates NetworkPort and returns whether validation passed along with any errors.
+func (v NetworkPort) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameNetworkPort, scalarStringValue(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v NetworkPort) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseNetworkUri validates and returns the canonical form of a Network.Uri value.
 func ParseNetworkUri(value string) (string, error) {
 	return callScalarParse(scalarNameNetworkUri, value)
@@ -3867,6 +4172,50 @@ func (v TemporalHours) ValidateRequired() (bool, []ValidationError) {
 	return v.Validate()
 }
 
+// ParseTemporalLocalDateTime validates and returns the canonical form of a Temporal.LocalDateTime value.
+func ParseTemporalLocalDateTime(value string) (string, error) {
+	return callScalarParse(scalarNameTemporalLocalDateTime, value)
+}
+
+// NormalizeTemporalLocalDateTime returns the canonical form of a Temporal.LocalDateTime value without enforcing shape.
+func NormalizeTemporalLocalDateTime(value string) (string, error) {
+	return callScalarNormalize(scalarNameTemporalLocalDateTime, value)
+}
+
+// ValidateTemporalLocalDateTime enforces the shape of a Temporal.LocalDateTime value.
+func ValidateTemporalLocalDateTime(value string) error {
+	return callScalarValidate(scalarNameTemporalLocalDateTime, value)
+}
+
+func (v TemporalLocalDateTime) String() string {
+	return string(v)
+}
+
+func (v TemporalLocalDateTime) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v TemporalLocalDateTime) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v TemporalLocalDateTime) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates TemporalLocalDateTime and returns whether validation passed along with any errors.
+func (v TemporalLocalDateTime) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameTemporalLocalDateTime, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v TemporalLocalDateTime) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
 // ParseTemporalMilliseconds validates and returns the canonical form of a Temporal.Milliseconds value.
 func ParseTemporalMilliseconds(value string) (string, error) {
 	return callScalarParse(scalarNameTemporalMilliseconds, value)
@@ -3969,6 +4318,50 @@ func (v TemporalMonth) Validate() (bool, []ValidationError) {
 
 // ValidateRequired validates with required check and returns whether validation passed along with any errors.
 func (v TemporalMonth) ValidateRequired() (bool, []ValidationError) {
+	if scalarRequiredValueMissing(v) {
+		return false, []ValidationError{{Validator: "required", Message: "required field"}}
+	}
+	return v.Validate()
+}
+
+// ParseTemporalPeriod validates and returns the canonical form of a Temporal.Period value.
+func ParseTemporalPeriod(value string) (string, error) {
+	return callScalarParse(scalarNameTemporalPeriod, value)
+}
+
+// NormalizeTemporalPeriod returns the canonical form of a Temporal.Period value without enforcing shape.
+func NormalizeTemporalPeriod(value string) (string, error) {
+	return callScalarNormalize(scalarNameTemporalPeriod, value)
+}
+
+// ValidateTemporalPeriod enforces the shape of a Temporal.Period value.
+func ValidateTemporalPeriod(value string) error {
+	return callScalarValidate(scalarNameTemporalPeriod, value)
+}
+
+func (v TemporalPeriod) String() string {
+	return string(v)
+}
+
+func (v TemporalPeriod) ToLower() string {
+	return strings.ToLower(string(v))
+}
+
+func (v TemporalPeriod) ToUpper() string {
+	return strings.ToUpper(string(v))
+}
+
+func (v TemporalPeriod) TrimSpace() string {
+	return strings.TrimSpace(string(v))
+}
+
+// Validate validates TemporalPeriod and returns whether validation passed along with any errors.
+func (v TemporalPeriod) Validate() (bool, []ValidationError) {
+	return validateScalarValue(scalarNameTemporalPeriod, string(v))
+}
+
+// ValidateRequired validates with required check and returns whether validation passed along with any errors.
+func (v TemporalPeriod) ValidateRequired() (bool, []ValidationError) {
 	if scalarRequiredValueMissing(v) {
 		return false, []ValidationError{{Validator: "required", Message: "required field"}}
 	}

@@ -30,4 +30,4 @@ assignees: ""
 ## Notes
 
 <!-- Anything else: does it reproduce in another binding? Is it a behaviour
-change from a previous version (check CHANGELOG.md)? -->
+change from a previous version (check the commit history)? -->

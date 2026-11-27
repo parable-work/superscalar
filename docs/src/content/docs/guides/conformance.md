@@ -128,6 +128,7 @@ assembled or how the binding was built, not in the built-ins.
 
 A pull request that adds, removes or edits a vector, or changes which inputs a
 scalar accepts, is a versioned behaviour change: loosening is a minor bump,
-tightening is a major bump, and either needs a changelog entry. The
+tightening is a major bump, and the pull request says which in its title
+and description, which become the commit on `main`. The
 [ABI and versioning](/superscalar/policy/abi-and-versioning/) page states
 the rule; `CONTRIBUTING.md` explains how to propose a change.

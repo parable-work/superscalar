@@ -65,6 +65,7 @@ export const VALID_SCALARS: readonly string[] = [
   "Crypto.SHA256",
   "Design.Color",
   "Embedding.Vector",
+  "File.MediaType",
   "File.SizeBytes",
   "Finance.Currency",
   "Finance.Money",
@@ -77,6 +78,7 @@ export const VALID_SCALARS: readonly string[] = [
   "Generic.Probability",
   "Generic.StringMap",
   "Generic.Text",
+  "Geo.CountryCode",
   "Geo.Location",
   "Git.PathPattern",
   "Identity.Name",
@@ -87,6 +89,7 @@ export const VALID_SCALARS: readonly string[] = [
   "Network.DnsLabel",
   "Network.DomainName",
   "Network.IpAddress",
+  "Network.Port",
   "Network.Uri",
   "Network.Url",
   "Ordering.Rank",
@@ -96,9 +99,11 @@ export const VALID_SCALARS: readonly string[] = [
   "Temporal.Days",
   "Temporal.Duration",
   "Temporal.Hours",
+  "Temporal.LocalDateTime",
   "Temporal.Milliseconds",
   "Temporal.Minutes",
   "Temporal.Month",
+  "Temporal.Period",
   "Temporal.Quarter",
   "Temporal.QuarterYear",
   "Temporal.RecurrenceRule",
@@ -544,6 +549,38 @@ export function normalizeEmbeddingVectorStrict(value: string): EmbeddingVector {
 }
 export function validateEmbeddingVector(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend("Embedding.Vector", value);
+}
+
+export type FileMediaType = string & { readonly __brand: "File.MediaType" };
+function convertFileMediaTypeValue(value: unknown | null): FileMediaType | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as FileMediaType;
+}
+export function parseFileMediaType(value: unknown): FileMediaType | null {
+  return convertFileMediaTypeValue(coerceValue("File.MediaType", value));
+}
+export function normalizeFileMediaType(value: unknown): FileMediaType | null {
+  return convertFileMediaTypeValue(coerceValue("File.MediaType", value));
+}
+export function parseFileMediaTypeStrict(value: string): FileMediaType {
+  const parsed = convertFileMediaTypeValue(backend.parse("File.MediaType", value));
+  if (parsed === null) {
+    throw new Error("invalid File.MediaType");
+  }
+  return parsed;
+}
+export function normalizeFileMediaTypeStrict(value: string): FileMediaType {
+  const normalized = convertFileMediaTypeValue(backend.normalize("File.MediaType", value));
+  if (normalized === null) {
+    throw new Error("invalid File.MediaType");
+  }
+  return normalized;
+}
+export function validateFileMediaType(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("File.MediaType", value);
 }
 
 export type FileSizeBytes = number;
@@ -1018,6 +1055,38 @@ export function validateGenericText(value: unknown | null | undefined): ScalarVa
   return validateWithBackend("Generic.Text", value);
 }
 
+export type GeoCountryCode = string & { readonly __brand: "Geo.CountryCode" };
+function convertGeoCountryCodeValue(value: unknown | null): GeoCountryCode | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as GeoCountryCode;
+}
+export function parseGeoCountryCode(value: unknown): GeoCountryCode | null {
+  return convertGeoCountryCodeValue(coerceValue("Geo.CountryCode", value));
+}
+export function normalizeGeoCountryCode(value: unknown): GeoCountryCode | null {
+  return convertGeoCountryCodeValue(coerceValue("Geo.CountryCode", value));
+}
+export function parseGeoCountryCodeStrict(value: string): GeoCountryCode {
+  const parsed = convertGeoCountryCodeValue(backend.parse("Geo.CountryCode", value));
+  if (parsed === null) {
+    throw new Error("invalid Geo.CountryCode");
+  }
+  return parsed;
+}
+export function normalizeGeoCountryCodeStrict(value: string): GeoCountryCode {
+  const normalized = convertGeoCountryCodeValue(backend.normalize("Geo.CountryCode", value));
+  if (normalized === null) {
+    throw new Error("invalid Geo.CountryCode");
+  }
+  return normalized;
+}
+export function validateGeoCountryCode(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Geo.CountryCode", value);
+}
+
 export type GeoLocation = { lat: number; lon: number };
 function convertGeoLocationValue(value: unknown | null): GeoLocation | null {
   if (value === null || value === undefined) {
@@ -1343,6 +1412,50 @@ export function normalizeNetworkIpAddressStrict(value: string): NetworkIpAddress
 }
 export function validateNetworkIpAddress(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend("Network.IpAddress", value);
+}
+
+export type NetworkPort = number;
+function convertNetworkPortValue(value: unknown | null): NetworkPort | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // The lenient path already decodes a JSON number; the strict path hands back
+  // the core's canonical text, which must become the number this type declares.
+  if (typeof value === "number") {
+    return value as NetworkPort;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed as NetworkPort;
+}
+export function parseNetworkPort(value: unknown): NetworkPort | null {
+  return convertNetworkPortValue(coerceValue("Network.Port", value));
+}
+export function normalizeNetworkPort(value: unknown): NetworkPort | null {
+  return convertNetworkPortValue(coerceValue("Network.Port", value));
+}
+export function parseNetworkPortStrict(value: string): NetworkPort {
+  const parsed = convertNetworkPortValue(backend.parse("Network.Port", value));
+  if (parsed === null) {
+    throw new Error("invalid Network.Port");
+  }
+  return parsed;
+}
+export function normalizeNetworkPortStrict(value: string): NetworkPort {
+  const normalized = convertNetworkPortValue(backend.normalize("Network.Port", value));
+  if (normalized === null) {
+    throw new Error("invalid Network.Port");
+  }
+  return normalized;
+}
+export function validateNetworkPort(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Network.Port", value);
 }
 
 export type NetworkUri = string & { readonly __brand: "Network.Uri" };
@@ -1676,6 +1789,38 @@ export function validateTemporalHours(value: unknown | null | undefined): Scalar
   return validateWithBackend("Temporal.Hours", value);
 }
 
+export type TemporalLocalDateTime = string & { readonly __brand: "Temporal.LocalDateTime" };
+function convertTemporalLocalDateTimeValue(value: unknown | null): TemporalLocalDateTime | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as TemporalLocalDateTime;
+}
+export function parseTemporalLocalDateTime(value: unknown): TemporalLocalDateTime | null {
+  return convertTemporalLocalDateTimeValue(coerceValue("Temporal.LocalDateTime", value));
+}
+export function normalizeTemporalLocalDateTime(value: unknown): TemporalLocalDateTime | null {
+  return convertTemporalLocalDateTimeValue(coerceValue("Temporal.LocalDateTime", value));
+}
+export function parseTemporalLocalDateTimeStrict(value: string): TemporalLocalDateTime {
+  const parsed = convertTemporalLocalDateTimeValue(backend.parse("Temporal.LocalDateTime", value));
+  if (parsed === null) {
+    throw new Error("invalid Temporal.LocalDateTime");
+  }
+  return parsed;
+}
+export function normalizeTemporalLocalDateTimeStrict(value: string): TemporalLocalDateTime {
+  const normalized = convertTemporalLocalDateTimeValue(backend.normalize("Temporal.LocalDateTime", value));
+  if (normalized === null) {
+    throw new Error("invalid Temporal.LocalDateTime");
+  }
+  return normalized;
+}
+export function validateTemporalLocalDateTime(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Temporal.LocalDateTime", value);
+}
+
 export type TemporalMilliseconds = number;
 function convertTemporalMillisecondsValue(value: unknown | null): TemporalMilliseconds | null {
   if (value === null || value === undefined) {
@@ -1794,6 +1939,38 @@ export function normalizeTemporalMonthStrict(value: string): TemporalMonth {
 }
 export function validateTemporalMonth(value: unknown | null | undefined): ScalarValidationResult {
   return validateWithBackend("Temporal.Month", value);
+}
+
+export type TemporalPeriod = string & { readonly __brand: "Temporal.Period" };
+function convertTemporalPeriodValue(value: unknown | null): TemporalPeriod | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return value as TemporalPeriod;
+}
+export function parseTemporalPeriod(value: unknown): TemporalPeriod | null {
+  return convertTemporalPeriodValue(coerceValue("Temporal.Period", value));
+}
+export function normalizeTemporalPeriod(value: unknown): TemporalPeriod | null {
+  return convertTemporalPeriodValue(coerceValue("Temporal.Period", value));
+}
+export function parseTemporalPeriodStrict(value: string): TemporalPeriod {
+  const parsed = convertTemporalPeriodValue(backend.parse("Temporal.Period", value));
+  if (parsed === null) {
+    throw new Error("invalid Temporal.Period");
+  }
+  return parsed;
+}
+export function normalizeTemporalPeriodStrict(value: string): TemporalPeriod {
+  const normalized = convertTemporalPeriodValue(backend.normalize("Temporal.Period", value));
+  if (normalized === null) {
+    throw new Error("invalid Temporal.Period");
+  }
+  return normalized;
+}
+export function validateTemporalPeriod(value: unknown | null | undefined): ScalarValidationResult {
+  return validateWithBackend("Temporal.Period", value);
 }
 
 export type TemporalQuarter = string & { readonly __brand: "Temporal.Quarter" };
@@ -2322,6 +2499,25 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     largeText: false,
   },
   {
+    canonicalName: "File.MediaType",
+    symbol: "FileMediaType",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 255,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["image/png", "application/json", "text/csv;charset=utf-8"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+    largeText: false,
+  },
+  {
     canonicalName: "File.SizeBytes",
     symbol: "FileSizeBytes",
     primitive: "Int",
@@ -2550,6 +2746,25 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     largeText: false,
   },
   {
+    canonicalName: "Geo.CountryCode",
+    symbol: "GeoCountryCode",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 2,
+    minLength: 2,
+    pattern: "^[A-Z]{2}$",
+    hasValidator: true,
+    examples: ["US", "DE", "JP"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+    largeText: false,
+  },
+  {
     canonicalName: "Geo.Location",
     symbol: "GeoLocation",
     primitive: "String",
@@ -2740,6 +2955,25 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     largeText: false,
   },
   {
+    canonicalName: "Network.Port",
+    symbol: "NetworkPort",
+    primitive: "Int",
+    tsType: "number",
+    format: "",
+    maxLength: 0,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["443", "8080"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+    largeText: false,
+  },
+  {
     canonicalName: "Network.Uri",
     symbol: "NetworkUri",
     primitive: "String",
@@ -2911,6 +3145,25 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     largeText: false,
   },
   {
+    canonicalName: "Temporal.LocalDateTime",
+    symbol: "TemporalLocalDateTime",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 40,
+    minLength: 0,
+    pattern: "",
+    hasValidator: true,
+    examples: ["2026-10-31T09:00:00"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+    largeText: false,
+  },
+  {
     canonicalName: "Temporal.Milliseconds",
     symbol: "TemporalMilliseconds",
     primitive: "Int",
@@ -2959,6 +3212,25 @@ export const SCALAR_METADATA: ScalarMetadata[] = [
     pattern: "",
     hasValidator: true,
     examples: ["02"],
+    comparabilityClass: null,
+    isSortable: true,
+    caseInsensitive: false,
+    reservedWords: [],
+    reservedWordsCaseInsensitive: false,
+    reservedWordsMatchPartial: false,
+    largeText: false,
+  },
+  {
+    canonicalName: "Temporal.Period",
+    symbol: "TemporalPeriod",
+    primitive: "String",
+    tsType: "string",
+    format: "",
+    maxLength: 64,
+    minLength: 3,
+    pattern: "^P(?:[0-9]{1,9}Y)?(?:[0-9]{1,9}M)?(?:[0-9]{1,9}W)?(?:[0-9]{1,9}D)?(?:T(?:[0-9]{1,9}H)?(?:[0-9]{1,9}M)?(?:[0-9]{1,9}(?:\\.[0-9]{1,9})?S)?)?$",
+    hasValidator: true,
+    examples: ["P2D", "P1M", "PT30M", "P1Y6M"],
     comparabilityClass: null,
     isSortable: true,
     caseInsensitive: false,

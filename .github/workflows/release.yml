@@ -90,8 +90,7 @@ jobs:
             dry_run=false
             tag="$REF_NAME"
             version="${tag#v}"
-            # Refuses a tag whose version the tree does not carry, and a
-            # version without a CHANGELOG section.
+            # Refuses a tag whose version the tree does not carry.
             python3 scripts/bump_version.py check --expect "$version"
           fi
           prerelease=false
@@ -500,9 +499,9 @@ jobs:
         run: |
           set -euo pipefail
           CORE_SHA="$(python3 -c 'import json; print(json.load(open("release-assets/manifest.json"))["core_sha"])')"
+          # The commit history is the changelog: --generate-notes lists the
+          # pull requests merged since the last release after this section.
           {
-            python3 scripts/bump_version.py notes "$VERSION"
-            echo
             echo "## Artifacts"
             echo
             echo "Every asset was built from core commit \`$CORE_SHA\` and is listed in \`manifest.json\` with its SHA-256."
@@ -514,6 +513,7 @@ jobs:
             --verify-tag \
             --title "superscalar $TAG" \
             --notes-file notes.md \
+            --generate-notes \
             "${flags[@]}" \
             release-assets/*.tar.gz release-assets/manifest.json release-assets/*.spdx.json \
             release-assets/python/* release-assets/npm/*.tgz
