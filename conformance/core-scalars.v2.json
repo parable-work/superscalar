@@ -241,6 +241,30 @@
           "validator": "parse"
         },
         {
+          "input": "ana😀@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana lopez@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana​@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana‮@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "x́@example.com",
+          "validator": "parse"
+        },
+        {
+          "input": "ana@exa😀mple.com",
+          "validator": "parse"
+        },
+        {
           "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.example.com",
           "validator": "length"
         },

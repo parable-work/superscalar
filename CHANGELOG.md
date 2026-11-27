@@ -206,6 +206,14 @@ bump they require (minor when loosening, major when tightening).
   `generic_decimal` functions take text or a `decimal.Decimal`, and
   `parse_generic_decimal_to_decimal` returns one. A new scalar, so a minor
   bump.
+- Conformance: `Contact.Email` gains six rejected vectors for a character
+  outside ASCII that is not a letter or a digit: an emoji in the local part
+  and inside a domain label, a no-break space, a zero-width space, a bidi
+  override and a combining mark NFC does not compose. `email_address` 0.2.10
+  accepts them as atext, so the scalar refuses them itself and keeps the
+  accept set of 0.2.9; it also sets the crate's new `allow_long_local_parts`
+  to `false`, so a local part over 64 bytes stays refused. No accept-set
+  change, no bump required.
 
 ### Changed
 
@@ -254,7 +262,7 @@ bump they require (minor when loosening, major when tightening).
     order, number spelling, negative zero, and the refusals above. Two new
     core tests keep definitions honest: a JSON-valued scalar declares no
     `pattern` or length bounds, and every example parses to itself.
-- `Contact.Email` is parsed by the `email_address` crate (pinned `=0.2.9`,
+- `Contact.Email` is parsed by the `email_address` crate (pinned `=0.2.10`,
   RFC 5321, RFC 5322 and RFC 6531) instead of matched against a regex.
   Breaking: the accept set loosens and tightens, the canonical form of some
   inputs changes, and the error kind changes, a major bump.
