@@ -37,6 +37,7 @@ export namespace Embedding {
 }
 
 export namespace File {
+  export type MediaType = Brand<string, 'File.MediaType'>;
   export type SizeBytes = Brand<number, 'File.SizeBytes'>;
 }
 
@@ -59,6 +60,7 @@ export namespace Git {
 }
 
 export namespace Geo {
+  export type CountryCode = Brand<string, 'Geo.CountryCode'>;
   export type Location = Brand<{ readonly lat: number; readonly lon: number }, 'Geo.Location'>;
 }
 
@@ -77,6 +79,7 @@ export namespace Network {
   export type DnsLabel = Brand<string, 'Network.DnsLabel'>;
   export type DomainName = Brand<string, 'Network.DomainName'>;
   export type IpAddress = Brand<string, 'Network.IpAddress'>;
+  export type Port = Brand<number, 'Network.Port'>;
   export type Uri = Brand<string, 'Network.Uri'>;
   export type Url = Brand<string, 'Network.Url'>;
 }
@@ -92,9 +95,11 @@ export namespace Temporal {
   export type Days = Brand<number, 'Temporal.Days'>;
   export type Duration = Brand<string, 'Temporal.Duration'>;
   export type Hours = Brand<number, 'Temporal.Hours'>;
+  export type LocalDateTime = Brand<string, 'Temporal.LocalDateTime'>;
   export type Milliseconds = Brand<number, 'Temporal.Milliseconds'>;
   export type Minutes = Brand<number, 'Temporal.Minutes'>;
   export type Month = Brand<string, 'Temporal.Month'>;
+  export type Period = Brand<string, 'Temporal.Period'>;
   export type Quarter = Brand<string, 'Temporal.Quarter'>;
   export type QuarterYear = Brand<string, 'Temporal.QuarterYear'>;
   export type RecurrenceRule = Brand<string, 'Temporal.RecurrenceRule'>;

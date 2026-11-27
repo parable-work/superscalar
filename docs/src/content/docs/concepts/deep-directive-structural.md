@@ -27,8 +27,8 @@ fails. An input that is already valid is returned unchanged, which is why
 `Temporal.Quarter` keeps `Q1`.
 
 Many of the built-ins are directive scalars, including `Auth.JWT`,
-`Finance.SignedMoney`, `Identity.Slug`, `Network.IpAddress`, `Ordering.Rank`,
-`Text.Markdown` and `Version.SemVer`.
+`Finance.SignedMoney`, `Identity.Slug`, `Network.IpAddress`, `Network.Port`,
+`Ordering.Rank`, `Text.Markdown` and `Version.SemVer`.
 
 Adding one is a registry entry plus conformance vectors; there is no module
 to write.
@@ -45,12 +45,14 @@ rules. The rule lives in one Rust module under
 `crates/core/src/scalars/`, implemented once and called by every binding.
 
 The deep built-ins include `Contact.Email`,
-`Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `Finance.Currency`,
-`Generic.Decimal`, `Generic.JSON`, `Generic.StringMap`, `Geo.Location`,
+`Contact.PhoneNumber`, `Design.Color`, `Embedding.Vector`, `File.MediaType`,
+`Finance.Currency`, `Generic.Decimal`, `Generic.JSON`, `Generic.StringMap`,
+`Geo.CountryCode`, `Geo.Location`,
 `Git.PathPattern`, `Identity.UUID`, `Identity.UserID` (an alias of
 `Identity.UUID`), `Network.Url`, `Network.DnsLabel`, `Temporal.Date`,
-`Temporal.DateTime`, `Temporal.Duration`, `Temporal.Month`,
-`Temporal.QuarterYear`, `Temporal.RecurrenceRule` and `Temporal.Time`.
+`Temporal.DateTime`, `Temporal.Duration`, `Temporal.LocalDateTime`,
+`Temporal.Month`, `Temporal.Period`, `Temporal.QuarterYear`,
+`Temporal.RecurrenceRule` and `Temporal.Time`.
 
 A deep scalar may borrow the generic validator and add only a canonical form.
 `Temporal.Time` does: its pattern decides which values are accepted, and its

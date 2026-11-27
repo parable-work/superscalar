@@ -206,6 +206,41 @@ bump they require (minor when loosening, major when tightening).
   `generic_decimal` functions take text or a `decimal.Decimal`, and
   `parse_generic_decimal_to_decimal` returns one. A new scalar, so a minor
   bump.
+- Scalar: `Temporal.LocalDateTime`, a date and a time of day with no zone or
+  offset: a wall-clock reading such as a recurrence's start. Canonical
+  `YYYY-MM-DDTHH:MM:SS`, with a fraction of up to nine digits only when it is
+  not zero. Accepts `T`, `t` or a space as the separator and a time without
+  seconds, trims whitespace, and checks that the date exists. A value with a
+  zone or an offset (`Z`, `+05:00`) is refused with `parse`, not stripped,
+  and so is a date alone. SQL `TIMESTAMP`. It joins no comparability class:
+  it is not an instant. A new scalar, so a minor bump.
+- Scalar: `Temporal.Period`, an ISO 8601 duration (`P2D`, `P1M`, `PT30M`):
+  an amount of calendar time, where `Temporal.Duration` is an exact elapsed
+  time. `PnYnMnWnDTnHnMnS` with uppercase designators, each number one to
+  nine digits, a fraction on the seconds alone. The canonical form drops
+  leading zeros and components that are zero and writes nothing as `PT0S`;
+  components are never carried into one another. Refuses a sign, lowercase,
+  whitespace and a fraction on another unit with `pattern`, and a `T` with no
+  time part with `parse`. SQL `VARCHAR(64)`. A new scalar, so a minor bump.
+- Scalar: `File.MediaType`, an IANA media type: `type/subtype` (each an RFC
+  6838 restricted name) with optional `;name=value` parameters. The grammar
+  is checked, not the IANA registry. The canonical form is the WHATWG MIME
+  Sniffing serialization: lowercase type, subtype and parameter names, no
+  whitespace, a value quoted only when it is not a token
+  (`Text/HTML; Charset="UTF-8"` is `text/html;charset=UTF-8`). Refuses a media
+  range (`image/*`), an empty or repeated parameter and anything over 255
+  characters. SQL `VARCHAR(255)`. A new scalar, so a minor bump.
+- Scalar: `Geo.CountryCode`, an officially assigned ISO 3166-1 alpha-2 code
+  (249 codes, current as of ISO/TC 46 N1127 of 2024-02-29). Exactly two
+  uppercase ASCII letters; lowercase and whitespace are refused, not
+  canonicalized, and user-assigned (`XK`), exceptionally reserved (`UK`,
+  `EU`) and withdrawn (`AN`) codes are refused with `enum`. SQL `VARCHAR(2)`.
+  Rust reads the table from `scalars::geo_country_code::COUNTRY_CODES`. A new
+  scalar, so a minor bump. A later edition that assigns a code is a minor
+  bump; one that withdraws a code is a major bump.
+- Scalar: `Network.Port`, a TCP or UDP port number: an integer from 1 through
+  65535, SQL `INTEGER`, a directive scalar. Port 0 is refused. A new scalar,
+  so a minor bump.
 
 ### Changed
 

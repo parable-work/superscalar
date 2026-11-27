@@ -30,6 +30,22 @@ pub(crate) fn impls() -> Vec<(&'static str, Box<dyn Scalar>)> {
             Box::new(scalars::embedding_vector::EmbeddingVector),
         ),
         (
+            names::FILE_MEDIA_TYPE,
+            Box::new(scalars::file_media_type::FileMediaType),
+        ),
+        (
+            names::GEO_COUNTRY_CODE,
+            Box::new(scalars::geo_country_code::GeoCountryCode),
+        ),
+        (
+            names::TEMPORAL_LOCAL_DATE_TIME,
+            Box::new(scalars::temporal_local_date_time::TemporalLocalDateTime),
+        ),
+        (
+            names::TEMPORAL_PERIOD,
+            Box::new(scalars::temporal_period::TemporalPeriod),
+        ),
+        (
             names::FINANCE_CURRENCY,
             Box::new(scalars::finance_currency::FinanceCurrency),
         ),

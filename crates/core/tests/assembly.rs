@@ -316,7 +316,7 @@ fn earlier_check_wins_when_two_violations_hold() {
 /// from the catalog.
 #[test]
 fn builtin_registry_is_frozen() {
-    const TABLE: [&str; 54] = [
+    const TABLE: [&str; 59] = [
         "AgentSkill.Name",
         "Auth.JWT",
         "Auth.Password",
@@ -327,6 +327,7 @@ fn builtin_registry_is_frozen() {
         "Crypto.SHA256",
         "Design.Color",
         "Embedding.Vector",
+        "File.MediaType",
         "File.SizeBytes",
         "Finance.Currency",
         "Finance.Money",
@@ -339,6 +340,7 @@ fn builtin_registry_is_frozen() {
         "Generic.Probability",
         "Generic.StringMap",
         "Generic.Text",
+        "Geo.CountryCode",
         "Geo.Location",
         "Git.PathPattern",
         "Identity.Name",
@@ -349,6 +351,7 @@ fn builtin_registry_is_frozen() {
         "Network.DnsLabel",
         "Network.DomainName",
         "Network.IpAddress",
+        "Network.Port",
         "Network.Uri",
         "Network.Url",
         "Ordering.Rank",
@@ -358,9 +361,11 @@ fn builtin_registry_is_frozen() {
         "Temporal.Days",
         "Temporal.Duration",
         "Temporal.Hours",
+        "Temporal.LocalDateTime",
         "Temporal.Milliseconds",
         "Temporal.Minutes",
         "Temporal.Month",
+        "Temporal.Period",
         "Temporal.Quarter",
         "Temporal.QuarterYear",
         "Temporal.RecurrenceRule",
@@ -494,7 +499,7 @@ fn dump_has_the_documented_shape() {
     assert_eq!(dump["dump_version"], 2);
     assert_eq!(dump["extensions"], serde_json::json!(["builtin"]));
     let scalars = dump["scalars"].as_array().expect("array");
-    assert_eq!(scalars.len(), 54);
+    assert_eq!(scalars.len(), 59);
     let email = scalars
         .iter()
         .find(|scalar| scalar["canonical"] == "Contact.Email")
